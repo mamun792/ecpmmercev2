@@ -3,12 +3,9 @@
 namespace App\Http\Controllers\Admin\Order;
 
 use Inertia\Inertia;
-use App\Models\Media;
 use App\Models\Order;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
-use App\Models\GeneralSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,17 +16,24 @@ use App\Services\Product\ProductService;
 use App\Exceptions\InvalidOrderDataException;
 use App\Exceptions\InsufficientStockException;
 use App\Services\Couriers\Pathao\PathaoService;
-
-
+use App\Traits\OrderEagerLoading;
+use App\DTOs\Order\UpdateOrderDTO;
+use App\Http\Requests\Order\UpdateOrderRequest;
+use Illuminate\Support\Facades\Gate;
 
 class OrderController extends Controller
 {
-    protected $orderService;
-    protected $productService;
-    protected $pathaoService;
+    use OrderEagerLoading;
 
-    public function __construct(OrderInterface $orderService, ProductService $productService, PathaoService $pathaoService)
-    {
+    protected OrderInterface $orderService;
+    protected ProductService $productService;
+    protected PathaoService $pathaoService;
+
+    public function __construct(
+        OrderInterface $orderService,
+        ProductService $productService,
+        PathaoService $pathaoService
+    ) {
         $this->orderService = $orderService;
         $this->productService = $productService;
         $this->pathaoService = $pathaoService;
@@ -39,12 +43,9 @@ class OrderController extends Controller
      * Display paginated list of orders
      *
      * @param Request $request
-     *
-     *
      */
     public function index(Request $request)
     {
-        //Log::info('request', $request->all());
         $filters = [
             'status' => $request->input('status'),
             'payment_status' => $request->input('payment_status'),
@@ -124,8 +125,10 @@ class OrderController extends Controller
 
     public function districtWiseOrders()
     {
+        // Security: Use selectRaw instead of DB::raw to prevent SQL injection
         $districtCounts = DB::table('orders')
-            ->select('shipping_district', DB::raw('COUNT(*) as total_orders'))
+            ->select('shipping_district')
+            ->selectRaw('COUNT(*) as total_orders')
             ->whereNotNull('shipping_district')
             ->groupBy('shipping_district')
             ->get();
@@ -156,34 +159,12 @@ class OrderController extends Controller
      * Display the edit form for an order
      *
      * @param int $id
-     *
      */
     public function edit($id, Request $request)
     {
-
         try {
-            //$order = Order::with(['items.product', 'items.variation'])->findOrFail($id);
-            $order = Order::with([
-                'items.product' => function($query) {
-                    $query->withTrashed();
-                },
-                'items.productVariation' => function($query) {
-                    $query->withTrashed();
-                },
-                'items.productVariation.attributes.value' => function($query) {
-                    $query->withTrashed();
-                },
-                'items.productVariation.attributes.value.attribute' => function($query) {
-                    $query->withTrashed();
-                }
-            ])->findOrFail($id);
-
-
-            // Only allow editing pending, processing, or incomplete orders
-            // if (!in_array($order->status, ['pending', 'processing', 'incomplete'])) {
-            //     return redirect()->route('orders.show', $id)
-            //         ->with('error', 'Cannot edit orders in ' . $order->status . ' status');
-            // }
+            // Use trait-based eager loading for consistency
+            $order = Order::with($this->getOrderDetailEagerLoads())->findOrFail($id);
 
             // Get payment methods for dropdown
             $paymentMethods = [
@@ -219,7 +200,7 @@ class OrderController extends Controller
                 if ($item->product) {
                     $item->product->is_deleted = $item->product->trashed();
                 }
-                
+
                 if ($item->product_variation_id && $item->productVariation) {
                     // Add is_deleted flag to the productVariation object
                     $item->productVariation->is_deleted = $item->productVariation->trashed();
@@ -441,19 +422,10 @@ class OrderController extends Controller
     public function show($id)
     {
         try {
-            $order = Order::with([
-                'items.product',
-                'items.productVariation',
-                'items.productVariation.attributes.value' => function($query) {
-                    $query->withTrashed();
-                },
-                'items.productVariation.attributes.value.attribute' => function($query) {
-                    $query->withTrashed();
-                }
-            ])->findOrFail($id);
+            // Use trait-based eager loading
+            $order = Order::with($this->getOrderDetailEagerLoads())->findOrFail($id);
 
             $settings = GeneralSetting::select('app_name', 'address', 'store_email', 'store_phone_number')->first();
-
             $logo = Media::select('logo')->first();
 
             return Inertia::render('Admin/Orders/Show', [
@@ -466,54 +438,6 @@ class OrderController extends Controller
                 ->with('error', 'Order not found: ' . $e->getMessage());
         }
     }
-
-    /**
-     * Remove an order item via AJAX
-     *
-     * @param int $orderId
-     * @param int $itemId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function removeItem($orderId, $itemId)
-    {
-        try {
-            // Update via service
-            $this->orderService->updateOrder($orderId, [
-                'items' => [
-                    [
-                        'id' => $itemId,
-                        'action' => 'remove'
-                    ]
-                ]
-            ]);
-
-            // Fetch updated order for response
-            $order = Order::findOrFail($orderId);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Item removed successfully',
-                'data' => [
-                    'order' => [
-                        'subtotal' => $order->subtotal,
-                        'discount_total' => $order->discount_total,
-                        'shipping_cost' => $order->shipping_cost,
-                        'total' => $order->total,
-                        'formatted_subtotal' => number_format($order->subtotal, 2),
-                        'formatted_discount_total' => number_format($order->discount_total, 2),
-                        'formatted_shipping_cost' => number_format($order->shipping_cost, 2),
-                        'formatted_total' => number_format($order->total, 2),
-                    ]
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to remove item: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
 
 
     public function destroy($id)
@@ -536,17 +460,25 @@ class OrderController extends Controller
 
     public function OderupdateStatus(Request $request, $orderId)
     {
-
-
-
         try {
             $validated = $request->validate([
                 'status' => 'required|string|max:255',
             ]);
 
+            // Get old status before update
+            $order = Order::findOrFail($orderId);
+            $oldStatus = $order->status;
 
-
+            // Update status via service
             $order = $this->orderService->updateOrderStatus($orderId, $validated['status']);
+
+            // Dispatch event for status change
+            event(new \App\Events\Orders\OrderStatusChanged(
+                $order,
+                $oldStatus,
+                $validated['status'],
+                auth()->id()
+            ));
 
             // If order status is delivered, automatically mark payment as paid
             if ($validated['status'] === 'delivered' && $order->payment_status !== 'paid') {
@@ -557,10 +489,10 @@ class OrderController extends Controller
             // Update caching
             $this->updateOrderCache();
 
-
             Log::info('Order status updated', [
                 'orderId' => $orderId,
-                'status' => $validated['status'],
+                'old_status' => $oldStatus,
+                'new_status' => $validated['status'],
                 'payment_status' => $order->payment_status
             ]);
 
@@ -576,12 +508,6 @@ class OrderController extends Controller
         }
     }
 
-    private function updateOrderCache()
-    {
-
-        Cache::flush();
-    }
-
     public function updateNewOrders(Request $request, $orderId)
     {
         try {
@@ -590,7 +516,7 @@ class OrderController extends Controller
             $order = $this->orderService->updateNewOrder($orderId, $request->all());
             Log::info('order', $order->toArray());
 
-            // update caching
+            // Smart cache invalidation
             $this->updateOrderCache();
 
             // Return JSON for Inertia AJAX requests
@@ -639,321 +565,12 @@ class OrderController extends Controller
         }
     }
 
-
-    public function destroyItem(Order $order, $item)
-    {
-        try {
-            DB::beginTransaction();
-
-            // Find the order item and ensure it belongs to the order
-            $orderItem = OrderItem::where('order_id', $order->id)
-                ->where('id', $item)
-                ->firstOrFail();
-
-            // Restore stock if the order is not incomplete (incomplete orders don't deduct stock)
-            if ($order->status !== 'incomplete') {
-                $quantity = $orderItem->quantity;
-
-                if ($orderItem->product_variation_id) {
-                    // Variable product - restore stock to variation AND main product
-                    $variation = $orderItem->productVariation;
-                    $product = $orderItem->product;
-
-                    if ($variation) {
-                        $variation->stock += $quantity;
-                        $variation->sold_stock = max(0, $variation->sold_stock - $quantity);
-                        $variation->save();
-
-                        Log::info('Stock restored to variation on item delete', [
-                            'order_id' => $order->id,
-                            'item_id' => $item,
-                            'variation_id' => $variation->id,
-                            'quantity_restored' => $quantity,
-                            'new_stock' => $variation->stock
-                        ]);
-                    }
-
-                    // Also restore stock to main product
-                    if ($product) {
-                        $product->stock += $quantity;
-                        $product->sold_stock = max(0, $product->sold_stock - $quantity);
-                        $product->save();
-
-                        Log::info('Stock restored to main product on item delete', [
-                            'order_id' => $order->id,
-                            'item_id' => $item,
-                            'product_id' => $product->id,
-                            'quantity_restored' => $quantity,
-                            'new_stock' => $product->stock
-                        ]);
-                    }
-                } else {
-                    // Simple product - restore stock to product
-                    $product = $orderItem->product;
-                    if ($product) {
-                        $product->stock += $quantity;
-                        $product->sold_stock = max(0, $product->sold_stock - $quantity);
-                        $product->save();
-
-                        Log::info('Stock restored to product on item delete', [
-                            'order_id' => $order->id,
-                            'item_id' => $item,
-                            'product_id' => $product->id,
-                            'quantity_restored' => $quantity,
-                            'new_stock' => $product->stock
-                        ]);
-                    }
-                }
-            }
-
-            // Delete the order item
-            $orderItem->delete();
-
-            // Recalculate order totals
-            $subtotal = $order->items()->sum('subtotal');
-            $discount_total = $order->items()->sum('discount_total');
-            $total = $subtotal - $discount_total + $order->shipping_cost;
-
-            // Update the order
-            $order->update([
-                'subtotal' => $subtotal,
-                'discount_total' => $discount_total,
-                'total' => $total,
-            ]);
-
-            DB::commit();
-
-            // Clear cache
-            $this->updateOrderCache();
-
-            return redirect()->back()
-                ->with('success', 'Order item removed and stock restored successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to remove order item', [
-                'order_id' => $order->id,
-                'item_id' => $item,
-                'error' => $e->getMessage()
-            ]);
-            return redirect()->back()
-                ->with('error', 'Failed to remove order item: ' . $e->getMessage());
-        }
-    }
-
-
-public function downloadInvoice(Order $order)
-{
-    // Eager load the nested relationships
-    $order->load([
-        'items.product',
-        'items.productVariation',
-        'items.productVariation.attributes.value' => function($query) {
-            $query->withTrashed();
-        },
-        'items.productVariation.attributes.value.attribute' => function($query) {
-            $query->withTrashed();
-        }
-    ]);
-
-    // Return or pass to a view or PDF generation
-    //return $order;
-
-    //return view('invoices.order', ['order' => $order]);
-
-    // If generating a PDF
-    $pdf = Pdf::loadView('invoices.order', ['order' => $order]);
-    return $pdf->download('invoice-' . $order->id . '.pdf');
-}
-
-
-    public function bulkDownloadInvoices(Request $request)
-    {
-        $orderIds = $request->input('order_ids'); // e.g. [3, 1, 2]
-
-        // Fetch orders sorted by ID
-        $orders = Order::with([
-            'items.product',
-            'items.productVariation',
-            'items.productVariation.attributes.value' => function($query) {
-                $query->withTrashed();
-            },
-            'items.productVariation.attributes.value.attribute' => function($query) {
-                $query->withTrashed();
-            }
-        ])
-        ->whereIn('id', $orderIds)
-        ->orderBy('id')
-        ->get();
-
-            //return view('invoices.bulk', ['orders' => $orders]);
-
-        // Pass all orders to a combined PDF view
-        $pdf = Pdf::loadView('invoices.bulk', ['orders' => $orders]);
-
-        return $pdf->download('bulk-invoices.pdf');
-    }
-
-
-
-        public function bulkPrintInvoices(Request $request)
-    {
-        $orderIds = explode(',', $request->query('order_ids')); // e.g. "3,1,2"
-
-        // Fetch orders sorted by ID
-        $orders = Order::with([
-            'items.product',
-            'items.productVariation',
-            'items.productVariation.attributes.value' => function($query) {
-                $query->withTrashed();
-            },
-            'items.productVariation.attributes.value.attribute' => function($query) {
-                $query->withTrashed();
-            }
-        ])
-        ->whereIn('id', $orderIds)
-        ->orderBy('id')
-        ->get();
-
-        $settings = GeneralSetting::select('app_name', 'address', 'store_email', 'store_phone_number')->first();
-        $logo = Media::select('logo')->first();
-
-        //return $orders;
-
-        // Return view for printing
-        return view('invoices.bulk-print', [
-            'orders' => $orders,
-            'settings' => $settings,
-            'logo' => $logo
-        ]);
-    }
-
     /**
-     * Update order item quantity
+     * Smart cache invalidation - only invalidates order-related cache
+     * Instead of flushing entire cache
      */
-    public function updateItemQuantity(Request $request, $orderId, $itemId)
+    private function updateOrderCache(): void
     {
-        try {
-            $validated = $request->validate([
-                'quantity' => 'required|integer|min:1|max:100'
-            ]);
-
-            $order = Order::findOrFail($orderId);
-            $orderItem = OrderItem::where('order_id', $orderId)
-                ->where('id', $itemId)
-                ->firstOrFail();
-
-            // Check if order can be updated (only pending, processing, or incomplete orders)
-            if (!in_array($order->status, ['pending', 'processing', 'incomplete'])) {
-                if ($request->wantsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Cannot update order in ' . $order->status . ' status'
-                    ], 422);
-                }
-                return redirect()->back()->with('error', 'Cannot update order in ' . $order->status . ' status');
-            }
-
-            // Get product and variation for stock check
-            $product = $orderItem->product;
-            $variation = $orderItem->productVariation;
-
-            // Calculate quantity difference
-            $quantityDifference = $validated['quantity'] - $orderItem->quantity;
-
-            // Check stock availability
-            $availableStock = $variation ? $variation->stock : $product->stock;
-            if ($quantityDifference > 0 && $availableStock < $quantityDifference) {
-                if ($request->wantsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Insufficient stock. Only {$availableStock} items available."
-                    ], 422);
-                }
-                return redirect()->back()->with('error', "Insufficient stock. Only {$availableStock} items available.");
-            }
-
-            DB::beginTransaction();
-
-            // Update stock (skip for incomplete orders)
-            if ($order->status !== 'incomplete' && $quantityDifference != 0) {
-                if ($variation) {
-                    // Update variation stock
-                    $variation->stock -= $quantityDifference;
-                    $variation->sold_stock += $quantityDifference;
-                    $variation->save();
-
-                    // Also update main product stock
-                    $product->stock -= $quantityDifference;
-                    $product->sold_stock += $quantityDifference;
-                    $product->save();
-
-                    Log::info('Stock updated for variable product', [
-                        'product_id' => $product->id,
-                        'variation_id' => $variation->id,
-                        'quantity_diff' => $quantityDifference,
-                        'product_new_stock' => $product->stock,
-                        'variation_new_stock' => $variation->stock
-                    ]);
-                } else {
-                    // Update simple product stock
-                    $product->stock -= $quantityDifference;
-                    $product->sold_stock += $quantityDifference;
-                    $product->save();
-
-                    Log::info('Stock updated for simple product', [
-                        'product_id' => $product->id,
-                        'quantity_diff' => $quantityDifference,
-                        'product_new_stock' => $product->stock
-                    ]);
-                }
-            }
-
-            // Update order item - both subtotal and final_price
-            $orderItem->quantity = $validated['quantity'];
-            $orderItem->subtotal = $orderItem->quantity * $orderItem->unit_price;
-            $orderItem->final_price = $orderItem->subtotal - ($orderItem->discount_total ?? 0);
-            $orderItem->save();
-
-            // Recalculate order totals (uses item->subtotal to calculate order total)
-            $this->orderService->calculateOrderTotals($order);
-
-            // Refresh order to get updated totals
-            $order->refresh();
-
-            DB::commit();
-
-            // Clear cache
-            $this->updateOrderCache();
-
-            Log::info('Order item quantity updated', [
-                'order_id' => $orderId,
-                'item_id' => $itemId,
-                'old_quantity' => $orderItem->quantity - $quantityDifference,
-                'new_quantity' => $validated['quantity']
-            ]);
-
-            // Return redirect for Inertia
-            return redirect()->back()->with('success', 'Quantity updated successfully');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to update order item quantity', [
-                'order_id' => $orderId,
-                'item_id' => $itemId,
-                'error' => $e->getMessage()
-            ]);
-
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to update quantity: ' . $e->getMessage()
-                ], 500);
-            }
-            return redirect()->back()->with('error', 'Failed to update quantity: ' . $e->getMessage());
-        }
+        Order::invalidateCache();
     }
-
-
-
-
 }

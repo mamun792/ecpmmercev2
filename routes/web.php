@@ -80,9 +80,9 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
     Route::get('/incomplete-orders', [OrderController::class, 'incompleteOrders'])->name('orders.incomplete');
     Route::get('/order-map', [OrderController::class, 'districtWiseOrders'])->name('orders.map');
 
-    Route::get('/invoice/{order}/download', [OrderController::class, 'downloadInvoice'])->name('invoice.download');
-    Route::post('/bulk-invoice/download', [OrderController::class, 'bulkDownloadInvoices'])->name('invoice.bulk-download');
-    Route::get('/bulk-invoice/print', [OrderController::class, 'bulkPrintInvoices'])->name('invoice.bulk-print');
+    Route::get('/invoice/{order}/download', [\App\Http\Controllers\Admin\Order\OrderInvoiceController::class, 'download'])->name('invoice.download');
+    Route::post('/bulk-invoice/download', [\App\Http\Controllers\Admin\Order\OrderInvoiceController::class, 'bulkDownload'])->name('invoice.bulk-download');
+    Route::get('/bulk-invoice/print', [\App\Http\Controllers\Admin\Order\OrderInvoiceController::class, 'bulkPrint'])->name('invoice.bulk-print');
     // update new order
 
 
@@ -255,9 +255,9 @@ Route::post('/orders/{orderId}/basic-info', [OrderController::class, 'updateBasi
 // Quick update admin notes
 Route::put('/admin/orders/{orderId}/admin-notes', [OrderController::class, 'updateAdminNotes'])->name('admin.orders.update-notes');
 
-Route::put('/orders/{order}/items/{item}', [OrderController::class, 'updateItemQuantity'])->name('orders.items.update');
+Route::put('/orders/{order}/items/{item}', [\App\Http\Controllers\Admin\Order\OrderItemController::class, 'updateQuantity'])->name('orders.items.update');
 
-Route::delete('/orders/{order}/items/{item}', [OrderController::class, 'destroyItem'])->name('orders.items.destroy');
+Route::delete('/orders/{order}/items/{item}', [\App\Http\Controllers\Admin\Order\OrderItemController::class, 'destroy'])->name('orders.items.destroy');
 
 // Pre-Order Lead Admin Routes
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {

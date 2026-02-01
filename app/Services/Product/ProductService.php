@@ -42,8 +42,11 @@ class ProductService
     $search = $request->input('search', '');
     $page = $request->input('page', 1);
 
-    // Generate unique cache key based on pagination and search
-    $cacheKey = "products.admin.page.{$page}.per_page.{$perPage}.search." . md5($search);
+    // Get cache version for stock updates (incremented when stock changes)
+    $cacheVersion = Cache::get('products_stock_version', 1);
+
+    // Generate unique cache key with version for cache busting
+    $cacheKey = "products.admin.v{$cacheVersion}.page.{$page}.per_page.{$perPage}.search." . md5($search);
 
     // Cache for 30 minutes (1800 seconds)
     return Cache::remember($cacheKey, 1800, function () use ($search, $perPage) {

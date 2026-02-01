@@ -20,23 +20,31 @@ use App\Exceptions\OrderNotFoundException;
 use App\Models\Cart;
 use App\Services\Cart\CartService;
 use App\Services\Coupon\CouponService;
+use App\Services\Inventory\InventoryService;
+use App\DTOs\InventoryAdjustmentDTO;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Notification;
+use App\Traits\OrderEagerLoading;
 
 class OrderService implements OrderInterface
 {
-    protected $orderRepository;
-    protected $couponService;
-    protected $cartService;
+    use OrderEagerLoading;
+
+    protected OrderRepositoryInterface $orderRepository;
+    protected CouponService $couponService;
+    protected CartService $cartService;
+    protected InventoryService $inventoryService;
 
     public function __construct(
         OrderRepositoryInterface $orderRepository,
         CouponService $couponService,
-        CartService $cartService
+        CartService $cartService,
+        InventoryService $inventoryService
     ) {
         $this->orderRepository = $orderRepository;
         $this->couponService = $couponService;
         $this->cartService = $cartService;
+        $this->inventoryService = $inventoryService;
     }
 
     /**
@@ -283,13 +291,13 @@ class OrderService implements OrderInterface
 
     /**
      * Resolve and validate product variations for order items
+     * Uses V2 Inventory System for stock validation
      *
      * @param array $items
+     * @param string $orderStatus
      * @return array
      * @throws InsufficientStockException
      */
-
-
     protected function resolveAndValidateOrderItems(array $items, string $orderStatus = 'pending'): array
     {
         $processedItems = [];
@@ -306,31 +314,33 @@ class OrderService implements OrderInterface
                     $productVariation = ProductVariation::where('id', $itemData['product_variation_id'])
                         ->where('product_id', $product->id)
                         ->firstOrFail();
-
-                    // Log variation details
-                    // Log::info('Product variation', [
-                    //     'variation_id' => $productVariation->id
-                    // ]);
                 } catch (\Exception $e) {
                     Log::warning('Product variation not found', [
                         'product_id' => $product->id,
                         'variation_id' => $itemData['product_variation_id'] ?? null
                     ]);
-
-                    // If variation is not found, fall back to product-level stock
                     $productVariation = null;
                 }
             }
 
             // Skip stock validation for incomplete orders or pre-order products
             if ($orderStatus !== 'incomplete' && !$product->is_pre_order) {
-                // Determine available stock
-                $availableStock = $productVariation ? $productVariation->stock : $product->stock;
+                // V2 Inventory: Use InventoryService for stock check
+                $availableStock = $this->inventoryService->getTotalStock(
+                    $product->id,
+                    $productVariation?->id
+                );
+
+                // Fallback to old stock columns if V2 inventory not set up
+                if ($availableStock <= 0) {
+                    $availableStock = $productVariation ? $productVariation->stock : $product->stock;
+                }
 
                 // Validate stock availability
                 if ($availableStock < $itemData['quantity']) {
                     $stockErrors[] = [
                         'product' => $product->name,
+                        'variation' => $productVariation?->id,
                         'available' => $availableStock,
                         'requested' => $itemData['quantity']
                     ];
@@ -338,9 +348,7 @@ class OrderService implements OrderInterface
                 }
             }
 
-            // FIXED: Price determination logic
-            // If product variation exists AND has a price, use that price directly
-            // Otherwise use the base product price
+            // Price determination logic
             $price = ($productVariation && $productVariation->price > 0)
                 ? $product->price + $productVariation->price
                 : $product->price;
@@ -486,6 +494,13 @@ class OrderService implements OrderInterface
 
         $finalPrice = $subtotal - $discountAmount;
 
+        // Get campaign info if applicable
+        $campaignPrice = $itemData['campaign_price'] ?? null;
+        $campaignInfo = $itemData['campaign'] ?? null;
+
+        // Get current stock for snapshot
+        $currentStock = $this->inventoryService->getTotalStock($product->id, $variation?->id);
+
         return OrderItem::create([
             'order_id' => $order->id,
             'product_id' => $product->id,
@@ -499,42 +514,217 @@ class OrderService implements OrderInterface
             'final_price' => $finalPrice,
             'coupon_code' => $itemData['additional_data']['coupon_code'] ?? null,
             'options' => $itemData['additional_data']['options'] ?? null,
-            'is_pre_order' => $product->is_pre_order
+            'is_pre_order' => $product->is_pre_order,
+
+            // Product snapshot - using actual DB column names
+            'product_name' => $product->name,
+            'product_code' => $product->product_code ?? null,
+            'product_sku' => $product->sku ?? $product->product_code ?? null,
+            'product_image_url' => $product->feature_image,
+            'product_short_description' => $product->short_description ?? null,
+            'product_status' => $product->status ?? 'active',
+            'product_type' => $product->product_type ?? 'simple',
+            'was_pre_order' => $product->is_pre_order ?? false,
+
+            // Variation snapshot
+            'variation_name' => $variation?->name ?? null,
+            'variation_sku' => $variation?->sku ?? $variation?->product_code ?? null,
+            'variation_image_url' => $variation?->image_path ?? null,
+            'variation_attributes' => $variation ? $this->getVariationAttributesSnapshot($variation) : null,
+
+            // Price snapshot
+            'base_product_price' => $product->price ?? $unitPrice,
+            'variation_price_addition' => $variation?->price_adjustment ?? 0,
+            'original_price' => $itemData['base_unit_price'] ?? $unitPrice,
+            'cost_price' => $product->cost_price ?? 0,
+
+            // Tax info - default to 0 for NOT NULL columns
+            'tax_rate' => $itemData['tax_rate'] ?? 0,
+            'tax_amount' => $itemData['tax_amount'] ?? 0,
+            'handling_fee' => $itemData['handling_fee'] ?? 0,
+
+            // Campaign snapshot - default to empty string for NOT NULL columns
+            'campaign_name' => $campaignInfo['name'] ?? '',
+            'campaign_code' => $campaignInfo['code'] ?? '',
+
+            // Stock & inventory snapshot
+            'stock_at_order_time' => $currentStock,
+            'inventory_location' => $itemData['inventory_location'] ?? 'default',
+
+            // Full data snapshots (JSON)
+            'product_data_snapshot' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'product_code' => $product->product_code,
+                'price' => $product->price,
+                'cost_price' => $product->cost_price,
+                'category_id' => $product->category_id,
+                'brand_id' => $product->brand_id,
+                'status' => $product->status,
+            ],
+            'variation_data_snapshot' => $variation ? [
+                'id' => $variation->id,
+                'name' => $variation->name,
+                'sku' => $variation->sku,
+                'price' => $variation->price,
+                'price_adjustment' => $variation->price_adjustment,
+                'attributes' => $this->getVariationAttributesSnapshot($variation),
+            ] : null,
+            'snapshot_created_at' => now(),
+            'snapshot_version' => 1,
         ]);
     }
 
     /**
-     * Update stock for product and its variation
+     * Get variation attributes as snapshot array
+     */
+    protected function getVariationAttributesSnapshot(?ProductVariation $variation): ?array
+    {
+        if (!$variation) {
+            return null;
+        }
+
+        try {
+            $variation->load('attributeValues.attribute');
+
+            return $variation->attributeValues
+                ->filter(fn($value) => $value && $value->attribute)
+                ->mapWithKeys(fn($value) => [
+                    $value->attribute->name => $value->value
+                ])
+                ->toArray();
+        } catch (\Exception $e) {
+            Log::warning('Failed to get variation attributes snapshot', [
+                'variation_id' => $variation->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Update stock for product and its variation using V2 Inventory System
+     * Records transaction in inventory_transactions for audit trail
      *
      * @param Product $product
      * @param ProductVariation|null $variation
      * @param int $quantity
+     * @param int|null $orderId Reference for transaction logging
      */
     protected function updateProductStock(
         Product $product,
         ?ProductVariation $variation,
-        int $quantity
+        int $quantity,
+        ?int $orderId = null
     ): void {
         // Skip stock update for pre-order products
         if ($product->is_pre_order) {
             return;
         }
 
-        // If there's a variation, only update the variation stock
-        if ($variation) {
-            $variation->increment('sold_stock', $quantity);
-            $variation->decrement('stock', $quantity);
+        try {
+            // V2 Inventory: Use InventoryService for stock deduction with transaction logging
+            $dto = new InventoryAdjustmentDTO(
+                productId: $product->id,
+                variationId: $variation?->id,
+                quantity: $quantity,
+                adjustmentType: 'decrease',
+                reason: 'Order sale',
+                referenceType: 'order',
+                referenceId: $orderId,
+                userId: auth()->id(),
+                location: 'MAIN',
+                notes: "Stock deducted for order #{$orderId}"
+            );
 
-            $product->increment('sold_stock', $quantity);
-            $product->decrement('stock', $quantity);
-        } else {
-            // Only update product stock if no variation exists
-            $product->increment('sold_stock', $quantity);
-            $product->decrement('stock', $quantity);
+            $this->inventoryService->adjustStock($dto);
+
+            Log::info('V2 Inventory: Stock deducted for order', [
+                'product_id' => $product->id,
+                'variation_id' => $variation?->id,
+                'quantity' => $quantity,
+                'order_id' => $orderId,
+            ]);
+        } catch (\Exception $e) {
+            // Fallback to legacy stock update if V2 fails
+            Log::warning('V2 Inventory failed, using legacy stock update', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage()
+            ]);
+
+            if ($variation) {
+                $variation->increment('sold_stock', $quantity);
+                $variation->decrement('stock', $quantity);
+                $product->increment('sold_stock', $quantity);
+                $product->decrement('stock', $quantity);
+            } else {
+                $product->increment('sold_stock', $quantity);
+                $product->decrement('stock', $quantity);
+            }
         }
 
-        // Clear product cache after stock update
-        Cache::flush();
+        // Smart cache invalidation instead of flush
+        Order::invalidateCache();
+    }
+
+    /**
+     * Restore stock when order item is removed or order cancelled
+     * Uses V2 Inventory System with transaction logging
+     */
+    public function restoreProductStock(
+        Product $product,
+        ?ProductVariation $variation,
+        int $quantity,
+        ?int $orderId = null,
+        string $reason = 'Order item removed'
+    ): void {
+        if ($product->is_pre_order) {
+            return;
+        }
+
+        try {
+            $dto = new InventoryAdjustmentDTO(
+                productId: $product->id,
+                variationId: $variation?->id,
+                quantity: $quantity,
+                adjustmentType: 'increase',
+                reason: $reason,
+                referenceType: 'order',
+                referenceId: $orderId,
+                userId: auth()->id(),
+                location: 'MAIN',
+                notes: "Stock restored for order #{$orderId}"
+            );
+
+            $this->inventoryService->adjustStock($dto);
+
+            Log::info('V2 Inventory: Stock restored for order', [
+                'product_id' => $product->id,
+                'variation_id' => $variation?->id,
+                'quantity' => $quantity,
+                'order_id' => $orderId,
+                'reason' => $reason,
+            ]);
+        } catch (\Exception $e) {
+            // Fallback to legacy stock restore
+            Log::warning('V2 Inventory restore failed, using legacy', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage()
+            ]);
+
+            if ($variation) {
+                $variation->decrement('sold_stock', $quantity);
+                $variation->increment('stock', $quantity);
+                $product->decrement('sold_stock', $quantity);
+                $product->increment('stock', $quantity);
+            } else {
+                $product->decrement('sold_stock', $quantity);
+                $product->increment('stock', $quantity);
+            }
+        }
+
+        Order::invalidateCache();
     }
 
     /**

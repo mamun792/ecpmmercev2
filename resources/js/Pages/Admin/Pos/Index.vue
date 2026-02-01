@@ -201,22 +201,26 @@ const matchedVariation = computed(() => {
       product_price: currentProduct.value.price,
       product_price_type: typeof currentProduct.value.price,
       total_price: (matched.price || 0) + (currentProduct.value.price || 0),
+      available_stock: matched.available_stock,
       raw_variation: matched,
       raw_product: currentProduct.value
     });
 
-    // V2 Inventory: Calculate available stock for variation
-    if (matched.inventoryStock && matched.inventoryStock.length > 0) {
-      matched.available_stock = matched.inventoryStock.reduce((total, stock) => total + (stock.available_quantity || 0), 0);
-    } else if (matched.stock) {
-      // Fallback to old stock column
-      matched.available_stock = matched.stock;
-    } else {
-      // Fallback to parent product stock if variation stock not available
-      matched.available_stock = currentProduct.value.available_stock || currentProduct.value.stock || 0;
+    // V2 Inventory: Use available_stock calculated by backend
+    // available_stock is already set by ProductService->getAllProductsForAdmin()
+    // which calls inventoryService->getTotalStock() for each variation
+    if (matched.available_stock === undefined || matched.available_stock === null) {
+      // Fallback only if backend didn't set available_stock
+      if (matched.inventoryStock && matched.inventoryStock.length > 0) {
+        matched.available_stock = matched.inventoryStock.reduce((total, stock) => total + (stock.available_quantity || 0), 0);
+      } else if (matched.stock !== undefined) {
+        matched.available_stock = matched.stock;
+      } else {
+        matched.available_stock = 0; // Out of stock if no data available
+      }
     }
 
-    console.log('💾 Stock calculated for variation:', matched.available_stock);
+    console.log('💾 Final stock for selected variation:', matched.available_stock);
   }
 
   return matched;

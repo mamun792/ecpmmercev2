@@ -10,6 +10,7 @@ use App\Models\ProductVariation;
 use App\DTOs\InventoryAdjustmentDTO;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use App\Exceptions\InsufficientStockException;
 
 class InventoryService
@@ -164,6 +165,10 @@ class InventoryService
                 'after' => $quantityAfter,
                 'user_id' => $dto->userId,
             ]);
+
+            // Increment products stock cache version to bust POS/inventory cache
+            $currentVersion = Cache::get('products_stock_version', 1);
+            Cache::forever('products_stock_version', $currentVersion + 1);
 
             return $inventoryStock->fresh();
         });
