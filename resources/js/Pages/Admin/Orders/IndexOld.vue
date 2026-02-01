@@ -14,13 +14,6 @@ import {
     X,
     Hash,
     Truck,
-    Package,
-    Clock,
-    ArrowUpDown,
-    CheckCircle,
-    XCircle,
-    AlertCircle,
-    ExternalLink,
 } from "lucide-vue-next";
 import CourierSelectionModal from "@/Components/Couriers/CourierSelectionModal.vue";
 import DeleteModal from "@/Components/Modal/DeleteModal.vue";
@@ -49,7 +42,6 @@ const loading = ref(false);
 const isDownloading = ref(false); // New loading state for invoice download
 const showAdminNotesModal = ref(false);
 const selectedOrderForNotes = ref(null);
-const viewMode = ref("table"); // View mode toggle - default to table
 
 // Pagination computed values
 const currentPage = ref(props.orders.current_page || 1);
@@ -754,172 +746,6 @@ const handleNotesSaved = (newNotes) => {
                                 </span>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Status Tabs - Big Tech Style -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-                <div class="border-b border-gray-200">
-                    <div class="flex items-center overflow-x-auto scrollbar-hide">
-                        <!-- All Orders Tab -->
-                        <button
-                            @click="selectStatus('')"
-                            :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
-                                filters.status === ''
-                                    ? 'border-orange-600 text-orange-600 bg-orange-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                            ]"
-                        >
-                            <div class="flex items-center gap-2">
-                                <span>All Orders</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === '' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700'">
-                                    {{ props.statusCounts.find((s) => s.status === 'total')?.count || 0 }}
-                                </span>
-                            </div>
-                        </button>
-
-                        <!-- Pending Tab -->
-                        <button
-                            @click="selectStatus('pending')"
-                            :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
-                                filters.status === 'pending'
-                                    ? 'border-amber-600 text-amber-600 bg-amber-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                            ]"
-                        >
-                            <div class="flex items-center gap-2">
-                                <Clock class="w-4 h-4" />
-                                <span>Pending</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'pending' ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700'">
-                                    {{ props.statusCounts.find((s) => s.status === 'pending')?.count || 0 }}
-                                </span>
-                            </div>
-                        </button>
-
-                        <!-- Processing Tab -->
-                        <button
-                            @click="selectStatus('processing')"
-                            :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
-                                filters.status === 'processing'
-                                    ? 'border-blue-600 text-blue-600 bg-blue-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                            ]"
-                        >
-                            <div class="flex items-center gap-2">
-                                <Package class="w-4 h-4" />
-                                <span>Processing</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'processing' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'">
-                                    {{ props.statusCounts.find((s) => s.status === 'processing')?.count || 0 }}
-                                </span>
-                            </div>
-                        </button>
-
-                        <!-- Shipped Tab -->
-                        <button
-                            @click="selectStatus('shipped')"
-                            :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
-                                filters.status === 'shipped'
-                                    ? 'border-indigo-600 text-indigo-600 bg-indigo-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                            ]"
-                        >
-                            <div class="flex items-center gap-2">
-                                <Truck class="w-4 h-4" />
-                                <span>Shipped</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'shipped' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'">
-                                    {{ props.statusCounts.find((s) => s.status === 'shipped')?.count || 0 }}
-                                </span>
-                            </div>
-                        </button>
-
-                        <!-- Delivered Tab -->
-                        <button
-                            @click="selectStatus('delivered')"
-                            :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
-                                filters.status === 'delivered'
-                                    ? 'border-green-600 text-green-600 bg-green-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                            ]"
-                        >
-                            <div class="flex items-center gap-2">
-                                <CheckCircle class="w-4 h-4" />
-                                <span>Delivered</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'delivered' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'">
-                                    {{ props.statusCounts.find((s) => s.status === 'delivered')?.count || 0 }}
-                                </span>
-                            </div>
-                        </button>
-
-                        <!-- Completed Tab -->
-                        <button
-                            @click="selectStatus('completed')"
-                            :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
-                                filters.status === 'completed'
-                                    ? 'border-emerald-600 text-emerald-600 bg-emerald-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                            ]"
-                        >
-                            <div class="flex items-center gap-2">
-                                <CheckCircle class="w-4 h-4" />
-                                <span>Completed</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'completed' ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700'">
-                                    {{ props.statusCounts.find((s) => s.status === 'completed')?.count || 0 }}
-                                </span>
-                            </div>
-                        </button>
-
-                        <!-- Cancelled Tab -->
-                        <button
-                            @click="selectStatus('cancelled')"
-                            :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
-                                filters.status === 'cancelled'
-                                    ? 'border-red-600 text-red-600 bg-red-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                            ]"
-                        >
-                            <div class="flex items-center gap-2">
-                                <XCircle class="w-4 h-4" />
-                                <span>Cancelled</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'cancelled' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'">
-                                    {{ props.statusCounts.find((s) => s.status === 'cancelled')?.count || 0 }}
-                                </span>
-                            </div>
-                        </button>
-
-                        <!-- Returned Tab -->
-                        <button
-                            @click="selectStatus('returned')"
-                            :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
-                                filters.status === 'returned'
-                                    ? 'border-purple-600 text-purple-600 bg-purple-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                            ]"
-                        >
-                            <div class="flex items-center gap-2">
-                                <ArrowUpDown class="w-4 h-4" />
-                                <span>Returned</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'returned' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'">
-                                    {{ props.statusCounts.find((s) => s.status === 'returned')?.count || 0 }}
-                                </span>
-                            </div>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -1722,15 +1548,5 @@ const handleNotesSaved = (newNotes) => {
 
 .pagination-ellipsis {
     @apply px-3 py-1 text-sm text-gray-500 dark:text-gray-400;
-}
-
-/* Hide scrollbar for status tabs */
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
 }
 </style>

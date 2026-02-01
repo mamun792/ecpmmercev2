@@ -6,8 +6,9 @@ import { toast } from "@steveyuowo/vue-hot-toast";
 
 const props = defineProps({
   itemId: {
-    type: [Number, String],
-    required: true
+    type: [Number, String, null],
+    required: false,
+    default: null
   },
   itemName: {
     type: String,
@@ -62,14 +63,14 @@ const closeModal = () => {
     <div v-if="isVisible" class="fixed inset-0 z-50 flex items-center justify-center">
       <!-- Backdrop -->
       <div class="fixed inset-0 bg-black bg-opacity-50" @click="closeModal"></div>
-      
+
       <!-- Modal Content -->
       <div class="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
         <h3 class="text-lg font-semibold mb-4">Confirm Deletion</h3>
         <p class="text-gray-600 mb-6">
           Are you sure you want to delete this {{ itemName }}? This action cannot be undone.
         </p>
-        
+
         <div class="flex justify-end space-x-3">
           <button
             @click="closeModal"
