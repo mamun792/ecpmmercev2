@@ -107,8 +107,23 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
         Route::post('/reports', [InventoryController::class, 'generateReport'])->name('reports');
     });
 
-    // Legacy inventory
-    Route::get('/reports', [InventoryManagementController::class, 'generateReport'])->name('reports.generateReport');
+    // Reports
+    Route::prefix('reports')->name('reports.')->group(function () {
+        // Inventory Report V2 (Big Tech Style)
+        Route::get('/inventory', [\App\Http\Controllers\Admin\Reports\InventoryReportController::class, 'index'])->name('inventory.v2');
+        Route::get('/inventory/export-pdf', [\App\Http\Controllers\Admin\Reports\InventoryReportController::class, 'exportPDF'])->name('inventory.export-pdf');
+        Route::get('/inventory/export-csv', [\App\Http\Controllers\Admin\Reports\InventoryReportController::class, 'exportCSV'])->name('inventory.export-csv');
+
+        // Revenue Reports
+        Route::get('/revenue', [\App\Http\Controllers\Admin\Reports\RevenueReportController::class, 'dashboard'])->name('revenue.dashboard');
+        Route::get('/revenue/monthly', [\App\Http\Controllers\Admin\Reports\RevenueReportController::class, 'getMonthlyRevenue'])->name('revenue.monthly');
+        Route::get('/revenue/products', [\App\Http\Controllers\Admin\Reports\RevenueReportController::class, 'getTopProducts'])->name('revenue.products');
+        Route::get('/revenue/customers', [\App\Http\Controllers\Admin\Reports\RevenueReportController::class, 'getTopCustomers'])->name('revenue.customers');
+        Route::get('/revenue/export', [\App\Http\Controllers\Admin\Reports\RevenueReportController::class, 'export'])->name('revenue.export');
+
+        // Legacy inventory (Old version - for backward compatibility)
+        Route::get('/legacy', [InventoryManagementController::class, 'generateReport'])->name('generateReport');
+    });
 
     Route::resource('products', ProductController::class);
     Route::post('/products/{id}/quick-edit', [ProductController::class, 'quickEdit'])->name('products.quick-edit');

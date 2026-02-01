@@ -23,6 +23,7 @@ class Product extends Model
         'is_daily_product',
         'type',
         'price',
+        'cost_price',
         'previous_price',
         'youtube_video',
         'feature_image',
@@ -73,6 +74,7 @@ class Product extends Model
         'recovered_at' => 'datetime',
         'weight' => 'decimal:2',
         'price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'previous_price' => 'decimal:2',
     ];
 

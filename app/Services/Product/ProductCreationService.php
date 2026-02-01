@@ -316,6 +316,7 @@ class ProductCreationService
             $variation = ProductVariation::create([
                 'product_id' => $product->id,
                 'price' => $variationData['price'],
+                'cost_price' => $variationData['cost_price'] ?? null,
                 'previous_price' => $variationData['previous_price'],
                 'image_path' => $variationImagePath,
                 // New schema fields

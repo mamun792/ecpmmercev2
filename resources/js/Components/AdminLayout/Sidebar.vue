@@ -201,6 +201,7 @@ import {
     Wallet,
     ShieldCheck,
     Globe,
+    BarChart3,
 } from "lucide-vue-next";
 import { Link, usePage } from "@inertiajs/vue3";
 
@@ -331,7 +332,7 @@ const navigationItems = [
             },
             {
                 label: "Report",
-                route: "admin.reports.generateReport",
+                route: "admin.reports.inventory.v2",
                 permission: "admin.reports.generateReport",
             },
         ],
@@ -381,6 +382,12 @@ const navigationItems = [
                 permission: "admin.product-purchase-costs.index",
             },
         ],
+    },
+    {
+        label: "Revenue Dashboard",
+        route: "admin.reports.revenue.dashboard",
+        icon: BarChart3,
+        permission: "admin.reports.revenue.dashboard",
     },
     {
         label: "Users & Access",

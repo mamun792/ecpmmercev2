@@ -25,6 +25,7 @@ class ProductCreationDTO
 
         // Pricing
         public readonly float $price = 0.00,
+        public readonly ?float $costPrice = null,
         public readonly ?float $previousPrice = null,
         public readonly ?float $purchasePrice = null,
         public readonly int $stock = 0,
@@ -109,6 +110,7 @@ class ProductCreationDTO
             type: $request->type ?? 'simple',
 
             price: (float) ($request->price ?? 0),
+            costPrice: $request->cost_price ? (float) $request->cost_price : null,
             previousPrice: $request->previous_price ? (float) $request->previous_price : null,
             purchasePrice: $request->purchase_price ? (float) $request->purchase_price : null,
             stock: $stock,
@@ -159,6 +161,9 @@ class ProductCreationDTO
 
             $variations[] = [
                 'price' => (float) ($variationData['price'] ?? 0),
+                'cost_price' => isset($variationData['cost_price']) && $variationData['cost_price'] !== ''
+                    ? (float) $variationData['cost_price']
+                    : null,
                 'previous_price' => isset($variationData['previous_price']) && $variationData['previous_price'] !== ''
                     ? (float) $variationData['previous_price']
                     : null,
@@ -225,6 +230,7 @@ class ProductCreationDTO
             'status' => $this->status,
             'type' => $this->type,
             'price' => $this->price,
+            'cost_price' => $this->costPrice,
             'previous_price' => $this->previousPrice,
             'purchase_price' => $this->purchasePrice,
             'stock' => $this->stock,

@@ -272,13 +272,23 @@ public function generateReport(Request $request)
                         ->map(fn($stocks) => $stocks->sum('available_quantity'))
                         ->toArray();
 
+                    // Calculate minimum threshold and stock status
+                    $minThreshold = $product->inventoryStocks->min('minimum_threshold') ?? 0;
+                    $isLowStock = $totalStock > 0 && $totalStock <= $minThreshold;
+                    $isOutOfStock = $totalStock <= 0;
+                    $stockStatus = $isOutOfStock ? 'out_of_stock' : ($isLowStock ? 'low_stock' : 'in_stock');
+
                     $stockData = [
                         'product_id' => $product->id,
                         'product_name' => $product->name,
                         'product_image' => $product->feature_image,
-                        'product_price' => $product->price, 
+                        'product_price' => $product->price,
                         'total_stock' => $totalStock,
                         'location_stock' => $locationBreakdown, // Added location breakdown
+                        'minimum_threshold' => $minThreshold,
+                        'is_low_stock' => $isLowStock,
+                        'is_out_of_stock' => $isOutOfStock,
+                        'stock_status' => $stockStatus,
                         'total_sold' => $soldStock,
                         'initial_stock' => $initial_stock,
                         'stock_ratio' => $initial_stock > 0
@@ -301,14 +311,20 @@ public function generateReport(Request $request)
                         // Variation stock by location
                         $variationInventory = \App\Models\InventoryStock::where('product_variation_id', $variation->id)->get();
                         $variationStock = $variationInventory->sum('available_quantity');
-                        
+
                         $variationLocationStock = $variationInventory->groupBy('location_code')
                             ->map(fn($stocks) => $stocks->sum('available_quantity'))
                             ->toArray();
 
-                        $variationSold = 0; 
+                        $variationSold = 0;
                         $variationTotal = $variationStock + $variationSold;
-                        
+
+                        // Calculate variation threshold and status
+                        $variationMinThreshold = $variationInventory->min('minimum_threshold') ?? 0;
+                        $variationIsLowStock = $variationStock > 0 && $variationStock <= $variationMinThreshold;
+                        $variationIsOutOfStock = $variationStock <= 0;
+                        $variationStockStatus = $variationIsOutOfStock ? 'out_of_stock' : ($variationIsLowStock ? 'low_stock' : 'in_stock');
+
                         // Map attributes correctly
                         $attributeDetails = collect($variation->attributes)
                             ->mapWithKeys(function ($item) {
@@ -319,11 +335,15 @@ public function generateReport(Request $request)
                             ->toArray();
 
                         $stockData['variations'][] = [
-                            'product_id' => $product->id, 
+                            'product_id' => $product->id,
                             'variation_id' => $variation->id,
                             'attributes' => $attributeDetails,
                             'current_stock' => $variationStock,
                             'location_stock' => $variationLocationStock, // Added location breakdown
+                            'minimum_threshold' => $variationMinThreshold,
+                            'is_low_stock' => $variationIsLowStock,
+                            'is_out_of_stock' => $variationIsOutOfStock,
+                            'stock_status' => $variationStockStatus,
                             'sold_stock' => $variationSold,
                             'initial_stock' => $variationTotal,
                             'sold_ratio' => $variationTotal > 0
