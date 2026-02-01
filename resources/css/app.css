@@ -1,0 +1,244 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --primary-color: #f0512e;
+}
+
+body {
+    font-family: "Montserrat", sans-serif !important;
+    font-weight: 500;
+}
+
+table thead tr th {
+    border: 1px solid #ccc;
+    text-align: left;
+}
+
+table tbody tr td {
+    border: 1px solid #ccc;
+}
+
+.btn-primary {
+    @apply bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 border-0;
+}
+.btn-error {
+    @apply bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 border-0;
+}
+
+.dark {
+    @apply bg-gray-900 text-gray-100;
+}
+/* .sidebar {
+  height: 100vh;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+} */
+.ck-editor ul {
+    @apply list-disc list-inside;
+}
+
+.main-table {
+    @apply overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800;
+}
+.main-table table {
+    @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
+}
+.main-table table thead {
+    @apply bg-gray-50 dark:bg-gray-900;
+}
+
+.main-table table thead th {
+    @apply w-16 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider;
+}
+
+.main-table table thead .balk-select-check {
+    @apply w-10 px-3 py-3 text-left;
+}
+
+.main-table table tbody {
+    @apply bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700;
+}
+
+.main-table table tbody tr {
+    @apply hover:bg-gray-50 dark:hover:bg-gray-700;
+}
+
+.main-table table tbody tr td {
+    @apply px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-300;
+}
+.main-table table tbody tr .actions {
+    @apply px-3 py-4 whitespace-nowrap text-center;
+}
+
+.table_delete_action {
+    @apply bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition duration-200;
+}
+.table_edit_action {
+    @apply bg-blue-600 text-white inline-flex px-3 py-2 rounded-md hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition duration-200;
+}
+.table_view_action {
+    @apply bg-green-600 text-white inline-flex px-3 py-2 rounded-md hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 transition duration-200;
+}
+.table_expand_action {
+    @apply bg-gray-600 text-white px-3 py-2 rounded-md hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 transition duration-200;
+}
+.table_quick_edit_action {
+    @apply bg-yellow-600 text-white px-3 py-2 rounded-md hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 transition duration-200;
+}
+
+/* ck editor css */
+
+@media print {
+    body {
+        margin: 0 !important;
+    }
+}
+
+.main-container {
+    font-family: "Lato";
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.ck-content {
+    font-family: "Lato";
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.editor-container_classic-editor .editor-container__editor {
+    min-width: 795px;
+    max-width: 795px;
+}
+
+.ck-content h3.category {
+    font-family: "Oswald";
+    font-size: 20px;
+    font-weight: bold;
+    color: #555;
+    letter-spacing: 10px;
+    margin: 0;
+    padding: 0;
+}
+
+.ck-content h2.document-title {
+    font-family: "Oswald";
+    font-size: 50px;
+    font-weight: bold;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.ck-content h3.document-subtitle {
+    font-family: "Oswald";
+    font-size: 20px;
+    color: #555;
+    margin: 0 0 1em;
+    font-weight: bold;
+    padding: 0;
+}
+
+.ck-content p.info-box {
+    --background-size: 30px;
+    --background-color: #e91e63;
+    padding: 1.2em 2em;
+    border: 1px solid var(--background-color);
+    background:
+        linear-gradient(
+            135deg,
+            var(--background-color) 0%,
+            var(--background-color) var(--background-size),
+            transparent var(--background-size)
+        ),
+        linear-gradient(
+            135deg,
+            transparent calc(100% - var(--background-size)),
+            var(--background-color) calc(100% - var(--background-size)),
+            var(--background-color)
+        );
+    border-radius: 10px;
+    margin: 1.5em 2em;
+    box-shadow: 5px 5px 0 #ffe6ef;
+}
+
+.ck-content blockquote.side-quote {
+    font-family: "Oswald";
+    font-style: normal;
+    float: right;
+    width: 35%;
+    position: relative;
+    border: 0;
+    overflow: visible;
+    z-index: 1;
+    margin-left: 1em;
+}
+
+.ck-content blockquote.side-quote::before {
+    content: "“";
+    position: absolute;
+    top: -37px;
+    left: -10px;
+    display: block;
+    font-size: 200px;
+    color: #e7e7e7;
+    z-index: -1;
+    line-height: 1;
+}
+
+.ck-content blockquote.side-quote p {
+    font-size: 2em;
+    line-height: 1;
+}
+
+.ck-content blockquote.side-quote p:last-child:not(:first-child) {
+    font-size: 1.3em;
+    text-align: right;
+    color: #555;
+}
+
+.ck-content span.marker {
+    background: yellow;
+}
+
+.ck-content span.spoiler {
+    background: #000;
+    color: #000;
+}
+
+.ck-content span.spoiler:hover {
+    background: #000;
+    color: #fff;
+}
+
+.ck-content pre.fancy-code {
+    border: 0;
+    margin-left: 2em;
+    margin-right: 2em;
+    border-radius: 10px;
+}
+
+.ck-content pre.fancy-code::before {
+    content: "";
+    display: block;
+    height: 13px;
+    margin-bottom: 8px;
+    background-repeat: no-repeat;
+}
+
+.ck-content pre.fancy-code-dark {
+    background: #272822;
+    color: #fff;
+    box-shadow: 5px 5px 0 #0000001f;
+}
+
+.ck-content pre.fancy-code-bright {
+    background: #dddfe0;
+    color: #000;
+    box-shadow: 5px 5px 0 #b3b3b3;
+}

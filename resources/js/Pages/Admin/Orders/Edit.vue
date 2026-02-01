@@ -1,0 +1,1067 @@
+<script setup>
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref, computed, watch, onMounted } from 'vue';
+import { router } from '@inertiajs/vue3';
+import { toast } from "@steveyuowo/vue-hot-toast"
+import StatusDropdown from '@/Components/Order/StatusDropdown.vue';
+
+// Debounce function to delay execution
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
+const props = defineProps({
+  order: Object,
+  products: Object,
+  paymentMethods: Array,
+  orderStatuses: Array,
+  paymentStatuses: Array,
+});
+
+const perPage = ref(props.products.per_page || 10);
+const search = ref('');
+const currentPage = ref(props.products.current_page || 1);
+const loading = ref(false);
+
+// State for selected attributes per product
+const selectedAttributes = ref({});
+
+// State for selected variations per product
+const selectedVariations = ref({});
+
+// State for error messages per product
+const errorMessages = ref({});
+
+// State for quantities per product
+const quantities = ref({});
+
+// State for pending quantity changes (item.id => { originalQuantity, newQuantity })
+const pendingQuantityChanges = ref({});
+
+// State for display order items
+const displayOrderItems = ref([...props.order.items.map(item => ({
+  ...item,
+  isNew: false,
+  stockLimit: item.product.type === 'variable' ? item.product_variation?.stock : item.product.stock,
+  isVariationDeleted: item.product_variation_id && item.product_variation?.is_deleted === true,
+  isProductDeleted: item.product?.is_deleted === true,
+}))]);
+
+// Check if there are pending changes
+const hasPendingChanges = computed(() => {
+  return Object.keys(pendingQuantityChanges.value).length > 0;
+});
+
+// Form for order updates
+const form = useForm({
+  customer_name: props.order.customer_name,
+  customer_phone: props.order.customer_phone,
+  customer_email: props.order.customer_email,
+  shipping_address: props.order.shipping_address,
+  admin_notes: props.order.admin_notes || '',
+  payment_status: props.order.payment_status,
+  payment_method: props.order.payment_method,
+  discount: props.order.pos_discount || 0,
+  discount_type: props.order.discount_type || 'fixed',
+  shipping_cost: props.order.shipping_cost || 0,
+  area: props.order.area || 'inside_dhaka',
+  status: props.order.status || 'pending',
+});
+
+// Initialize quantities and search value on mount
+onMounted(() => {
+  const url = new URL(window.location.href);
+  const searchParam = url.searchParams.get('search');
+  if (searchParam) {
+    search.value = searchParam;
+  }
+  // Initialize quantities for all products
+  props.products.data.forEach(product => {
+    quantities.value[product.id] = 1;
+  });
+});
+
+// Go back to previous page
+const goBack = () => {
+  window.history.back();
+};
+
+// Compute filtered products based on search
+const filteredProducts = computed(() => {
+  if (!search.value) return props.products.data;
+  const searchTerm = search.value.toLowerCase();
+  return props.products.data.filter(product =>
+    product.name.toLowerCase().includes(searchTerm) ||
+    product.id.toString().includes(searchTerm) ||
+    product.price.toString().includes(searchTerm) ||
+    product.status.toLowerCase().includes(searchTerm)
+  );
+});
+
+// Compute order subtotal (sum of all item prices)
+const orderSubtotal = computed(() => {
+  return parseFloat(props.order.subtotal) || 0;
+});
+
+// Compute discount amount based on discount type
+// POS discount is calculated on: subtotal + shipping
+const discountAmount = computed(() => {
+  const discountValue = parseFloat(form.discount) || 0;
+
+  if (!discountValue || discountValue <= 0) return 0;
+
+  // Base for discount calculation: subtotal + shipping (same as POS)
+  const base = orderSubtotal.value + (parseFloat(form.shipping_cost) || 0);
+
+  if (form.discount_type === 'percentage') {
+    return (base * Math.min(discountValue, 100)) / 100;
+  }
+
+  return Math.min(discountValue, base);
+});
+
+// Compute order total with discount
+// Formula: subtotal + shipping - discount (same as database and POS)
+const orderTotalWithDiscount = computed(() => {
+  const subtotal = orderSubtotal.value;
+  const shipping = parseFloat(form.shipping_cost) || 0;
+  const discount = discountAmount.value;
+  return Math.max(0, subtotal + shipping - discount);
+});
+
+// Truncate product name to a specified word limit
+const truncateName = (name, wordLimit = 2) => {
+  const words = name.split(' ');
+  if (words.length <= wordLimit) return name;
+  return words.slice(0, wordLimit).join(' ') + '...';
+};
+
+// Get unique attributes for a product
+const getUniqueAttributes = (product) => {
+  const attributes = {};
+  if (product.variations && product.variations.length > 0) {
+    product.variations.forEach(variation => {
+      variation.attributes.forEach(attr => {
+        const attrName = attr.value.attribute.name;
+        const attrValue = attr.value.value;
+        if (!attributes[attrName]) {
+          attributes[attrName] = new Set();
+        }
+        attributes[attrName].add(attrValue);
+      });
+    });
+  }
+  return attributes;
+};
+
+// Compute available variations for a product based on selected attributes
+const getAvailableVariations = (product) => {
+  if (!product.variations || product.variations.length === 0) return [];
+
+  const selectedAttrs = selectedAttributes.value[product.id] || {};
+  const hasAllAttributesSelected = Object.keys(getUniqueAttributes(product)).every(attrName => selectedAttrs[attrName]);
+
+  if (product.id === 4 && hasAllAttributesSelected) {
+    const selectedSize = selectedAttrs['Size'];
+    const selectedColor = selectedAttrs['Color'];
+    if (
+      (selectedSize === 'XL' && selectedColor === 'Black') ||
+      (selectedSize === 'L' && selectedColor === 'Black')
+    ) {
+      errorMessages.value[product.id] = `Variation not available for ${selectedSize} ${selectedColor}`;
+      return [];
+    }
+  }
+
+  const matchingVariations = product.variations.filter(variation => {
+    return variation.attributes.every(attr => {
+      const attrName = attr.value.attribute.name;
+      const attrValue = attr.value.value;
+      return selectedAttrs[attrName] === attrValue;
+    });
+  });
+
+  if (hasAllAttributesSelected && matchingVariations.length === 0) {
+    errorMessages.value[product.id] = 'Selected variation combination not available';
+  } else {
+    errorMessages.value[product.id] = null;
+  }
+
+  return matchingVariations;
+};
+
+// Get attributes for an order item
+const getItemAttributes = (item) => {
+  if (!item.product_variation || !item.product_variation.attributes) return [];
+  return item.product_variation.attributes.map(attr => ({
+    name: attr.value.attribute.name,
+    value: attr.value.value,
+  }));
+};
+
+// Handle attribute selection
+const selectAttribute = (product, attrName, attrValue) => {
+  if (!selectedAttributes.value[product.id]) {
+    selectedAttributes.value[product.id] = {};
+  }
+  selectedAttributes.value[product.id][attrName] = attrValue;
+
+  const matchingVariations = getAvailableVariations(product);
+  selectedVariations.value[product.id] = matchingVariations.length === 1 ? matchingVariations[0] : null;
+};
+
+// Increment quantity for a product
+const incrementQuantity = (product) => {
+  const stockLimit = product.type === 'variable' ? (selectedVariations.value[product.id]?.stock || 0) : product.stock;
+  if (quantities.value[product.id] < stockLimit) {
+    quantities.value[product.id] += 1;
+  } else {
+    toast.error(`Maximum stock reached (${stockLimit})`);
+  }
+};
+
+// Decrement quantity for a product
+const decrementQuantity = (product) => {
+  if (quantities.value[product.id] > 1) {
+    quantities.value[product.id] -= 1;
+  }
+};
+
+// Handle per page change
+const updatePerPage = () => {
+  router.get(`/admin/orders/${props.order.id}/edit`, {
+    per_page: perPage.value,
+    search: search.value
+  }, {
+    preserveState: true,
+    preserveScroll: true
+  });
+};
+
+// Debounced search function
+const debouncedSearch = debounce(() => {
+  router.get(`/admin/orders/${props.order.id}/edit`, {
+    per_page: perPage.value,
+    search: search.value,
+    page: currentPage.value
+  }, {
+    preserveState: true,
+    preserveScroll: true
+  });
+}, 500);
+
+// Watch for search input changes
+watch(search, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
+    debouncedSearch();
+  }
+});
+
+// Clear search input
+const clearSearch = () => {
+  search.value = '';
+  router.get(`/admin/orders/${props.order.id}/edit`, {
+    per_page: perPage.value,
+    search: '',
+    page: 1
+  }, {
+    preserveState: true,
+    preserveScroll: true
+  });
+};
+
+// Handle pagination
+const goToPage = (page) => {
+  currentPage.value = page;
+  router.get(`/admin/orders/${props.order.id}/edit`, {
+    page: page,
+    per_page: perPage.value,
+    search: search.value
+  }, {
+    preserveState: true,
+    preserveScroll: true
+  });
+};
+
+// Handle Order New button click
+const orderNew = (product) => {
+  const variationId = selectedVariations.value[product.id]?.id || null;
+  if (product.type === 'variable' && !variationId) {
+    toast.error('Please select a valid variation');
+    return;
+  }
+
+  // Get the selected quantity to add
+  const quantity = quantities.value[product.id] || 1;
+
+  // Check for existing item
+  const existingItem = displayOrderItems.value.find(item =>
+    item.product_id === product.id &&
+    item.product_variation_id === variationId
+  );
+
+  // Get current available stock (this is what's LEFT in inventory)
+  const availableStock = product.type === 'variable' ? selectedVariations.value[product.id].stock : product.stock;
+
+  // Simple validation: Can we add the requested quantity based on available stock?
+  // We only check if the AMOUNT TO ADD exceeds available stock
+  if (quantity > availableStock) {
+    toast.error(`Cannot add ${quantity} items. Only ${availableStock} available in stock.`);
+    return;
+  }
+
+  loading.value = true;
+  // Send only the quantity to ADD, not the new total (backend will handle the addition)
+  router.post(`/orders/${props.order.id}/update`, {
+    items: [{
+      product_id: product.id,
+      product_variation_id: variationId,
+      quantity: quantity
+    }]
+  }, {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      // Reload order to sync with server state
+      router.reload({
+        only: ['order'],
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+          // Update displayOrderItems with the latest order items
+          displayOrderItems.value = props.order.items.map(item => ({
+            ...item,
+            isNew: false,
+            stockLimit: item.product.type === 'variable' ? item.product_variation?.stock : item.product.stock,
+            isVariationDeleted: item.product_variation_id && item.product_variation?.is_deleted === true,
+            isProductDeleted: item.product?.is_deleted === true,
+          }));
+          toast.success('Item added to order successfully');
+          // Reset selection and quantity for this product
+          selectedAttributes.value[product.id] = {};
+          selectedVariations.value[product.id] = null;
+          quantities.value[product.id] = 1;
+        }
+      });
+    },
+    onError: (errors) => {
+      console.error('Error adding item to order:', errors);
+      const errorMessage = errors.message || 'Failed to add item to order';
+      errorMessages.value[product.id] = errorMessage;
+      toast.error(errorMessage);
+    },
+    onFinish: () => {
+      loading.value = false;
+    }
+  });
+};
+
+// Handle item removal
+const removeItem = (itemId) => {
+  loading.value = true;
+  router.delete(`/orders/${props.order.id}/items/${itemId}`, {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      // Reload order to sync with server state
+      router.reload({
+        only: ['order'],
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+          // Update displayOrderItems with the latest order items
+          displayOrderItems.value = props.order.items.map(item => ({
+            ...item,
+            isNew: false,
+            stockLimit: item.product.type === 'variable' ? item.product_variation?.stock : item.product.stock,
+            isVariationDeleted: item.product_variation_id && item.product_variation?.is_deleted === true,
+            isProductDeleted: item.product?.is_deleted === true,
+          }));
+          toast.success('Item removed from order successfully');
+        },
+        onError: (errors) => {
+          console.error('Error reloading order:', errors);
+          toast.error('Failed to refresh order');
+        }
+      });
+    },
+    onError: (errors) => {
+      console.error('Error removing item:', errors);
+      toast.error(errors.message || 'Failed to remove item');
+    },
+    onFinish: () => {
+      loading.value = false;
+    }
+  });
+};
+
+// Increment quantity (for order items - now tracks pending changes)
+const incrementOrderItemQuantity = (item) => {
+  const pending = pendingQuantityChanges.value[item.id];
+
+  // Get the TRUE original quantity (before any pending changes)
+  // If we already have pending changes, use the stored originalQuantity
+  // Otherwise, the current item.quantity IS the original
+  const trueOriginalQuantity = pending ? pending.originalQuantity : item.quantity;
+  const currentQuantity = pending ? pending.newQuantity : item.quantity;
+
+  // Get available stock (what's LEFT in inventory)
+  const availableStock = item.stockLimit;
+
+  // Calculate how many items we've ALREADY added (pending additions)
+  const pendingAdditions = currentQuantity - trueOriginalQuantity;
+
+  // Check if adding 1 more would exceed available stock
+  // pendingAdditions + 1 > availableStock means we can't add more
+  if (pendingAdditions + 1 > availableStock) {
+    toast.error(`Cannot add more. Only ${availableStock} available in stock. Already added ${pendingAdditions}.`);
+    return;
+  }
+
+  const newQuantity = currentQuantity + 1;
+
+  // Track the pending change - always use the TRUE original
+  if (newQuantity === trueOriginalQuantity) {
+    // If back to original, remove from pending
+    delete pendingQuantityChanges.value[item.id];
+  } else {
+    pendingQuantityChanges.value[item.id] = {
+      originalQuantity: trueOriginalQuantity,
+      newQuantity,
+      itemId: item.id
+    };
+  }
+
+  // Update display immediately
+  const displayItem = displayOrderItems.value.find(i => i.id === item.id);
+  if (displayItem) {
+    displayItem.quantity = newQuantity;
+    displayItem.final_price = (newQuantity * parseFloat(displayItem.unit_price)).toFixed(2);
+  }
+};
+
+// Decrement quantity (for order items - now tracks pending changes)
+const decrementOrderItemQuantity = (item) => {
+  const pending = pendingQuantityChanges.value[item.id];
+
+  // Get the TRUE original quantity (before any pending changes)
+  const trueOriginalQuantity = pending ? pending.originalQuantity : item.quantity;
+  const currentQuantity = pending ? pending.newQuantity : item.quantity;
+
+  if (currentQuantity <= 1) {
+    toast.error('Quantity cannot be less than 1. Use remove button to delete item.');
+    return;
+  }
+
+  const newQuantity = currentQuantity - 1;
+
+  // Track the pending change - always use the TRUE original
+  if (newQuantity === trueOriginalQuantity) {
+    // If back to original, remove from pending
+    delete pendingQuantityChanges.value[item.id];
+  } else {
+    pendingQuantityChanges.value[item.id] = {
+      originalQuantity: trueOriginalQuantity,
+      newQuantity,
+      itemId: item.id
+    };
+  }
+
+  // Update display immediately
+  const displayItem = displayOrderItems.value.find(i => i.id === item.id);
+  if (displayItem) {
+    displayItem.quantity = newQuantity;
+    displayItem.final_price = (newQuantity * parseFloat(displayItem.unit_price)).toFixed(2);
+  }
+};
+
+// Save all pending quantity changes
+const saveQuantityChanges = () => {
+  if (!hasPendingChanges.value) return;
+
+  loading.value = true;
+  const changes = Object.values(pendingQuantityChanges.value);
+  let completed = 0;
+  let errors = [];
+
+  // Process each change sequentially
+  const processNext = (index) => {
+    if (index >= changes.length) {
+      // All done
+      loading.value = false;
+      if (errors.length === 0) {
+        toast.success('All quantity changes saved successfully');
+        pendingQuantityChanges.value = {};
+        // Reload to get fresh data
+        router.reload({
+          only: ['order'],
+          preserveState: true,
+          preserveScroll: true,
+          onSuccess: () => {
+            displayOrderItems.value = props.order.items.map(orderItem => ({
+              ...orderItem,
+              isNew: false,
+              stockLimit: orderItem.product.type === 'variable' ? orderItem.product_variation?.stock : orderItem.product.stock,
+              isVariationDeleted: orderItem.product_variation_id && orderItem.product_variation?.is_deleted === true,
+              isProductDeleted: orderItem.product?.is_deleted === true,
+            }));
+          }
+        });
+      } else {
+        toast.error(`${errors.length} change(s) failed. Please check and try again.`);
+      }
+      return;
+    }
+
+    const change = changes[index];
+    router.put(`/orders/${props.order.id}/items/${change.itemId}`, {
+      quantity: change.newQuantity
+    }, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        completed++;
+        delete pendingQuantityChanges.value[change.itemId];
+        processNext(index + 1);
+      },
+      onError: (err) => {
+        errors.push({ itemId: change.itemId, error: err });
+        processNext(index + 1);
+      }
+    });
+  };
+
+  processNext(0);
+};
+
+// Cancel pending changes and revert display
+const cancelQuantityChanges = () => {
+  // Revert display items to original quantities
+  displayOrderItems.value = props.order.items.map(item => ({
+    ...item,
+    isNew: false,
+    stockLimit: item.product.type === 'variable' ? item.product_variation?.stock : item.product.stock,
+    isVariationDeleted: item.product_variation_id && item.product_variation?.is_deleted === true,
+    isProductDeleted: item.product?.is_deleted === true,
+  }));
+  pendingQuantityChanges.value = {};
+  toast.info('Changes cancelled');
+};
+
+// Submit form for customer info updates
+const submitForm = () => {
+  form.post(`/orders/${props.order.id}/basic-info`, {
+    preserveScroll: true,
+    onSuccess: (page) => {
+      // Check for flash message from backend
+      if (page.props.flash?.success) {
+        toast.success(page.props.flash.success);
+      } else {
+        toast.success('Order updated successfully');
+      }
+      // Go back to previous page
+      window.history.back();
+    },
+    onError: (errors) => {
+      console.log('Error updating order:', errors);
+      toast.error('Failed to update order');
+    },
+  });
+};
+</script>
+
+<template>
+  <Head title="Edit Order" />
+  <AdminLayout>
+    <div class="w-full bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen p-4 md:p-8">
+      <!-- Header Section -->
+      <div class="mb-8">
+        <div class="flex justify-between items-start gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z" />
+                </svg>
+              </div>
+              <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Order #{{ order.id }}</h1>
+            </div>
+            <div class="flex flex-wrap gap-4 ml-12 mt-2">
+              <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</p>
+                <p class="text-sm font-medium text-gray-700 mt-1">
+                  <span :class="['inline-flex items-center px-3 py-1 rounded-full text-xs font-medium',
+                    order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-blue-100 text-blue-800'
+                  ]">
+                    {{ order.status }}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Updated</p>
+                <p class="text-sm font-medium text-gray-700 mt-1">{{ new Date(order.updated_at).toLocaleDateString() }}</p>
+              </div>
+            </div>
+          </div>
+          <button @click="goBack" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg transition-all duration-200 hover:shadow-md font-medium text-sm group">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        <!-- Left Column: Order Items & Customer Info -->
+        <div class="lg:col-span-1 space-y-6 lg:space-y-8">
+          <!-- Order Items Card (Top) -->
+          <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-primary/6 to-primary/10 px-6 py-4 border-b border-gray-200">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M7 4a3 3 0 000 6h10a3 3 0 100-6H7zM7 10a3 3 0 000 6h10a3 3 0 100-6H7z" />
+                    </svg>
+                    Order Items
+                  </h2>
+                  <p class="text-sm text-gray-600">{{ displayOrderItems.length }} item{{ displayOrderItems.length !== 1 ? 's' : '' }} in this order</p>
+                </div>
+                <!-- Save/Cancel buttons for pending quantity changes -->
+                <div v-if="hasPendingChanges" class="flex items-center gap-2">
+                  <span class="text-xs text-amber-600 font-medium">Unsaved changes</span>
+                  <button
+                    @click="cancelQuantityChanges"
+                    :disabled="loading"
+                    class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    @click="saveQuantityChanges"
+                    :disabled="loading"
+                    class="px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1"
+                  >
+                    <svg v-if="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="displayOrderItems.length > 0" class="overflow-x-auto max-h-96">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Product</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Qty</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total</th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Act</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="item in displayOrderItems" :key="item.id" class="hover:bg-primary/6 transition-colors text-xs">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <div class="flex-shrink-0 h-8 w-8 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
+                          <img :src="item.product.feature_image" alt="product image" class="h-full w-full object-cover" />
+                        </div>
+                        <div>
+                          <div class="font-semibold text-gray-900">{{ truncateName(item.product.name, 1) }}</div>
+                          <div v-if="item.product_variation && item.product_variation.attributes && item.product_variation.attributes.length > 0" class="flex flex-wrap gap-1 mt-1">
+                            <span v-for="attr in item.product_variation.attributes" :key="attr.id" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              {{ attr.value.attribute.name }}: {{ attr.value.value }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                      <div class="flex items-center gap-1">
+                        <button @click="decrementOrderItemQuantity(item)" :disabled="loading || item.quantity <= 1 || item.isVariationDeleted || item.isProductDeleted" :title="item.isVariationDeleted ? 'Variation has been deleted' : item.isProductDeleted ? 'Product has been deleted' : ''" class="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs font-bold transition-colors">
+                          -
+                        </button>
+                        <span
+                          class="font-bold min-w-[2rem] text-center"
+                          :class="[
+                            item.isVariationDeleted || item.isProductDeleted ? 'text-red-600' :
+                            pendingQuantityChanges[item.id] ? 'text-amber-600 bg-amber-100 px-1 rounded' :
+                            'text-gray-900'
+                          ]"
+                        >
+                          {{ item.quantity }}
+                          <span v-if="pendingQuantityChanges[item.id]" class="text-xs">*</span>
+                        </span>
+                        <button
+                          @click="incrementOrderItemQuantity(item)"
+                          :disabled="loading || item.isVariationDeleted || item.isProductDeleted || ((pendingQuantityChanges[item.id]?.newQuantity || item.quantity) - (pendingQuantityChanges[item.id]?.originalQuantity || item.quantity) >= item.stockLimit)"
+                          :title="item.isVariationDeleted ? 'Variation has been deleted' : item.isProductDeleted ? 'Product has been deleted' : (item.stockLimit <= 0 ? 'No stock available' : '')"
+                          class="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs font-bold transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div v-if="item.isVariationDeleted" class="text-xs text-red-600 mt-1 italic">
+                        Variation deleted
+                      </div>
+                      <div v-else-if="item.isProductDeleted" class="text-xs text-red-600 mt-1 italic">
+                        Product deleted
+                      </div>
+                      <div v-else-if="pendingQuantityChanges[item.id]" class="text-xs text-amber-600 mt-1 italic">
+                        Was: {{ pendingQuantityChanges[item.id].originalQuantity }}
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                      <span class="font-bold text-emerald-600">৳{{ item.final_price }}</span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-center">
+                      <button @click="removeItem(item.id)" :disabled="loading" class="text-red-600 hover:text-red-800 disabled:opacity-50 font-bold">
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div v-else class="px-6 py-8 text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z" />
+              </svg>
+              <p class="text-gray-500 font-medium text-sm">No items yet</p>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-t border-gray-200">
+              <div class="space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-gray-600">Subtotal</span>
+                  <span class="font-semibold text-gray-900">৳{{ orderSubtotal.toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-gray-600">Shipping</span>
+                  <span class="font-semibold text-gray-900">৳{{ form.shipping_cost || 0 }}</span>
+                </div>
+                <div v-if="discountAmount > 0" class="flex justify-between items-center text-sm text-red-600">
+                  <span>Discount <span class="text-xs text-gray-500">({{ form.discount_type === 'percentage' ? form.discount + '%' : '৳' + discountAmount.toFixed(2) }})</span></span>
+                  <span class="font-semibold">-৳{{ discountAmount.toFixed(2) }}</span>
+                </div>
+                <div class="border-t border-gray-300 pt-2 flex justify-between items-center">
+                  <span class="text-gray-900 font-bold text-sm">Total</span>
+                  <span class="text-lg font-bold text-emerald-600">৳{{ orderTotalWithDiscount.toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer Information Card (Bottom) -->
+          <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
+              <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM9 6a3 3 0 11-6 0 3 3 0 016 0zm0 0a3 3 0 11-6 0 3 3 0 016 0zM9 10a3 3 0 11-6 0 3 3 0 016 0zm0 0a3 3 0 11-6 0 3 3 0 016 0zm0 0a3 3 0 11-6 0 3 3 0 016 0zm7-4a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Customer Info
+              </h2>
+            </div>
+
+            <div class="p-6 space-y-5">
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Customer Name</label>
+                <input v-model="form.customer_name" type="text" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Enter customer name" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Phone Number</label>
+                <input v-model="form.customer_phone" type="text" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Enter phone number" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Email Address</label>
+                <input v-model="form.customer_email" type="email" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Enter email address" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Shipping Address</label>
+                <textarea v-model="form.shipping_address" rows="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none" placeholder="Enter shipping address"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Admin Notes</label>
+                <textarea v-model="form.admin_notes" rows="3" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none" placeholder="Enter admin notes (internal use only)"></textarea>
+              </div>
+
+              <div class="border-t border-gray-200 pt-4">
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Payment Status</label>
+                <select v-model="form.payment_status" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white">
+                  <option v-for="(status, key) in paymentStatuses" :key="key" :value="key">{{ status }}</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Payment Method</label>
+                <select v-model="form.payment_method" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white">
+                  <option v-for="(method, key) in paymentMethods" :key="key" :value="key">{{ method }}</option>
+                </select>
+              </div>
+
+              <div class="border-t border-gray-200 pt-4">
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Order Status</label>
+                <StatusDropdown
+                  v-model="form.status"
+                  :order-id="order.id"
+                  :is-loading="loading"
+                  @status-change="(orderId, newStatus) => form.status = newStatus"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Delivery Area</label>
+                <select v-model="form.area" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white">
+                  <option value="inside_dhaka">Inside Dhaka</option>
+                  <option value="outside_dhaka">Outside Dhaka</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Shipping Cost (৳)</label>
+                <input v-model.number="form.shipping_cost" type="number" min="0" step="0.01" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Enter shipping cost" />
+              </div>
+
+              <!-- Discount Settings -->
+              <div class="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-sm font-medium text-gray-700">Discount Settings</h3>
+                  <div class="text-xs text-gray-500">Optional</div>
+                </div>
+                <div class="flex items-end space-x-2">
+                  <div class="flex-1">
+                    <label class="text-xs text-gray-500 block mb-1">Order Discount</label>
+                    <input
+                      v-model.number="form.discount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="Enter discount amount"
+                    />
+                  </div>
+                  <div class="w-32">
+                    <label class="text-xs text-gray-500 block mb-1">Type</label>
+                    <select
+                      v-model="form.discount_type"
+                      class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white"
+                    >
+                      <option value="fixed">Fixed</option>
+                      <option value="percentage">Percent</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="mt-2 text-xs text-gray-500">
+                  {{ form.discount_type === 'percentage' ?
+                    'Percentage will be applied to subtotal' :
+                    'Fixed amount will be deducted from total' }}
+                </div>
+              </div>
+
+              <button @click="submitForm" :disabled="loading" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 text-white py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold shadow-sm hover:shadow-md">
+                <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                </svg>
+                <span>{{ loading ? 'Updating...' : 'Save Changes' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Available Products -->
+        <div class="lg:col-span-2">
+          <!-- Products Card -->
+          <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-50 to-emerald-100 px-6 py-4 border-b border-gray-200">
+              <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2 mb-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 6H6.28l-.31-1.243A1 1 0 005 4H3z" />
+                </svg>
+                Available Products
+              </h2>
+              <p class="text-sm text-gray-600">Add products to this order</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div class="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+                <div class="flex items-center gap-3">
+                  <label for="perPage" class="text-sm font-medium text-gray-700">Show per page:</label>
+                  <select v-model="perPage" @change="updatePerPage" class="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-medium bg-white">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
+                <div class="relative w-full sm:w-72">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <input v-model="search" type="text" placeholder="Search products..." class="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm font-medium" />
+                  <button v-if="search" @click="clearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600">
+                    <svg class="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Products Table -->
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Product</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Price</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Stock</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Qty</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Variations</th>
+                    <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-for="product in filteredProducts" :key="product.id" class="hover:bg-blue-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0 h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          <img :src="product.feature_image" alt="product image" class="h-full w-full object-cover" />
+                        </div>
+                        <div class="ml-4">
+                          <div class="text-sm font-semibold text-gray-900">{{ truncateName(product.name) }}</div>
+                          <div class="text-xs text-gray-500 font-medium">SKU: {{ product.id }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="text-sm font-bold text-emerald-600">৳ {{ product.price }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold',
+                        (product.type === 'variable' && selectedVariations[product.id] ? selectedVariations[product.id].stock : product.stock) > 0
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      ]">
+                        {{ product.type === 'variable' && selectedVariations[product.id] ? selectedVariations[product.id].stock : product.stock }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
+                        <button @click="decrementQuantity(product)" :disabled="quantities[product.id] <= 1" class="px-2 py-1 bg-white rounded hover:bg-gray-200 text-gray-700 disabled:opacity-50 font-semibold transition-colors">
+                          −
+                        </button>
+                        <span class="text-sm w-6 text-center font-bold text-gray-900">{{ quantities[product.id] }}</span>
+                        <button @click="incrementQuantity(product)" :disabled="quantities[product.id] >= (product.type === 'variable' ? (selectedVariations[product.id]?.stock || 0) : product.stock)" class="px-2 py-1 bg-white rounded hover:bg-gray-200 text-gray-700 disabled:opacity-50 font-semibold transition-colors">
+                          +
+                        </button>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div v-if="product.variations && product.variations.length > 0" class="space-y-3">
+                        <div v-for="(values, attrName) in getUniqueAttributes(product)" :key="attrName">
+                          <span class="text-xs font-bold text-gray-600 uppercase tracking-wide">{{ attrName }}</span>
+                          <div class="flex flex-wrap gap-2 mt-2">
+                            <button v-for="value in Array.from(values)" :key="value" @click="selectAttribute(product, attrName, value)" :class="[
+                              'px-2.5 py-1 text-xs rounded-full border font-medium transition-all',
+                              selectedAttributes[product.id]?.[attrName] === value
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600'
+                            ]">
+                              {{ value }}
+                            </button>
+                          </div>
+                        </div>
+                        <div v-if="errorMessages[product.id]" class="mt-2">
+                          <p class="text-xs text-red-600 font-medium flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                            {{ errorMessages[product.id] }}
+                          </p>
+                        </div>
+                        <div v-else-if="selectedVariations[product.id]" class="mt-2">
+                          <p class="text-xs text-green-600 font-medium flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                            {{ selectedVariations[product.id].stock }} in stock
+                          </p>
+                        </div>
+                      </div>
+                      <div v-else class="text-xs text-gray-500 font-medium italic">No variations</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button @click="orderNew(product)" :disabled="product.type === 'variable' && !selectedVariations[product.id] || loading" :class="[
+                        'inline-flex items-center px-3.5 py-2 border border-transparent text-xs font-bold rounded-lg shadow-sm text-white transition-all duration-200',
+                        product.type === 'variable' && !selectedVariations[product.id] || loading
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:shadow-md'
+                      ]">
+                        <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 -ml-1 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10.5 1.5H5.75A2.75 2.75 0 003 4.25v11A2.75 2.75 0 005.75 18h8.5A2.75 2.75 0 0017 15.25V9.5m-11-6.5v5m0-5l2.5 2.5M12.5 8.5h4.75" />
+                        </svg>
+                        {{ loading ? 'Adding...' : 'Add' }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+              <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p class="text-sm text-gray-700 font-medium">
+                    Showing <span class="text-gray-900 font-bold">{{ products.from }}</span> to <span class="text-gray-900 font-bold">{{ products.to }}</span> of <span class="text-gray-900 font-bold">{{ products.total }}</span> results
+                  </p>
+                </div>
+                <div v-if="products.links && products.links.length > 0">
+                  <nav class="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px gap-1" aria-label="Pagination">
+                    <button v-for="link in products.links" :key="link.label" @click="link.url && goToPage(parseInt(link.url.split('page=')[1]))" :disabled="!link.url" :class="[
+                      'relative inline-flex items-center px-3 py-2 border text-sm font-medium rounded transition-all',
+                      link.active
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600 shadow-sm'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
+                      !link.url ? 'opacity-50 cursor-not-allowed' : ''
+                    ]" v-html="link.label">
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </AdminLayout>
+</template>

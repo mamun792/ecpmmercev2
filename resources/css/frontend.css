@@ -1,0 +1,11 @@
+/* Frontend-only font overrides (Heebo) */
+
+/* Apply Heebo to the whole page when the body has the `frontend` class */
+body.frontend {
+  font-family: 'Jost', sans-serif !important;
+}
+
+/* Utility class to use Heebo selectively */
+.font-heebo {
+  font-family: 'Jost', sans-serif;
+}
