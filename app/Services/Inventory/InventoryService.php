@@ -463,6 +463,55 @@ class InventoryService
     }
 
     /**
+     * Get total available stock for a product across all locations
+     */
+    public function getTotalStock(int $productId, ?int $variationId = null): int
+    {
+        $query = InventoryStock::where('product_id', $productId);
+
+        if ($variationId) {
+            $query->where('product_variation_id', $variationId);
+        }
+
+        return $query->sum('available_quantity') ?: 0;
+    }
+
+    /**
+     * Get stock by location for a product
+     */
+    public function getStockByLocation(int $productId, ?int $variationId = null): array
+    {
+        $query = InventoryStock::where('product_id', $productId);
+
+        if ($variationId) {
+            $query->where('product_variation_id', $variationId);
+        }
+
+        return $query->get(['location_code', 'location_name', 'available_quantity', 'reserved_quantity'])
+            ->toArray();
+    }
+
+    /**
+     * Check if sufficient stock is available
+     */
+    public function hasStock(int $productId, int $requiredQuantity, ?int $variationId = null, ?string $locationCode = null): bool
+    {
+        $query = InventoryStock::where('product_id', $productId);
+
+        if ($variationId) {
+            $query->where('product_variation_id', $variationId);
+        }
+
+        if ($locationCode) {
+            $query->where('location_code', $locationCode);
+        }
+
+        $totalStock = $query->sum('available_quantity') ?: 0;
+
+        return $totalStock >= $requiredQuantity;
+    }
+
+    /**
      * Get location name from code
      */
     protected function getLocationName(string $locationCode): string

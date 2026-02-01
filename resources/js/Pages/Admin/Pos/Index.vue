@@ -204,6 +204,19 @@ const matchedVariation = computed(() => {
       raw_variation: matched,
       raw_product: currentProduct.value
     });
+
+    // V2 Inventory: Calculate available stock for variation
+    if (matched.inventoryStock && matched.inventoryStock.length > 0) {
+      matched.available_stock = matched.inventoryStock.reduce((total, stock) => total + (stock.available_quantity || 0), 0);
+    } else if (matched.stock) {
+      // Fallback to old stock column
+      matched.available_stock = matched.stock;
+    } else {
+      // Fallback to parent product stock if variation stock not available
+      matched.available_stock = currentProduct.value.available_stock || currentProduct.value.stock || 0;
+    }
+
+    console.log('💾 Stock calculated for variation:', matched.available_stock);
   }
 
   return matched;
@@ -787,24 +800,34 @@ onMounted(async () => {
 <template>
     <Head title="Point of Sale" />
     <AdminLayout>
-        <div class="min-h-screen bg-gray-50">
+        <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
             <!-- Header -->
-            <div class="bg-white shadow-sm border-b">
-                <div class="px-2 py-4">
+            <div class="bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 shadow-lg border-b-2 border-orange-200 dark:border-orange-900/50">
+                <div class="px-6 py-6">
                     <div class="flex items-center justify-between">
-                        <h1 class="text-2xl font-bold text-gray-900">
-                            Point of Sale
-                        </h1>
-                        <div class="flex items-center space-x-3">
-                            <div
-                                class="px-3 py-1 rounded-full text-sm font-medium border border-gray-200 text-gray-700 bg-white"
-                            >
-                                {{ cartItemsCount }} items
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                                <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                                </svg>
                             </div>
-                            <div
-                                class="px-3 py-1 rounded-full text-sm font-medium border border-gray-200 text-gray-700 bg-white"
-                            >
-                                ৳{{ formatPrice(cartTotal) }}
+                            <div>
+                                <h1 class="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
+                                    Point of Sale
+                                </h1>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Smart POS System v2.0</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="px-4 py-2 rounded-xl text-sm font-bold border-2 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm">
+                                    <span class="text-xs uppercase tracking-wider">Items</span>
+                                    <span class="ml-2 text-lg">{{ cartItemsCount }}</span>
+                                </div>
+                                <div class="px-4 py-2 rounded-xl text-sm font-bold border-2 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 shadow-sm">
+                                    <span class="text-xs uppercase tracking-wider">Total</span>
+                                    <span class="ml-2 text-lg">৳{{ formatPrice(cartTotal) }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -813,30 +836,47 @@ onMounted(async () => {
 
             <div class="flex flex-col lg:flex-row h-full">
                 <!-- Products Section -->
-                <div class="w-full xl:w-2/3 p-3">
+                <div class="w-full xl:w-2/3 p-6">
                     <!-- Search and Filters -->
-                    <div class="bg-white rounded-lg shadow-sm border p-4 mb-6">
-                        <div class="flex items-center justify-between">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 border-gray-100 dark:border-gray-700 p-6 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Product Search</h3>
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                Showing {{ paginationInfo.from }}-{{ paginationInfo.to }} of {{ paginationInfo.total }} products
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-6">
                             <div class="flex items-center space-x-4 flex-1">
                                 <div class="flex-1 relative">
                                     <input
                                         v-model="searchQuery"
                                         type="text"
-                                        placeholder="Search products by name or code..."
-                                        class="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="Search products by name, code, or barcode..."
+                                        class="w-full pl-12 pr-6 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 text-sm font-medium shadow-sm transition-all"
                                     />
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/>
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Per Page Selector -->
-                            <div class="ml-4 flex items-center space-x-2">
-                                <label class="text-sm text-gray-600"
-                                    >Show:</label
-                                >
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Show:</span>
                                 <select
                                     :value="perPage"
                                     @change="changePerPage($event.target.value)"
-                                    class="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    class="px-4 py-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all"
                                 >
                                     <option value="10">10</option>
                                     <option value="25">25</option>
@@ -924,39 +964,39 @@ onMounted(async () => {
                                         <span
                                             v-else
                                             :class="{
-                                                'bg-green-50 text-green-700 border-green-200':
-                                                    product.stock > 10,
-                                                'bg-yellow-50 text-yellow-700 border-yellow-200':
-                                                    product.stock > 0 &&
-                                                    product.stock <= 10,
+                                                'bg-emerald-50 text-emerald-700 border-emerald-200':
+                                                    product.available_stock > 10,
+                                                'bg-amber-50 text-amber-700 border-amber-200':
+                                                    product.available_stock > 0 &&
+                                                    product.available_stock <= 10,
                                                 'bg-red-50 text-red-700 border-red-200':
-                                                    product.stock === 0,
+                                                    product.available_stock === 0,
                                             }"
-                                            class="text-xs font-medium px-2 py-1 rounded-full border"
+                                            class="text-xs font-semibold px-3 py-1.5 rounded-full border shadow-sm"
                                         >
-                                            {{ product.stock }} in stock
+                                            {{ product.available_stock }} in stock
                                         </span>
                                         <button
                                             @click="openVariationModal(product)"
                                             :disabled="
-                                                (product.stock === 0 &&
+                                                (product.available_stock === 0 &&
                                                     !product.is_pre_order) ||
                                                 cartLoading
                                             "
-                                            class="px-2 py-1 rounded-lg text-sm font-medium transition-colors"
+                                            class="px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 shadow-sm"
                                             :class="[
-                                                product.stock === 0 &&
+                                                product.available_stock === 0 &&
                                                 !product.is_pre_order
-                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                                                     : cartLoading
-                                                    ? 'bg-gray-100 text-gray-500'
-                                                    : 'bg-gray-900 text-white hover:bg-gray-800',
+                                                    ? 'bg-gray-200 dark:bg-gray-600 text-gray-500'
+                                                    : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-orange-500/30 hover:shadow-lg active:scale-95',
                                             ]"
                                         >
                                             {{
                                                 cartLoading
                                                     ? "Adding..."
-                                                    : product.stock === 0 &&
+                                                    : product.available_stock === 0 &&
                                                       !product.is_pre_order
                                                     ? "Out of Stock"
                                                     : product.type ===
@@ -1621,29 +1661,39 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Selected Variation Info -->
-            <div v-if="matchedVariation" class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <!-- Enhanced Selected Variation Info -->
+            <div v-if="matchedVariation" class="mx-8 mb-8 p-6 bg-gradient-to-br from-emerald-50 via-emerald-50 to-green-50 rounded-2xl border-2 border-emerald-200 shadow-lg">
               <div class="flex justify-between items-center">
-                <div>
-                  <p class="text-sm text-gray-500">Selected Variation</p>
-                  <p class="text-lg font-bold text-gray-900">৳{{ formatPrice(parseFloat(matchedVariation.price || 0) + parseFloat(currentProduct.price || 0)) }}</p>
-                  <p class="text-sm" :class="matchedVariation.stock > 0 ? 'text-green-600' : 'text-red-600'">
-                    {{ matchedVariation.stock > 0 ? `${matchedVariation.stock} in stock` : 'Out of stock' }}
-                  </p>
+                <div class="space-y-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                      <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+                      </svg>
+                    </div>
+                    <p class="text-sm font-bold text-emerald-700 uppercase tracking-wide">Selected Configuration</p>
+                  </div>
+                  <div>
+                    <p class="text-3xl font-black text-gray-900 leading-tight">৳{{ formatPrice(parseFloat(matchedVariation.price || 0) + parseFloat(currentProduct.price || 0)) }}</p>
+                    <p class="text-base font-bold mt-2 flex items-center gap-2" :class="(matchedVariation.available_stock || 0) > 0 ? 'text-emerald-700' : 'text-red-600'">
+                      <div class="w-3 h-3 rounded-full" :class="(matchedVariation.available_stock || 0) > 0 ? 'bg-emerald-500' : 'bg-red-500'"></div>
+                      {{ (matchedVariation.available_stock || 0) > 0 ? `${(matchedVariation.available_stock || 0)} units available` : 'Currently out of stock' }}
+                    </p>
+                  </div>
                 </div>
                 <button
                   @click="addMatchedVariationToCart"
-                  :disabled="matchedVariation.stock === 0 || cartLoading"
+                  :disabled="(matchedVariation.available_stock || 0) === 0 || cartLoading"
                   :class="[
-                    'px-6 py-3 rounded-lg font-medium transition-colors',
-                    matchedVariation.stock === 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    'px-8 py-4 rounded-xl font-bold transition-all duration-200 shadow-lg text-base min-w-[140px]',
+                    (matchedVariation.available_stock || 0) === 0
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed shadow-none'
                       : cartLoading
-                        ? 'bg-blue-400 text-white'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        ? 'bg-orange-400 text-white shadow-orange-400/30'
+                        : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-orange-500/40 hover:shadow-xl active:scale-95'
                   ]"
                 >
-                  {{ cartLoading ? 'Adding...' : matchedVariation.stock === 0 ? 'Out of Stock' : 'Add to Cart' }}
+                  {{ cartLoading ? 'Adding...' : (matchedVariation.available_stock || 0) === 0 ? 'Out of Stock' : 'Add to Cart' }}
                 </button>
               </div>
             </div>

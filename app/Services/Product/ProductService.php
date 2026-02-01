@@ -50,6 +50,8 @@ class ProductService
       $query = Product::with([
         'category.parentRecursive',
         'brand',
+        'inventoryStocks', // V2 inventory integration
+        'variations.inventoryStock', // V2 variation inventory
         'variations.attributes.value' => function($q) {
           $q->withTrashed(); // Load soft-deleted values to check
         },
@@ -91,7 +93,16 @@ class ProductService
           })->values();
 
           $product->setRelation('variations', $activeVariations);
+
+          // V2 Inventory: Calculate stock for each variation
+          $activeVariations->each(function ($variation) {
+            $variation->available_stock = $this->inventoryService->getTotalStock($variation->product_id, $variation->id);
+          });
         }
+
+        // V2 Inventory: Calculate total available stock from inventory_stocks table
+        $product->available_stock = $this->inventoryService->getTotalStock($product->id);
+
         // Simple products are always included
         return $product;
       });
@@ -575,7 +586,7 @@ class ProductService
       if (empty($product->barcode)) {
         $barcode = $this->barcodeService->generateEAN13($product->id);
         $product->update(['barcode' => $barcode]);
-        
+
         Log::info('📊 Auto-generated barcode for product', [
           'product_id' => $product->id,
           'barcode' => $barcode
@@ -640,7 +651,7 @@ class ProductService
     if ($request->type === 'variable' && $request->has('variations')) {
       return array_sum(array_map(fn($v) => $v['stock'] ?? 0, $request->variations));
     }
-    
+
     if ($request->has('stock_data')) {
         return array_sum(array_map(fn($item) => (int)($item['quantity'] ?? 0), $request->stock_data));
     }
@@ -803,7 +814,7 @@ class ProductService
         } elseif ($request->filled('min_quantity') || $request->filled('stock')) {
              $quantity = $request->input('stock', 0);
              $minQuantity = $request->input('min_quantity', 0);
-             
+
              // Update main warehouse stock
              $this->inventoryService->createStock(
                 productId: $product->id,
