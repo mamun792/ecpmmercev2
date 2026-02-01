@@ -18,9 +18,6 @@ class OrderItemController extends Controller
     public function __construct(OrderInterface $orderService)
     {
         $this->orderService = $orderService;
-
-        // Rate limiting
-        $this->middleware('throttle:60,1');
     }
 
     /**

@@ -99,12 +99,16 @@ class ProductService
 
           // V2 Inventory: Calculate stock for each variation
           $activeVariations->each(function ($variation) {
-            $variation->available_stock = $this->inventoryService->getTotalStock($variation->product_id, $variation->id);
+            $totalStock = $this->inventoryService->getTotalStock($variation->product_id, $variation->id);
+            $variation->available_stock = $totalStock;
+            $variation->stock = $totalStock; // Also set 'stock' for frontend compatibility
           });
         }
 
         // V2 Inventory: Calculate total available stock from inventory_stocks table
-        $product->available_stock = $this->inventoryService->getTotalStock($product->id);
+        $totalProductStock = $this->inventoryService->getTotalStock($product->id);
+        $product->available_stock = $totalProductStock;
+        $product->stock = $totalProductStock; // Also set 'stock' for frontend compatibility
 
         // Simple products are always included
         return $product;

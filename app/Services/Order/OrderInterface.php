@@ -37,4 +37,30 @@ interface OrderInterface
      * @return array
      */
     public function adminNotifications(): array;
-} 
+
+    /**
+     * Update product stock (V2 inventory integration)
+     */
+    public function updateProductStock(
+        \App\Models\Product $product,
+        ?\App\Models\ProductVariation $variation,
+        int $quantity,
+        ?int $orderId = null
+    ): void;
+
+    /**
+     * Restore product stock (V2 inventory integration)
+     */
+    public function restoreProductStock(
+        \App\Models\Product $product,
+        ?\App\Models\ProductVariation $variation,
+        int $quantity,
+        ?int $orderId = null,
+        string $reason = 'Order cancellation'
+    ): void;
+
+    /**
+     * Calculate order totals
+     */
+    public function calculateOrderTotals(Order $order): void;
+}

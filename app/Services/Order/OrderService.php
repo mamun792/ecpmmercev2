@@ -612,7 +612,7 @@ class OrderService implements OrderInterface
      * @param int $quantity
      * @param int|null $orderId Reference for transaction logging
      */
-    protected function updateProductStock(
+    public function updateProductStock(
         Product $product,
         ?ProductVariation $variation,
         int $quantity,

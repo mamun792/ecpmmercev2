@@ -959,77 +959,181 @@ const submitForm = () => {
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="text-sm font-bold text-emerald-600">৳ {{ product.price }}</span>
+                      <div class="text-sm font-bold text-emerald-600 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd" />
+                        </svg>
+                        <span>৳{{ parseFloat(product.price).toFixed(2) }}</span>
+                      </div>
+                      <div class="text-[10px] text-gray-500 font-medium mt-0.5">Per unit</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold',
-                        (product.type === 'variable' && selectedVariations[product.id] ? selectedVariations[product.id].stock : product.stock) > 0
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      ]">
-                        {{ product.type === 'variable' && selectedVariations[product.id] ? selectedVariations[product.id].stock : product.stock }}
-                      </span>
+                      <template v-if="product.type === 'variable' && selectedVariations[product.id]">
+                        <!-- Variation Stock Display -->
+                        <div class="flex flex-col gap-1">
+                          <span :class="[
+                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border-2',
+                            selectedVariations[product.id].stock > 10
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : selectedVariations[product.id].stock > 0
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                          ]">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                            </svg>
+                            {{ selectedVariations[product.id].stock }} Units
+                          </span>
+                          <span class="text-[10px] text-gray-500 font-medium">Selected variant</span>
+                        </div>
+                      </template>
+                      <template v-else-if="product.type === 'variable'">
+                        <!-- No Variation Selected -->
+                        <div class="flex flex-col gap-1">
+                          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500 border-2 border-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            Select variant
+                          </span>
+                          <span class="text-[10px] text-gray-500 font-medium">Choose options</span>
+                        </div>
+                      </template>
+                      <template v-else>
+                        <!-- Simple Product Stock -->
+                        <span :class="[
+                          'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border-2',
+                          product.stock > 10
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : product.stock > 0
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
+                        ]">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                          </svg>
+                          {{ product.stock }} Units
+                        </span>
+                      </template>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
-                        <button @click="decrementQuantity(product)" :disabled="quantities[product.id] <= 1" class="px-2 py-1 bg-white rounded hover:bg-gray-200 text-gray-700 disabled:opacity-50 font-semibold transition-colors">
-                          −
-                        </button>
-                        <span class="text-sm w-6 text-center font-bold text-gray-900">{{ quantities[product.id] }}</span>
-                        <button @click="incrementQuantity(product)" :disabled="quantities[product.id] >= (product.type === 'variable' ? (selectedVariations[product.id]?.stock || 0) : product.stock)" class="px-2 py-1 bg-white rounded hover:bg-gray-200 text-gray-700 disabled:opacity-50 font-semibold transition-colors">
-                          +
-                        </button>
+                      <div class="flex flex-col gap-2">
+                        <div class="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-2 border border-gray-200 w-fit">
+                          <button @click="decrementQuantity(product)" :disabled="quantities[product.id] <= 1" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg hover:bg-red-50 text-gray-700 hover:text-red-600 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-700 font-bold transition-all shadow-sm border border-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                            </svg>
+                          </button>
+                          <span class="text-sm w-8 text-center font-bold text-gray-900 bg-white px-2 py-1 rounded border border-gray-200">{{ quantities[product.id] }}</span>
+                          <button @click="incrementQuantity(product)" :disabled="quantities[product.id] >= (product.type === 'variable' ? (selectedVariations[product.id]?.stock || 0) : product.stock)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg hover:bg-emerald-50 text-gray-700 hover:text-emerald-600 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-700 font-bold transition-all shadow-sm border border-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div class="text-[10px] text-gray-600 font-medium flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                          </svg>
+                          Subtotal: <span class="font-bold text-emerald-600">৳{{ (quantities[product.id] * product.price).toFixed(2) }}</span>
+                        </div>
                       </div>
                     </td>
                     <td class="px-6 py-4">
                       <div v-if="product.variations && product.variations.length > 0" class="space-y-3">
-                        <div v-for="(values, attrName) in getUniqueAttributes(product)" :key="attrName">
-                          <span class="text-xs font-bold text-gray-600 uppercase tracking-wide">{{ attrName }}</span>
-                          <div class="flex flex-wrap gap-2 mt-2">
+                        <!-- Attribute Selection -->
+                        <div v-for="(values, attrName) in getUniqueAttributes(product)" :key="attrName" class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">{{ attrName }}</span>
+                            <span v-if="selectedAttributes[product.id]?.[attrName]" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
+                              Selected: {{ selectedAttributes[product.id][attrName] }}
+                            </span>
+                          </div>
+                          <div class="flex flex-wrap gap-2">
                             <button v-for="value in Array.from(values)" :key="value" @click="selectAttribute(product, attrName, value)" :class="[
-                              'px-2.5 py-1 text-xs rounded-full border font-medium transition-all',
+                              'px-3 py-1.5 text-xs rounded-lg border-2 font-bold transition-all duration-200 transform hover:scale-105',
                               selectedAttributes[product.id]?.[attrName] === value
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600'
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-md'
+                                : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600 hover:shadow-sm'
                             ]">
                               {{ value }}
                             </button>
                           </div>
                         </div>
-                        <div v-if="errorMessages[product.id]" class="mt-2">
-                          <p class="text-xs text-red-600 font-medium flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+
+                        <!-- Variation Status Messages -->
+                        <div v-if="errorMessages[product.id]" class="mt-3 bg-red-50 border-2 border-red-200 rounded-lg p-3">
+                          <p class="text-xs text-red-700 font-bold flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                             </svg>
-                            {{ errorMessages[product.id] }}
+                            <span>{{ errorMessages[product.id] }}</span>
                           </p>
                         </div>
-                        <div v-else-if="selectedVariations[product.id]" class="mt-2">
-                          <p class="text-xs text-green-600 font-medium flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        <div v-else-if="selectedVariations[product.id]" class="mt-3 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg p-3">
+                          <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1">
+                              <p class="text-xs text-emerald-800 font-bold flex items-center gap-2 mb-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                <span>Variation Selected</span>
+                              </p>
+                              <div class="text-[10px] text-emerald-700 font-medium space-y-0.5">
+                                <div v-for="attr in selectedVariations[product.id].attributes" :key="attr.id" class="flex items-center gap-1">
+                                  <span class="font-bold">{{ attr.value.attribute.name }}:</span>
+                                  <span>{{ attr.value.value }}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="text-right">
+                              <div :class="[
+                                'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold',
+                                selectedVariations[product.id].stock > 10
+                                  ? 'bg-emerald-600 text-white'
+                                  : selectedVariations[product.id].stock > 0
+                                  ? 'bg-amber-500 text-white'
+                                  : 'bg-red-500 text-white'
+                              ]">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                {{ selectedVariations[product.id].stock }}
+                              </div>
+                              <div class="text-[9px] text-emerald-600 font-medium mt-0.5">Available</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div v-else class="mt-3 bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
+                          <p class="text-xs text-blue-700 font-medium flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                             </svg>
-                            {{ selectedVariations[product.id].stock }} in stock
+                            <span>Please select all options to see stock availability</span>
                           </p>
                         </div>
                       </div>
-                      <div v-else class="text-xs text-gray-500 font-medium italic">No variations</div>
+                      <div v-else class="text-xs text-gray-500 font-medium italic bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                        No variations available
+                      </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td class="px-6 py-4 whitespace-nowrap text-right">
                       <button @click="orderNew(product)" :disabled="product.type === 'variable' && !selectedVariations[product.id] || loading" :class="[
-                        'inline-flex items-center px-3.5 py-2 border border-transparent text-xs font-bold rounded-lg shadow-sm text-white transition-all duration-200',
+                        'group inline-flex items-center gap-2 px-4 py-2.5 border-2 text-xs font-bold rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105',
                         product.type === 'variable' && !selectedVariations[product.id] || loading
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:shadow-md'
+                          ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-emerald-600 hover:shadow-lg active:scale-95'
                       ]">
-                        <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg v-if="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 -ml-1 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M10.5 1.5H5.75A2.75 2.75 0 003 4.25v11A2.75 2.75 0 005.75 18h8.5A2.75 2.75 0 0017 15.25V9.5m-11-6.5v5m0-5l2.5 2.5M12.5 8.5h4.75" />
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform group-hover:rotate-12" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
                         </svg>
-                        {{ loading ? 'Adding...' : 'Add' }}
+                        <span>{{ loading ? 'Adding...' : 'Add to Order' }}</span>
                       </button>
                     </td>
                   </tr>
