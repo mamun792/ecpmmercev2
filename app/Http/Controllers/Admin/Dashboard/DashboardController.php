@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\InventoryStock;
+use App\Models\OrderItem;
 // carbon
 use Carbon\Carbon;
 use App\Models\User;
@@ -78,6 +81,8 @@ class DashboardController extends Controller
             ->get();
 
         $locations = $this->districtWiseOrders();
+        $inventoryData = $this->getLowStockItems();
+        $topProducts = $this->getTopProducts();
 
         $data = [
             'summaryCards' => [
@@ -95,6 +100,9 @@ class DashboardController extends Controller
             'deliverySalesData' => $this->getDeliverySalesData(),
             'recentOrders' => $recentOrders,
             'locations' => $locations,
+            'inventoryItems' => $inventoryData['items'],
+            'criticalCount' => $inventoryData['criticalCount'],
+            'topProducts' => $topProducts,
         ];
         return Inertia::render('Admin/Dashboard/Index', [
             'data' => $data,
@@ -240,7 +248,7 @@ class DashboardController extends Controller
 
 
 
-        private function districtWiseOrders()
+    private function districtWiseOrders()
     {
         $districtCounts = DB::table('orders')
             ->select('shipping_district', DB::raw('COUNT(*) as total_orders'))
@@ -264,6 +272,115 @@ class DashboardController extends Controller
         });
 
         return $locations;
+    }
+
+    private function getLowStockItems()
+    {
+        // Get inventory items with stock information - optimized query
+        $items = InventoryStock::with(['product:id,name', 'productVariation:id,product_id'])
+            ->select('id', 'product_id', 'product_variation_id', 'available_quantity', 'minimum_threshold', 'maximum_threshold', 'track_inventory')
+            ->where('track_inventory', true)
+            ->orderByRaw('CASE 
+                WHEN available_quantity <= minimum_threshold THEN 1 
+                WHEN available_quantity <= (minimum_threshold * 1.5) THEN 2 
+                ELSE 3 
+            END')
+            ->orderBy('available_quantity', 'asc')
+            ->limit(10)
+            ->get()
+            ->map(function ($item) {
+                $name = $item->product->name ?? 'Unknown Product';
+                if ($item->productVariation) {
+                    $name .= ' - Variation';
+                }
+                
+                $current = $item->available_quantity ?? 0;
+                $threshold = $item->minimum_threshold ?? 10;
+                $max = $item->maximum_threshold ?? ($threshold * 3);
+                
+                // Calculate percentage
+                $percentage = $max > 0 ? round(($current / $max) * 100, 1) : 0;
+                
+                // Determine status
+                $status = 'good';
+                if ($current <= $threshold) {
+                    $status = 'critical';
+                } elseif ($current <= ($threshold * 1.5)) {
+                    $status = 'warning';
+                }
+                
+                return [
+                    'id' => $item->id,
+                    'name' => $name,
+                    'current' => $current,
+                    'max' => $max,
+                    'percentage' => $percentage,
+                    'status' => $status,
+                ];
+            });
+
+        // Count critical items efficiently
+        $criticalCount = InventoryStock::where('track_inventory', true)
+            ->whereColumn('available_quantity', '<=', 'minimum_threshold')
+            ->count();
+
+        return [
+            'items' => $items,
+            'criticalCount' => $criticalCount
+        ];
+    }
+
+    private function getTopProducts()
+    {
+        // Get top selling products from order items (last 30 days)
+        $topProducts = OrderItem::select(
+                'order_items.product_id',
+                DB::raw('SUM(order_items.quantity) as total_sold'),
+                DB::raw('SUM(order_items.final_price) as total_revenue')
+            )
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.created_at', '>=', now()->subDays(30))
+            ->whereNotNull('order_items.product_id')
+            ->groupBy('order_items.product_id')
+            ->orderByDesc('total_revenue')
+            ->limit(5)
+            ->get();
+
+        // Get product details with eager loading for performance
+        $productIds = $topProducts->pluck('product_id')->toArray();
+        $products = Product::whereIn('id', $productIds)
+            ->select('id', 'name', 'price', 'feature_image')
+            ->get()
+            ->keyBy('id');
+
+        return $topProducts->map(function ($item) use ($products) {
+            $product = $products->get($item->product_id);
+            
+            if (!$product) {
+                return null;
+            }
+
+            // Calculate growth percentage (compare last 30 days vs previous 30 days)
+            $previousRevenue = OrderItem::where('product_id', $item->product_id)
+                ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                ->whereBetween('orders.created_at', [now()->subDays(60), now()->subDays(30)])
+                ->sum('order_items.final_price');
+
+            $growthPercent = $previousRevenue > 0 
+                ? round((($item->total_revenue - $previousRevenue) / $previousRevenue) * 100, 1)
+                : 100;
+
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'image' => $product->feature_image,
+                'price' => (float) $product->price,
+                'total_sold' => (int) $item->total_sold,
+                'revenue' => (float) $item->total_revenue,
+                'growth' => $growthPercent,
+                'rating' => 4.8, // You can add real rating later from reviews table
+            ];
+        })->filter()->values();
     }
 
 

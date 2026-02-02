@@ -28,16 +28,16 @@ const statusOptions = [
 const willReturnStock = computed(() => {
     const activeStatuses = ['pending', 'processing', 'shipped', 'delivered', 'confirmed', 'on_hold'];
     const returningStatuses = ['cancelled', 'returned'];
-    
-    return activeStatuses.includes(props.currentStatus) && 
+
+    return activeStatuses.includes(props.currentStatus) &&
            returningStatuses.includes(selectedStatus.value);
 });
 
 const willReduceStock = computed(() => {
     const activeStatuses = ['pending', 'processing', 'shipped', 'delivered', 'confirmed', 'on_hold'];
     const returningStatuses = ['cancelled', 'returned'];
-    
-    return returningStatuses.includes(props.currentStatus) && 
+
+    return returningStatuses.includes(props.currentStatus) &&
            activeStatuses.includes(selectedStatus.value);
 });
 

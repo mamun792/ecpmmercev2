@@ -21,6 +21,7 @@ use App\Models\Cart;
 use App\Services\Cart\CartService;
 use App\Services\Coupon\CouponService;
 use App\Services\Inventory\InventoryService;
+use App\Services\Order\OrderFilterService;
 use App\DTOs\InventoryAdjustmentDTO;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Notification;
@@ -34,17 +35,20 @@ class OrderService implements OrderInterface
     protected CouponService $couponService;
     protected CartService $cartService;
     protected InventoryService $inventoryService;
+    protected OrderFilterService $filterService;
 
     public function __construct(
         OrderRepositoryInterface $orderRepository,
         CouponService $couponService,
         CartService $cartService,
-        InventoryService $inventoryService
+        InventoryService $inventoryService,
+        OrderFilterService $filterService
     ) {
         $this->orderRepository = $orderRepository;
         $this->couponService = $couponService;
         $this->cartService = $cartService;
         $this->inventoryService = $inventoryService;
+        $this->filterService = $filterService;
     }
 
     /**
@@ -845,13 +849,20 @@ class OrderService implements OrderInterface
      * @param array $params
      * @return LengthAwarePaginator
      */
+    /**
+     * Get paginated orders with advanced filtering
+     * Big Tech Pattern: Delegate filtering logic to OrderFilterService
+     *
+     * @param array $params
+     * @return LengthAwarePaginator
+     */
     public function getOrders(array $params = []): LengthAwarePaginator
     {
         $perPage = $params['per_page'] ?? 10;
         $sortBy = $params['sort_by'] ?? 'created_at';
         $sortDirection = $params['sort_direction'] ?? 'desc';
 
-        // Remove array_filter to pass through empty values
+        // Extract filters - now includes new filter options
         $filters = [
             'status' => $params['filters']['status'] ?? null,
             'payment_status' => $params['filters']['payment_status'] ?? null,
@@ -861,6 +872,9 @@ class OrderService implements OrderInterface
             'order_number' => $params['filters']['order_number'] ?? null,
             'min_total' => $params['filters']['min_total'] ?? null,
             'max_total' => $params['filters']['max_total'] ?? null,
+            'date_preset' => $params['filters']['date_preset'] ?? null, // NEW
+            'shipping_area' => $params['filters']['shipping_area'] ?? null, // NEW
+            'has_courier' => $params['filters']['has_courier'] ?? null, // NEW
         ];
 
         return $this->orderRepository->getPaginatedOrders(

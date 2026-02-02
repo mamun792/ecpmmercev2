@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Cache;
 use App\Services\Order\OrderInterface;
+use App\Services\Order\OrderFilterService;
 use App\Services\Product\ProductService;
 use App\Exceptions\InvalidOrderDataException;
 use App\Exceptions\InsufficientStockException;
@@ -28,25 +29,30 @@ class OrderController extends Controller
     protected OrderInterface $orderService;
     protected ProductService $productService;
     protected PathaoService $pathaoService;
+    protected OrderFilterService $filterService;
 
     public function __construct(
         OrderInterface $orderService,
         ProductService $productService,
-        PathaoService $pathaoService
+        PathaoService $pathaoService,
+        OrderFilterService $filterService
     ) {
         $this->orderService = $orderService;
         $this->productService = $productService;
         $this->pathaoService = $pathaoService;
+        $this->filterService = $filterService;
     }
 
     /**
-     * Display paginated list of orders
+     * Display paginated list of orders with advanced filtering
+     * Big Tech Pattern: Clean, maintainable filtering with dedicated service
      *
      * @param Request $request
      */
     public function index(Request $request)
     {
-        $filters = [
+        // Extract and validate filters
+        $rawFilters = [
             'status' => $request->input('status'),
             'payment_status' => $request->input('payment_status'),
             'date_from' => $request->input('date_from'),
@@ -55,12 +61,20 @@ class OrderController extends Controller
             'order_number' => $request->input('order_number'),
             'min_total' => $request->input('min_total'),
             'max_total' => $request->input('max_total'),
+            'date_preset' => $request->input('date_preset'), // NEW: Quick date filters
+            'shipping_area' => $request->input('shipping_area'), // NEW: Area filter
+            'has_courier' => $request->input('has_courier'), // NEW: Courier status
         ];
 
+        // Validate and sanitize filters
+        $filters = $this->filterService->validateFilters($rawFilters);
+
+        // Pagination and sorting
         $perPage = (int) $request->input('per_page', 10);
         $sortBy = $request->input('sort_by', 'created_at');
         $sortDirection = $request->input('sort_direction', 'desc');
 
+        // Get filtered and sorted orders
         $orders = $this->orderService->getOrders([
             'per_page' => $perPage,
             'filters' => $filters,
@@ -68,26 +82,20 @@ class OrderController extends Controller
             'sort_direction' => $sortDirection,
         ]);
 
-        //return $orders;
-
-        // Log::info('orders', [
-        //     'orders' => $orders,
-        // ]);
-
-
+        // Get status counts
         $statusCounts = $this->orderService->getStatusCounts();
 
-        //$cities = $this->pathaoService->getCities();
-
-
-        //return $orders;
-
-        //return $statusCounts;
+        // Get filter metadata for UI
+        $filterMeta = [
+            'active_count' => $this->filterService->getActiveFilterCount($filters),
+            'summary' => $this->filterService->getFilterSummary($filters),
+            'applied_filters' => $filters,
+        ];
 
         return Inertia::render('Admin/Orders/Index', [
             'orders' => $orders,
             'statusCounts' => $statusCounts,
-            // 'cities' => $cities,
+            'filterMeta' => $filterMeta, // NEW: Filter metadata for UI
         ]);
     }
 

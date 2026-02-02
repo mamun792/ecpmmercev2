@@ -3,6 +3,7 @@
 namespace App\Repository\Order;
 
 use App\Models\Order;
+use App\Services\Order\OrderFilterService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,13 @@ class OrderRepository implements OrderRepositoryInterface
      * Cache TTL in seconds (10 minutes)
      */
     const CACHE_TTL = 600;
+
+    protected OrderFilterService $filterService;
+
+    public function __construct(OrderFilterService $filterService)
+    {
+        $this->filterService = $filterService;
+    }
 
     /**
      * Find order by ID with eager loaded items using load optimization
@@ -141,7 +149,6 @@ public function getPaginatedOrders(
 
     protected function formatOrder($order): array
     {
-        Log::info('Formatting order mamun', ['order' => $order]);
         return [
             'id' => $order->id,
             'order_number' => $order->order_number,
@@ -284,7 +291,8 @@ public function getPaginatedOrders(
 
 
     /**
-     * Apply filters to the query builder
+     * Apply filters to the query builder using OrderFilterService
+     * Big Tech Pattern: Delegate to service for clean, maintainable code
      *
      * @param Builder $query
      * @param array $filters
@@ -292,66 +300,18 @@ public function getPaginatedOrders(
      */
     private function applyFilters(Builder $query, array $filters): void
     {
-        Log::info('Applying filters', $filters);
-
         // Exclude incomplete orders from main order list unless explicitly filtering for them
         if (!isset($filters['status']) || $filters['status'] !== 'incomplete') {
             $query->where('status', '!=', 'incomplete');
         }
 
-        // Filter by status
-        if (!empty($filters['status'])) {
-            if (is_array($filters['status'])) {
-                $query->whereIn('status', $filters['status']);
-            } else {
-                $query->where('status', $filters['status']);
-            }
-        }
-
-        // Filter by payment status
-        if (!empty($filters['payment_status'])) {
-            if (is_array($filters['payment_status'])) {
-                $query->whereIn('payment_status', $filters['payment_status']);
-            } else {
-                $query->where('payment_status', $filters['payment_status']);
-            }
-        }
-
-        // Date range filters
-        if (!empty($filters['date_from'])) {
-            $query->whereDate('created_at', '>=', $filters['date_from']);
-        }
-
-        if (!empty($filters['date_to'])) {
-            $query->whereDate('created_at', '<=', $filters['date_to']);
-        }
-
-        // Customer search (email or name)
-        if (!empty($filters['customer_search'])) {
-            $search = $filters['customer_search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('customer_email', 'like', "%{$search}%")
-                    ->orWhere('customer_name', 'like', "%{$search}%");
-            });
-        }
-
-        // Order number search
-        if (!empty($filters['order_number'])) {
-            $query->where('order_number', 'like', "%{$filters['order_number']}%");
-        }
-
-        // Total amount range
-        if (!empty($filters['min_total'])) {
-            $query->where('total', '>=', $filters['min_total']);
-        }
-
-        if (!empty($filters['max_total'])) {
-            $query->where('total', '<=', $filters['max_total']);
-        }
+        // Use OrderFilterService for all filtering logic
+        $this->filterService->applyFilters($query, $filters);
     }
 
     /**
-     * Apply sorting to the query builder
+     * Apply sorting to the query builder using OrderFilterService
+     * Big Tech Pattern: Centralized sorting logic
      *
      * @param Builder $query
      * @param string $sortBy
@@ -360,27 +320,8 @@ public function getPaginatedOrders(
      */
     private function applySorting(Builder $query, string $sortBy, string $sortDirection): void
     {
-        // Validate sort column
-        $validSortColumns = [
-            'id',
-            'order_number',
-            'status',
-            'customer_email',
-            'customer_name',
-            'total',
-            'created_at',
-            'payment_status'
-        ];
-
-        // Default to created_at if invalid column
-        if (!in_array($sortBy, $validSortColumns)) {
-            $sortBy = 'created_at';
-        }
-
-        // Ensure valid sort direction
-        $sortDirection = strtolower($sortDirection) === 'asc' ? 'asc' : 'desc';
-
-        $query->orderBy($sortBy, $sortDirection);
+        // Use OrderFilterService for sorting
+        $this->filterService->applySorting($query, $sortBy, $sortDirection);
     }
 
     /**

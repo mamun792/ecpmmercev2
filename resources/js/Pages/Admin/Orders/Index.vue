@@ -30,10 +30,13 @@ import StatusDropdown from "@/Components/Order/StatusDropdown.vue";
 import StatusChangeModal from "@/Components/Order/StatusChangeModal.vue";
 import FraudCheckerModal from "@/Components/Couriers/FraudCheckerModal.vue";
 import AdminNotesModal from "@/Components/Order/AdminNotesModal.vue";
+import AdvancedFilters from "@/Components/Order/AdvancedFilters.vue";
+import FilterChips from "@/Components/Order/FilterChips.vue";
 
 const props = defineProps({
     orders: Object,
     statusCounts: Object,
+    filterMeta: Object,
     cities: Array,
 });
 
@@ -75,6 +78,9 @@ const initFilters = () => {
         order_number: url.searchParams.get("order_number") || "",
         min_total: url.searchParams.get("min_total") || "",
         max_total: url.searchParams.get("max_total") || "",
+        date_preset: url.searchParams.get("date_preset") || "", // NEW
+        shipping_area: url.searchParams.get("shipping_area") || "", // NEW
+        has_courier: url.searchParams.get("has_courier") || "", // NEW
         per_page: parseInt(url.searchParams.get("per_page")) || 10,
         sort_by: url.searchParams.get("sort_by") || "created_at",
         sort_direction: url.searchParams.get("sort_direction") || "desc",
@@ -434,7 +440,7 @@ const openStatusChangeModal = (order) => {
 // Confirm status change from modal
 const confirmStatusChange = async (newStatus) => {
     if (!statusChangeOrder.value) return;
-    
+
     const orderId = statusChangeOrder.value.id;
     updatingOrders.value[orderId] = true;
     showStatusChangeModal.value = false;
@@ -557,6 +563,42 @@ const closeAdminNotesModal = () => {
 const handleNotesSaved = (newNotes) => {
     // The page will be refreshed by Inertia after successful save
     toast.success('Admin notes saved successfully');
+};
+
+// Filter chip removal functions
+const removeFilter = (filterKey) => {
+    if (filterKey === 'date_range') {
+        filters.value.date_from = '';
+        filters.value.date_to = '';
+    } else if (filterKey === 'amount_range') {
+        filters.value.min_total = '';
+        filters.value.max_total = '';
+    } else {
+        filters.value[filterKey] = '';
+    }
+    applyFilters();
+};
+
+const clearAllFilters = () => {
+    // Reset all filter values
+    filters.value = {
+        status: '',
+        payment_status: '',
+        customer_search: '',
+        order_number: '',
+        date_from: '',
+        date_to: '',
+        date_preset: '',
+        min_total: '',
+        max_total: '',
+        shipping_area: '',
+        has_courier: '',
+        per_page: filters.value.per_page || 10,
+        sort_by: filters.value.sort_by || 'created_at',
+        sort_direction: filters.value.sort_direction || 'desc',
+    };
+    // Apply the cleared filters immediately
+    applyFilters();
 };
 
 // Close menu when clicking outside (optional but good for UX)
@@ -962,121 +1004,21 @@ const handleNotesSaved = (newNotes) => {
                 </div>
             </div>
 
-            <!-- Filter Toggle Button -->
-            <div class="mb-4">
-                <button
-                    @click="toggleFilters"
-                    class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                >
-                    {{ showFilters ? "Hide Filters" : "Show Filters" }}
-                </button>
-            </div>
+            <!-- Filter Chips - Show Active Filters -->
+            <FilterChips 
+                :filters="filters"
+                @remove="removeFilter"
+                @clear-all="clearAllFilters"
+            />
 
-            <!-- Filters -->
-            <div
-                v-show="showFilters"
-                class="mb-6 bg-gradient-to-r from-green-100 to-blue-100 p-4 rounded-lg shadow"
-            >
-                <div
-                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-                >
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                            >Payment Status</label
-                        >
-                        <select
-                            v-model="filters.payment_status"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                        >
-                            <option value="">All</option>
-                            <option
-                                v-for="paymentStatus in paymentStatusOptions"
-                                :key="paymentStatus"
-                                :value="paymentStatus"
-                            >
-                                {{
-                                    paymentStatus.charAt(0).toUpperCase() +
-                                    paymentStatus.slice(1)
-                                }}
-                            </option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                            >Date From</label
-                        >
-                        <input
-                            v-model="filters.date_from"
-                            type="date"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                            >Date To</label
-                        >
-                        <input
-                            v-model="filters.date_to"
-                            type="date"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                            >Customer Search</label
-                        >
-                        <input
-                            v-model="filters.customer_search"
-                            type="text"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                            placeholder="Name or email"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                            >Order Number</label
-                        >
-                        <input
-                            v-model="filters.order_number"
-                            type="text"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                            placeholder="Search by order #"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                            >Min Total</label
-                        >
-                        <input
-                            v-model="filters.min_total"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700"
-                            >Max Total</label
-                        >
-                        <input
-                            v-model="filters.max_total"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                        />
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mt-4">
-                    <button
-                        @click="resetFilters"
-                        class="px-2 py-2 bg-gray-2000 hover:bg-gray-300 rounded-md text-sm font-medium"
-                    >
-                        Reset Filters
-                    </button>
-                </div>
-            </div>
+            <!-- Advanced Filters Component -->
+            <AdvancedFilters 
+                v-model="filters"
+                :status-counts="statusCounts"
+                @apply="applyFilters"
+                @reset="resetFilters"
+                class="mb-6"
+            />
 
             <div class="mb-6 flex justify-end items-center space-x-2">
                 <button
@@ -1754,11 +1696,12 @@ const handleNotesSaved = (newNotes) => {
 
         <!-- Admin Notes Modal -->
         <AdminNotesModal
+            v-if="selectedOrderForNotes"
             :visible="showAdminNotesModal"
-            :order-id="selectedOrderForNotes?.id"
-            :order-number="selectedOrderForNotes?.order_number"
-            :initial-notes="selectedOrderForNotes?.admin_notes"
-            :customer-note="selectedOrderForNotes?.customer?.note"
+            :order-id="selectedOrderForNotes.id"
+            :order-number="selectedOrderForNotes.order_number"
+            :initial-notes="selectedOrderForNotes.admin_notes || ''"
+            :customer-note="selectedOrderForNotes.customer?.note || ''"
             @close="closeAdminNotesModal"
             @saved="handleNotesSaved"
         />
