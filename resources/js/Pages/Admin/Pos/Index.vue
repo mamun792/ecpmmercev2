@@ -136,7 +136,10 @@ const productAttributes = computed(() => {
 
   const attributeMap = new Map();
 
-  currentProduct.value.variations.forEach(variation => {
+  // Filter only active variations
+  const activeVariations = currentProduct.value.variations.filter(v => v.status === 'active');
+
+  activeVariations.forEach(variation => {
     variation.attributes?.forEach(attr => {
       const attrName = attr.value?.attribute?.name;
       const attrValue = attr.value?.value;
@@ -182,8 +185,11 @@ const matchedVariation = computed(() => {
 
   if (!allSelected) return null;
 
+  // Filter only active variations
+  const activeVariations = currentProduct.value.variations.filter(v => v.status === 'active');
+
   // Find variation that matches all selected attribute values
-  const matched = currentProduct.value.variations.find(variation => {
+  const matched = activeVariations.find(variation => {
     return productAttributes.value.every(attr => {
       const selectedValueId = selectedAttributeValues.value[attr.name];
       return variation.attributes?.some(
@@ -234,8 +240,11 @@ const isAttributeValueAvailable = (attrName, valueId) => {
   const otherSelections = { ...selectedAttributeValues.value };
   delete otherSelections[attrName];
 
+  // Filter only active variations
+  const activeVariations = currentProduct.value.variations.filter(v => v.status === 'active');
+
   // Find if any variation exists with this value and all other selected values
-  return currentProduct.value.variations.some(variation => {
+  return activeVariations.some(variation => {
     // Check if this variation has the value we're checking
     const hasThisValue = variation.attributes?.some(
       attr => attr.value?.attribute?.name === attrName && attr.value?.id === valueId
@@ -380,19 +389,26 @@ const fetchCartData = async () => {
 };
 
 const openVariationModal = (product) => {
+  // Filter only active variations
+  const activeVariations = product.variations?.filter(v => v.status === 'active') || [];
+
   console.log('🚀 Opening Variation Modal:', {
     product_id: product.id,
     product_name: product.name,
     product_price: product.price,
     product_price_type: typeof product.price,
     product_type: product.type,
-    variations_count: product.variations?.length,
-    first_variation: product.variations?.[0],
-    all_variations: product.variations
+    variations_count: activeVariations.length,
+    first_variation: activeVariations[0],
+    all_variations: activeVariations
   });
 
-  if (product.type === 'variable' && product.variations.length > 0) {
-    currentProduct.value = product;
+  if (product.type === 'variable' && activeVariations.length > 0) {
+    // Set product with only active variations
+    currentProduct.value = {
+      ...product,
+      variations: activeVariations
+    };
     selectedAttributeValues.value = {}; // Reset selections
     showVariationModal.value = true;
   } else {

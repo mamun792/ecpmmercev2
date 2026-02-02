@@ -171,6 +171,24 @@ const closeRestockModal = () => {
   startRestock.value = false;
 };
 
+const toggleVariationStatus = (variation) => {
+  const newStatus = variation.status === 'active' ? 'inactive' : 'active';
+
+  router.post(route('admin.inventory.variation.toggle-status'), {
+    variation_id: variation.variation_id,
+    status: newStatus
+  }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast.success(`Variation ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
+      variation.status = newStatus; // Update local state
+    },
+    onError: () => {
+      toast.error("Failed to update variation status");
+    }
+  });
+};
+
 const submitRestock = () => {
   if (restockQuantity.value <= 0) {
     toast.error("Quantity must be greater than 0");
@@ -555,6 +573,7 @@ watch(locationFilter, () => currentPage.value = 1);
                             <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
                             <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Current</th>
                             <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Sold</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
                             <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
                           </tr>
                         </thead>
@@ -618,6 +637,18 @@ watch(locationFilter, () => currentPage.value = 1);
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-500">
                               {{ variation.sold_stock }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-center">
+                              <button
+                                @click="toggleVariationStatus(variation)"
+                                class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold transition-colors"
+                                :class="{
+                                  'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-200': variation.status === 'active',
+                                  'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-800 hover:bg-gray-200': variation.status === 'inactive'
+                                }"
+                              >
+                                {{ variation.status === 'active' ? 'Active' : 'Inactive' }}
+                              </button>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-right">
                               <button

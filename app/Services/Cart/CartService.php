@@ -165,6 +165,17 @@ class CartService
             'items.variation:id,product_id,price,image_path'
         ]);
 
+        // Remove cart items with deleted products
+        $cart->items->filter(function ($item) {
+            return $item->product === null;
+        })->each(function ($item) {
+            \Log::info("Removing cart item {$item->id} - Product {$item->product_id} not found (deleted)");
+            $item->delete();
+        });
+
+        // Reload items after cleanup
+        $cart->load('items');
+
         // V2 Inventory: Calculate available stock for each cart item
         $cart->items->each(function ($item) {
             $availableStock = $this->inventoryService->getTotalStock(

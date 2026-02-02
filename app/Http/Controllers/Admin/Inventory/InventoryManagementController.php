@@ -248,7 +248,7 @@ public function generateReport(Request $request)
 
         Product::with([
             'category:id,name',
-            'variations:id,product_id,price,image_path',
+            'variations:id,product_id,price,image_path,status',
             'variations.attributes:id,product_variation_id,attribute_value_id',
             'variations.attributes.value' => function($query) {
                 $query->withTrashed()->select(['id', 'attribute_id', 'value', 'deleted_at']);
@@ -375,7 +375,8 @@ public function generateReport(Request $request)
                                 ? round(($variationSold / $variationTotal) * 100, 2)
                                 : 0,
                             'price' => $variation->price,
-                            'image' => $variation->image_path
+                            'image' => $variation->image_path,
+                            'status' => $variation->status ?? 'active' // Add status field
                         ];
                     }
 

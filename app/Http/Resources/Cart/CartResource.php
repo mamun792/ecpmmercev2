@@ -14,14 +14,14 @@ class CartResource extends JsonResource
         $couponType = null;
         $couponValue = 0;
         $appliedItems = collect([]);
-        
+
         if ($couponCode) {
             try {
                 $couponService = app(CouponService::class);
                 $coupon = $couponService->verifyCoupon($couponCode);
                 $couponType = $coupon->discount_type;
                 $couponValue = $coupon->discount_value;
-                
+
                 $couponData = $couponService->applyToCart($couponCode, $this->id);
                 $discount = $couponData['summary']['total_discount'] ?? 0;
                 $appliedItems = collect($couponData['items'] ?? [])->keyBy('cart_item_id');
@@ -35,10 +35,13 @@ class CartResource extends JsonResource
             'id' => $this->id,
             'total' => $this->total,
             'items_count' => $this->items->count(),
-            'items' => $this->items->map(function ($item) use ($appliedItems) {
+            'items' => $this->items->filter(function ($item) {
+                // Filter out items with deleted products
+                return $item->product !== null;
+            })->map(function ($item) use ($appliedItems) {
                 $resource = new CartItemResource($item);
                 $data = $resource->toArray(request());
-                
+
                 $appliedInfo = $appliedItems->get($item->id);
                 if ($appliedInfo && $appliedInfo['is_eligible']) {
                     $data['coupon_code'] = $appliedInfo['coupon_code'];
@@ -51,7 +54,7 @@ class CartResource extends JsonResource
                     $data['discount_amount'] = 0;
                     $data['item_discount'] = 0;
                 }
-                
+
                 return $data;
             }),
             'coupon_code' => $couponCode,
