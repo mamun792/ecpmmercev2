@@ -1294,6 +1294,7 @@ class OrderService implements OrderInterface
 
     /**
      * Determine if stock should be returned to inventory
+     * Big Tech Style: Unified handling for cancelled & returned status
      *
      * @param string $oldStatus
      * @param string $newStatus
@@ -1301,26 +1302,31 @@ class OrderService implements OrderInterface
      */
     private function shouldReturnStock(string $oldStatus, string $newStatus): bool
     {
+        // Statuses that release stock back to inventory
         $returningStatuses = ['cancelled', 'returned'];
-        $nonReturningStatuses = ['delivered'];
 
-        // Handle cancelled orders or returns
-        if (in_array($newStatus, $returningStatuses)) {
-            // Allow returns from delivered status
-            if ($newStatus === 'returned' && $oldStatus === 'delivered') {
-                return true;
-            }
+        // Statuses where stock is already deducted (active orders)
+        $activeStatuses = ['pending', 'processing', 'shipped', 'delivered', 'confirmed', 'on_hold'];
 
-            // For other cases, don't return stock if already in returning status or delivered
-            return !in_array($oldStatus, $returningStatuses) &&
-                !in_array($oldStatus, $nonReturningStatuses);
+        // Return stock when transitioning FROM active status TO cancelled/returned
+        // Examples:
+        // - pending → cancelled (customer cancelled before shipping)
+        // - processing → cancelled (cancelled during processing)
+        // - delivered → returned (customer returned product)
+        // - shipped → cancelled (cancelled in transit)
+        if (in_array($newStatus, $returningStatuses) && in_array($oldStatus, $activeStatuses)) {
+            return true;
         }
 
+        // Don't return stock if:
+        // - Already cancelled/returned (cancelled → returned, returned → cancelled)
+        // - Incomplete orders (no stock was deducted yet)
         return false;
     }
 
     /**
      * Determine if stock should be reduced
+     * Big Tech Style: Handle order reactivation scenarios
      *
      * @param string $oldStatus
      * @param string $newStatus
@@ -1328,22 +1334,30 @@ class OrderService implements OrderInterface
      */
     private function shouldReduceStock(string $oldStatus, string $newStatus): bool
     {
-        // Statuses that have already deducted stock (order is active/completed)
+        // Statuses where stock is actively allocated
         $activeStatuses = ['pending', 'processing', 'shipped', 'delivered', 'confirmed', 'on_hold'];
-        // Statuses where stock has been returned (order cancelled/returned)
+
+        // Statuses where stock has been returned to inventory
         $returningStatuses = ['cancelled', 'returned'];
 
-        // Reduce stock when transitioning FROM a returned/cancelled status TO an active status
-        // This handles cases like: returned → delivered, cancelled → pending, etc.
+        // Reduce stock when transitioning FROM cancelled/returned TO active status
+        // This handles order reactivation scenarios:
+        // - cancelled → pending (admin reactivates cancelled order)
+        // - returned → pending (restocking then reselling)
+        // - cancelled → processing (order was accidentally cancelled)
         if (in_array($oldStatus, $returningStatuses) && in_array($newStatus, $activeStatuses)) {
             return true;
         }
 
+        // Don't reduce stock if:
+        // - Moving between active statuses (pending → processing, etc.)
+        // - Already in returning status
         return false;
     }
 
     /**
      * Return product stock to inventory
+     * Big Tech Style: Centralized inventory management with transaction logging
      *
      * @param Product $product
      * @param ProductVariation|null $variation
@@ -1379,6 +1393,25 @@ class OrderService implements OrderInterface
                 'variation_new_stock' => $variation->stock + $quantity,
                 'variation_new_sold_stock' => $newVariationSoldStock
             ]);
+
+            // Log to centralized inventory system (future-ready for full migration)
+            try {
+                $this->inventoryService->adjustStock(new InventoryAdjustmentDTO(
+                    productId: $product->id,
+                    location: 'MAIN',
+                    adjustmentType: 'increase',
+                    quantity: $quantity,
+                    reason: 'Order cancelled/returned - stock returned to inventory',
+                    variationId: $variation->id,
+                    userId: auth()->id() ?? null
+                ));
+            } catch (\Exception $e) {
+                Log::warning('Failed to log inventory transaction for variation', [
+                    'error' => $e->getMessage(),
+                    'product_id' => $product->id,
+                    'variation_id' => $variation->id
+                ]);
+            }
         } else {
             // Return stock to simple product - ensure sold_stock doesn't go negative
             $newSoldStock = max(0, $product->sold_stock - $quantity);
@@ -1393,6 +1426,24 @@ class OrderService implements OrderInterface
                 'product_new_stock' => $product->stock + $quantity,
                 'product_new_sold_stock' => $newSoldStock
             ]);
+
+            // Log to centralized inventory system (future-ready for full migration)
+            try {
+                $this->inventoryService->adjustStock(new InventoryAdjustmentDTO(
+                    productId: $product->id,
+                    location: 'MAIN',
+                    adjustmentType: 'increase',
+                    quantity: $quantity,
+                    reason: 'Order cancelled/returned - stock returned to inventory',
+                    variationId: null,
+                    userId: auth()->id() ?? null
+                ));
+            } catch (\Exception $e) {
+                Log::warning('Failed to log inventory transaction for product', [
+                    'error' => $e->getMessage(),
+                    'product_id' => $product->id
+                ]);
+            }
         }
 
         // Clear product cache after returning stock
@@ -1401,6 +1452,7 @@ class OrderService implements OrderInterface
 
     /**
      * Reduce product stock from inventory
+     * Big Tech Style: Centralized inventory management with transaction logging
      *
      * @param Product $product
      * @param ProductVariation|null $variation
@@ -1427,7 +1479,7 @@ class OrderService implements OrderInterface
                 'stock' => $newProductStock
             ]);
 
-            Log::info('Stock reduced for variable product', [
+            Log::info('Stock reduced for variable product (order reactivated)', [
                 'product_id' => $product->id,
                 'variation_id' => $variation->id,
                 'quantity' => $quantity,
@@ -1436,6 +1488,25 @@ class OrderService implements OrderInterface
                 'variation_new_stock' => $newVariationStock,
                 'variation_new_sold_stock' => $variation->sold_stock + $quantity
             ]);
+
+            // Log to centralized inventory system (future-ready for full migration)
+            try {
+                $this->inventoryService->adjustStock(new InventoryAdjustmentDTO(
+                    productId: $product->id,
+                    location: 'MAIN',
+                    adjustmentType: 'decrease',
+                    quantity: $quantity,
+                    reason: 'Order reactivated (cancelled/returned → active) - stock allocated',
+                    variationId: $variation->id,
+                    userId: auth()->id() ?? null
+                ));
+            } catch (\Exception $e) {
+                Log::warning('Failed to log inventory transaction for variation', [
+                    'error' => $e->getMessage(),
+                    'product_id' => $product->id,
+                    'variation_id' => $variation->id
+                ]);
+            }
         } else {
             // Reduce stock from simple product - ensure stock doesn't go negative
             $newStock = max(0, $product->stock - $quantity);
@@ -1444,12 +1515,30 @@ class OrderService implements OrderInterface
                 'stock' => $newStock
             ]);
 
-            Log::info('Stock reduced for simple product', [
+            Log::info('Stock reduced for simple product (order reactivated)', [
                 'product_id' => $product->id,
                 'quantity' => $quantity,
                 'product_new_stock' => $newStock,
                 'product_new_sold_stock' => $product->sold_stock + $quantity
             ]);
+
+            // Log to centralized inventory system (future-ready for full migration)
+            try {
+                $this->inventoryService->adjustStock(new InventoryAdjustmentDTO(
+                    productId: $product->id,
+                    location: 'MAIN',
+                    adjustmentType: 'decrease',
+                    quantity: $quantity,
+                    reason: 'Order reactivated (cancelled/returned → active) - stock allocated',
+                    variationId: null,
+                    userId: auth()->id() ?? null
+                ));
+            } catch (\Exception $e) {
+                Log::warning('Failed to log inventory transaction for product', [
+                    'error' => $e->getMessage(),
+                    'product_id' => $product->id
+                ]);
+            }
         }
 
         // Clear product cache after reducing stock

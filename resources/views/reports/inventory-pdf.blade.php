@@ -200,14 +200,8 @@
                 <tbody>
                     @foreach($products as $index => $product)
                         @php
-                            $stock = $product->type === 'simple'
-                                ? $product->stock
-                                : $product->variations->sum('stock');
-
-                            $sold = $product->type === 'simple'
-                                ? $product->sold_stock
-                                : $product->variations->sum('sold_stock');
-
+                            $stock = $product->computed_stock ?? 0;
+                            $sold = $product->computed_sold ?? 0;
                             $reorderLevel = $product->reorder_level ?? 10;
 
                             if ($stock === 0) {
@@ -223,7 +217,12 @@
                         @endphp
                         <tr>
                             <td class="text-center">{{ $index + 1 }}</td>
-                            <td>{{ $product->name }}</td>
+                            <td>
+                                {{ $product->name }}
+                                @if($product->variation_count > 0)
+                                    <span style="font-size: 8px; color: #7C3AED; font-weight: bold;">({{ $product->variation_count }} variation{{ $product->variation_count > 1 ? 's' : '' }})</span>
+                                @endif
+                            </td>
                             <td>{{ $product->sku ?? 'N/A' }}</td>
                             <td>{{ $product->category->name ?? 'Uncategorized' }}</td>
                             <td>
@@ -231,9 +230,9 @@
                                     {{ $product->type === 'simple' ? 'Simple' : 'Variable' }}
                                 </span>
                             </td>
-                            <td class="text-right"><strong>{{ number_format($stock ?? 0) }}</strong></td>
-                            <td class="text-right">{{ number_format($sold ?? 0) }}</td>
-                            <td class="text-right">৳{{ number_format($product->price ?? 0, 2) }}</td>
+                            <td class="text-right"><strong>{{ number_format($product->computed_stock ?? 0) }}</strong></td>
+                            <td class="text-right">{{ number_format($product->computed_sold ?? 0) }}</td>
+                            <td class="text-right">৳{{ number_format($product->display_price ?? $product->price ?? 0, 2) }}</td>
                             <td class="text-center">
                                 <span class="badge {{ $badgeClass }}">{{ $status }}</span>
                             </td>

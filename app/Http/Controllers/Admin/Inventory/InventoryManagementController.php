@@ -264,7 +264,26 @@ public function generateReport(Request $request)
                 foreach ($products as $product) {
                     // Calculate stock from inventory system
                     $totalStock = $product->inventoryStocks->sum('available_quantity');
-                    $soldStock = 0; // Calculate from orders if needed
+
+                    // Calculate sold from order_items
+                    if ($product->variations_count > 0) {
+                        // Variable product - sum all variation sales
+                        $soldStock = (int) \DB::table('order_items')
+                            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                            ->where('order_items.product_id', $product->id)
+                            ->whereNotNull('order_items.product_variation_id')
+                            ->whereIn('orders.status', ['pending', 'processing', 'shipped', 'delivered', 'completed'])
+                            ->sum('order_items.quantity');
+                    } else {
+                        // Simple product
+                        $soldStock = (int) \DB::table('order_items')
+                            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                            ->where('order_items.product_id', $product->id)
+                            ->whereNull('order_items.product_variation_id')
+                            ->whereIn('orders.status', ['pending', 'processing', 'shipped', 'delivered', 'completed'])
+                            ->sum('order_items.quantity');
+                    }
+
                     $initial_stock = $totalStock + $soldStock;
 
                     // Breakdown by location
@@ -316,7 +335,13 @@ public function generateReport(Request $request)
                             ->map(fn($stocks) => $stocks->sum('available_quantity'))
                             ->toArray();
 
-                        $variationSold = 0;
+                        // Calculate variation sold from order_items
+                        $variationSold = (int) \DB::table('order_items')
+                            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                            ->where('order_items.product_variation_id', $variation->id)
+                            ->whereIn('orders.status', ['pending', 'processing', 'shipped', 'delivered', 'completed'])
+                            ->sum('order_items.quantity');
+
                         $variationTotal = $variationStock + $variationSold;
 
                         // Calculate variation threshold and status

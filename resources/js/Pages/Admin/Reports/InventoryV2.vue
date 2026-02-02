@@ -420,7 +420,12 @@ const categories = computed(() => {
                     </div>
                     <div class="min-w-0">
                       <div class="text-sm font-medium text-gray-900 truncate">{{ product.name }}</div>
-                      <div class="text-xs text-gray-500">{{ product.sku || 'No SKU' }}</div>
+                      <div class="text-xs text-gray-500">
+                        {{ product.sku || 'No SKU' }}
+                        <span v-if="product.variation_count > 0" class="ml-1 text-purple-600 font-medium">
+                          ({{ product.variation_count }} variation{{ product.variation_count > 1 ? 's' : '' }})
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -437,7 +442,7 @@ const categories = computed(() => {
                   <span class="text-sm text-gray-600">{{ formatNumber(getProductSold(product)) }}</span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <span class="text-sm font-semibold text-gray-900">{{ formatCurrency(product.price) }}</span>
+                  <span class="text-sm font-semibold text-gray-900">{{ formatCurrency(product.display_price || product.price) }}</span>
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex justify-center">

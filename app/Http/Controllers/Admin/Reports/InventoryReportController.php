@@ -83,17 +83,11 @@ class InventoryReportController extends Controller
             }
         }
 
-        // Apply sorting
+        // Apply sorting (Note: stock/sold will be sorted after computation in collection)
         $sortBy = $request->input('sort_by', 'name');
         $sortDirection = $request->input('sort_direction', 'asc');
 
         switch ($sortBy) {
-            case 'stock':
-                $query->orderBy('stock', $sortDirection);
-                break;
-            case 'sold':
-                $query->orderBy('sold_stock', $sortDirection);
-                break;
             case 'price':
                 $query->orderBy('price', $sortDirection);
                 break;
@@ -119,15 +113,58 @@ class InventoryReportController extends Controller
 
                 $product->setRelation('variations', $filteredVariations);
 
-                // Calculate computed stock and sold for variable products
-                $product->computed_stock = $filteredVariations->sum('stock');
-                $product->computed_sold = $filteredVariations->sum('sold_stock');
+                // Calculate stock from inventory_stocks table
+                $product->computed_stock = \DB::table('inventory_stocks')
+                    ->whereIn('product_variation_id', $filteredVariations->pluck('id'))
+                    ->sum('available_quantity');
+
+                // Calculate sold from order_items (completed orders only)
+                $product->computed_sold = \DB::table('order_items')
+                    ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                    ->whereIn('order_items.product_variation_id', $filteredVariations->pluck('id'))
+                    ->whereIn('orders.status', ['pending', 'processing', 'shipped', 'delivered', 'completed'])
+                    ->sum('order_items.quantity');
+
+                // Add variation count and info
+                $product->variation_count = $filteredVariations->count();
+
+                // Use first variation price if product price is 0 or null
+                if (!$product->price || $product->price == 0) {
+                    $firstVariation = $filteredVariations->first();
+                    $product->display_price = $firstVariation ? $firstVariation->price : 0;
+                } else {
+                    $product->display_price = $product->price;
+                }
             } else {
-                // For simple products, use direct values
-                $product->computed_stock = $product->stock ?? 0;
-                $product->computed_sold = $product->sold_stock ?? 0;
+                // For simple products, get stock from inventory_stocks table
+                $product->computed_stock = \DB::table('inventory_stocks')
+                    ->where('product_id', $product->id)
+                    ->whereNull('product_variation_id')
+                    ->sum('available_quantity');
+
+                // Calculate sold from order_items (completed orders only)
+                $product->computed_sold = \DB::table('order_items')
+                    ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                    ->where('order_items.product_id', $product->id)
+                    ->whereNull('order_items.product_variation_id')
+                    ->whereIn('orders.status', ['pending', 'processing', 'shipped', 'delivered', 'completed'])
+                    ->sum('order_items.quantity');
+
+                $product->variation_count = 0;
+                $product->display_price = $product->price ?? 0;
             }
         });
+
+        // Sort by stock/sold after computation
+        if ($sortBy === 'stock') {
+            $products = $sortDirection === 'asc'
+                ? $products->sortBy('computed_stock')
+                : $products->sortByDesc('computed_stock');
+        } elseif ($sortBy === 'sold') {
+            $products = $sortDirection === 'asc'
+                ? $products->sortBy('computed_sold')
+                : $products->sortByDesc('computed_sold');
+        }
 
         // Calculate statistics
         $totalProducts = $products->count();
@@ -136,12 +173,7 @@ class InventoryReportController extends Controller
         $totalSold = $products->sum('computed_sold');
 
         $totalValue = $products->sum(function ($product) {
-            if ($product->type === 'simple') {
-                return $product->stock * $product->price;
-            }
-            return $product->variations->sum(function ($variation) {
-                return $variation->stock * $variation->price;
-            });
+            return $product->computed_stock * $product->display_price;
         });
 
         return Inertia::render('Admin/Reports/InventoryV2', [
