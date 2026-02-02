@@ -68,6 +68,7 @@ trait OrderEagerLoading
     /**
      * Full eager loading for order detail/edit views
      * Includes all relationships needed for editing
+     * V2 Inventory: Uses attributeValues instead of attributes.value.attribute
      */
     protected function getOrderDetailEagerLoads(): array
     {
@@ -78,12 +79,13 @@ trait OrderEagerLoading
             'items.productVariation' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributes.value' => function ($query) {
+            'items.productVariation.attributeValues:id,product_variation_id,attribute_id,value' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributes.value.attribute' => function ($query) {
+            'items.productVariation.attributeValues.attribute:id,name' => function ($query) {
                 $query->withTrashed();
             },
+            'items.productVariation.inventoryStock',
             'statusHistories.changedBy',
             'editLogs.editor',
         ];
@@ -92,6 +94,7 @@ trait OrderEagerLoading
     /**
      * Eager loading for invoice generation
      * Includes all product/variation details with soft deleted data
+     * V2 Inventory: Uses attributeValues instead of attributes.value.attribute
      */
     protected function getInvoiceEagerLoads(): array
     {
@@ -102,10 +105,10 @@ trait OrderEagerLoading
             'items.productVariation' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributes.value' => function ($query) {
+            'items.productVariation.attributeValues:id,product_variation_id,attribute_id,value' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributes.value.attribute' => function ($query) {
+            'items.productVariation.attributeValues.attribute:id,name' => function ($query) {
                 $query->withTrashed();
             },
         ];
@@ -137,6 +140,7 @@ trait OrderEagerLoading
     /**
      * Eager loading for stock operations
      * Includes product and variation for stock updates
+     * V2 Inventory: Removed old 'stock', 'sold_stock' fields - now in inventory_stocks table
      */
     protected function getStockOperationEagerLoads(): array
     {
@@ -145,8 +149,7 @@ trait OrderEagerLoading
                 $query->withTrashed()->select([
                     'id',
                     'name',
-                    'stock',
-                    'sold_stock',
+                    'type',
                     'is_pre_order',
                 ]);
             },
@@ -154,10 +157,11 @@ trait OrderEagerLoading
                 $query->withTrashed()->select([
                     'id',
                     'product_id',
-                    'stock',
-                    'sold_stock',
+                    'price',
                 ]);
             },
+            'items.product.inventoryStocks',
+            'items.productVariation.inventoryStock',
         ];
     }
 }

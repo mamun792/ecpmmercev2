@@ -32,6 +32,36 @@ const isAddingToCart = ref(false);
 
 const emit = defineEmits(["variation-change"]);
 
+// Color name to hex mapping for V2 structure (when color hex not stored in DB)
+const colorNameToHex = {
+    'red': '#FF0000',
+    'blue': '#0000FF',
+    'green': '#00FF00',
+    'yellow': '#FFFF00',
+    'black': '#000000',
+    'white': '#FFFFFF',
+    'pink': '#FFC0CB',
+    'purple': '#800080',
+    'orange': '#FFA500',
+    'brown': '#A52A2A',
+    'gray': '#808080',
+    'grey': '#808080',
+    'navy': '#000080',
+    'maroon': '#800000',
+    'gold': '#FFD700',
+    'silver': '#C0C0C0',
+    'beige': '#F5F5DC',
+    'cyan': '#00FFFF',
+    'magenta': '#FF00FF',
+    'olive': '#808000',
+};
+
+const getColorHex = (colorName) => {
+    if (!colorName) return null;
+    const normalized = colorName.toLowerCase().trim();
+    return colorNameToHex[normalized] || null;
+};
+
 const activeCampaign = computed(() => {
     if (!props.product.campaigns || props.product.campaigns.length === 0)
         return null;
@@ -189,52 +219,83 @@ const showWhatsapp = computed(() => !!whatsappLink.value);
 const availableAttributes = computed(() => {
     const attributesMap = new Map();
 
-    // First pass: collect unique attribute values (include image:null placeholder)
+    // First pass: collect unique attribute values
+    // V2 structure: attributeValues[].{id, value: 'BLUE', attribute: {id, name: 'COLOR'}}
+    // V1 structure: attributes[].{value: {id, value: 'BLUE', color, attribute: {name: 'COLOR'}}}
     props.product.variations?.forEach((variation) => {
-        variation.attributes?.forEach((attr) => {
-            const attrName = attr.value.attribute.name.toLowerCase();
+        const attrs = variation.attributeValues || variation.attributes || [];
+        attrs.forEach((attr) => {
+            // V2: attr.attribute.name, attr.value (string)
+            // V1: attr.value.attribute.name, attr.value.value (string)
+            let attrName, attrDisplayName, attrValue, attrId, attrColor;
+
+            if (attr.attribute && typeof attr.value === 'string') {
+                // V2 structure
+                attrName = attr.attribute.name?.toLowerCase();
+                attrDisplayName = attr.attribute.name;
+                attrValue = attr.value;
+                attrId = attr.id;
+                attrColor = attr.attribute.name?.toLowerCase() === 'color' ? getColorHex(attr.value) : null;
+            } else if (attr.value && typeof attr.value === 'object') {
+                // V1 structure
+                attrName = attr.value.attribute?.name?.toLowerCase();
+                attrDisplayName = attr.value.attribute?.name;
+                attrValue = attr.value.value;
+                attrId = attr.value.id;
+                attrColor = attr.value.color;
+            } else {
+                return; // Unknown structure
+            }
+
+            if (!attrName) return;
 
             if (!attributesMap.has(attrName)) {
                 attributesMap.set(attrName, {
-                    name: attr.value.attribute.name,
+                    name: attrDisplayName,
                     values: new Set(),
                 });
             }
 
             attributesMap.get(attrName).values.add(
                 JSON.stringify({
-                    id: attr.value.id,
-                    value: attr.value.value,
-                    color: attr.value.color,
+                    id: attrId,
+                    value: attrValue,
+                    color: attrColor,
                     image: null,
                 }),
             );
         });
     });
 
-    // Second pass: if a variation provides an image_path, attach it to the
-    // corresponding attribute value (only the first image is used).
+    // Second pass: attach variation images to attribute values
     props.product.variations?.forEach((variation) => {
         if (!variation.image_path) return;
-        variation.attributes?.forEach((attr) => {
-            const attrName = attr.value.attribute.name.toLowerCase();
+        const attrs = variation.attributeValues || variation.attributes || [];
+        attrs.forEach((attr) => {
+            let attrName, attrId;
+            if (attr.attribute && typeof attr.value === 'string') {
+                attrName = attr.attribute.name?.toLowerCase();
+                attrId = attr.id;
+            } else if (attr.value && typeof attr.value === 'object') {
+                attrName = attr.value.attribute?.name?.toLowerCase();
+                attrId = attr.value.id;
+            } else {
+                return;
+            }
+
             const set = attributesMap.get(attrName)?.values;
             if (!set) return;
 
-            // find matching serialized item and replace with image-filled version
             for (const item of Array.from(set)) {
                 try {
                     const obj = JSON.parse(item);
-                    if (obj.id === attr.value.id) {
-                        // replace with an object that contains the variation image
+                    if (obj.id === attrId) {
                         set.delete(item);
                         obj.image = variation.image_path;
                         set.add(JSON.stringify(obj));
                         break;
                     }
-                } catch (err) {
-                    // ignore malformed
-                }
+                } catch (err) {}
             }
         });
     });
@@ -269,19 +330,30 @@ const getMatchingVariation = () => {
 
     // Find variation that matches all selected attributes EXACTLY
     return props.product.variations.find((variation) => {
-        if (!variation.attributes) return false;
+        const attrs = variation.attributeValues || variation.attributes || [];
+        if (!attrs.length) return false;
 
         // Ensure the number of attributes matches the number of selections
-        if (variation.attributes.length !== selectedKeys.length) return false;
+        if (attrs.length !== selectedKeys.length) return false;
 
         // Check if every selected attribute matches the variation's attributes
         return selectedKeys.every((attrKey) => {
             const selectedAttr = selectedAttributes.value[attrKey];
-            return variation.attributes.some(
-                (varAttr) =>
-                    varAttr.value.attribute.name.toLowerCase() === attrKey &&
-                    varAttr.value.id === selectedAttr.id,
-            );
+            return attrs.some((varAttr) => {
+                let varAttrName, varAttrId;
+                if (varAttr.attribute && typeof varAttr.value === 'string') {
+                    // V2 structure
+                    varAttrName = varAttr.attribute.name?.toLowerCase();
+                    varAttrId = varAttr.id;
+                } else if (varAttr.value && typeof varAttr.value === 'object') {
+                    // V1 structure
+                    varAttrName = varAttr.value.attribute?.name?.toLowerCase();
+                    varAttrId = varAttr.value.id;
+                } else {
+                    return false;
+                }
+                return varAttrName === attrKey && varAttrId === selectedAttr.id;
+            });
         });
     });
 };
@@ -460,37 +532,39 @@ const isLightColor = (color) => {
 
 // Check if an attribute option is available (has > 0 stock) given other current selections
 const isOptionAvailable = (key, valueObj) => {
-    // If no variations, assume available (fallback)
     if (!props.product.variations || props.product.variations.length === 0)
         return true;
 
-    // Create a hypothetical selection merging potentially new value
     const potentialSelection = { ...selectedAttributes.value, [key]: valueObj };
 
-    // Search for ANY variation that matches this combination AND has stock
     return props.product.variations.some((variation) => {
-        // Must have stock
         if (variation.stock <= 0) return false;
 
-        // Must match ALL attributes in the potential selection
-        // Start by checking if the variation has the attributes we are looking for
-        if (!variation.attributes) return false; // Should not happen if data integrity is good
+        const attrs = variation.attributeValues || variation.attributes || [];
+        if (!attrs.length) return false;
 
-        // For every selected attribute key (color, ram, etc.)
         return Object.keys(potentialSelection).every((selKey) => {
             const desiredVal = potentialSelection[selKey];
 
-            // Find corresponding attribute in variation
-            // Note: variation.attributes structure: [ { value: { attribute: { name: 'Color' }, id: 123 } } ]
-            const matchingAttr = variation.attributes.find(
-                (a) => a.value.attribute.name.toLowerCase() === selKey,
-            );
+            const matchingAttr = attrs.find((a) => {
+                let aName;
+                if (a.attribute && typeof a.value === 'string') {
+                    aName = a.attribute.name?.toLowerCase();
+                } else if (a.value && typeof a.value === 'object') {
+                    aName = a.value.attribute?.name?.toLowerCase();
+                }
+                return aName === selKey;
+            });
 
-            // If variation doesn't have this attribute defined, it's not a match for this specific combination
-            // (Unless we treat missing as 'any', but typically variations are explicit)
             if (!matchingAttr) return false;
 
-            return matchingAttr.value.id === desiredVal.id;
+            let matchingAttrId;
+            if (matchingAttr.attribute && typeof matchingAttr.value === 'string') {
+                matchingAttrId = matchingAttr.id;
+            } else if (matchingAttr.value && typeof matchingAttr.value === 'object') {
+                matchingAttrId = matchingAttr.value.id;
+            }
+            return matchingAttrId === desiredVal.id;
         });
     });
 };

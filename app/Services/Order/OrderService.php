@@ -540,7 +540,7 @@ class OrderService implements OrderInterface
             'base_product_price' => $product->price ?? $unitPrice,
             'variation_price_addition' => $variation?->price_adjustment ?? 0,
             'original_price' => $itemData['base_unit_price'] ?? $unitPrice,
-            'cost_price' => $product->cost_price ?? 0,
+            'cost_price' => $variation?->cost_price ?? $product->cost_price ?? 0,
 
             // Tax info - default to 0 for NOT NULL columns
             'tax_rate' => $itemData['tax_rate'] ?? 0,
@@ -572,6 +572,7 @@ class OrderService implements OrderInterface
                 'name' => $variation->name,
                 'sku' => $variation->sku,
                 'price' => $variation->price,
+                'cost_price' => $variation->cost_price,
                 'price_adjustment' => $variation->price_adjustment,
                 'attributes' => $this->getVariationAttributesSnapshot($variation),
             ] : null,

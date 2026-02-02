@@ -1680,7 +1680,7 @@ onMounted(async () => {
                   <div>
                     <p class="text-3xl font-black text-gray-900 leading-tight">৳{{ formatPrice(parseFloat(matchedVariation.price || 0) + parseFloat(currentProduct.price || 0)) }}</p>
                     <p class="text-base font-bold mt-2 flex items-center gap-2" :class="(matchedVariation.available_stock || 0) > 0 ? 'text-emerald-700' : 'text-red-600'">
-                      <div class="w-3 h-3 rounded-full" :class="(matchedVariation.available_stock || 0) > 0 ? 'bg-emerald-500' : 'bg-red-500'"></div>
+                      <span class="w-3 h-3 rounded-full inline-block" :class="(matchedVariation.available_stock || 0) > 0 ? 'bg-emerald-500' : 'bg-red-500'"></span>
                       {{ (matchedVariation.available_stock || 0) > 0 ? `${(matchedVariation.available_stock || 0)} units available` : 'Currently out of stock' }}
                     </p>
                   </div>

@@ -34,27 +34,61 @@ const addingToCart = ref(false);
 
 const isVariable = computed(() => props.product.type === "variable");
 
-// Extract all unique attributes dynamically from variations (Simplified version of ProductInfo logic)
+// Color name to hex mapping for V2 structure
+const colorNameToHex = {
+    'red': '#FF0000', 'blue': '#0000FF', 'green': '#00FF00', 'yellow': '#FFFF00',
+    'black': '#000000', 'white': '#FFFFFF', 'pink': '#FFC0CB', 'purple': '#800080',
+    'orange': '#FFA500', 'brown': '#A52A2A', 'gray': '#808080', 'grey': '#808080',
+    'navy': '#000080', 'maroon': '#800000', 'gold': '#FFD700', 'silver': '#C0C0C0',
+};
+const getColorHex = (colorName) => {
+    if (!colorName) return null;
+    return colorNameToHex[colorName.toLowerCase().trim()] || null;
+};
+
+// Extract all unique attributes dynamically from variations (V2 compatible)
 const availableAttributes = computed(() => {
     if (!props.product.variations) return [];
 
     const attributesMap = new Map();
 
     props.product.variations.forEach((variation) => {
-        variation.attributes?.forEach((attr) => {
-            const attrName = attr.value.attribute.name.toLowerCase();
+        const attrs = variation.attributeValues || variation.attributes || [];
+        attrs.forEach((attr) => {
+            let attrName, attrDisplayName, attrValue, attrId, attrColor;
+
+            if (attr.attribute && typeof attr.value === 'string') {
+                // V2 structure
+                attrName = attr.attribute.name?.toLowerCase();
+                attrDisplayName = attr.attribute.name;
+                attrValue = attr.value;
+                attrId = attr.id;
+                attrColor = attr.attribute.name?.toLowerCase() === 'color' ? getColorHex(attr.value) : null;
+            } else if (attr.value && typeof attr.value === 'object') {
+                // V1 structure
+                attrName = attr.value.attribute?.name?.toLowerCase();
+                attrDisplayName = attr.value.attribute?.name;
+                attrValue = attr.value.value;
+                attrId = attr.value.id;
+                attrColor = attr.value.color;
+            } else {
+                return;
+            }
+
+            if (!attrName) return;
+
             if (!attributesMap.has(attrName)) {
                 attributesMap.set(attrName, {
-                    name: attr.value.attribute.name,
-                    values: new Map(), // Use Map to ensure unique values by ID
+                    name: attrDisplayName,
+                    values: new Map(),
                 });
             }
             const valuesMap = attributesMap.get(attrName).values;
-            if (!valuesMap.has(attr.value.id)) {
-                valuesMap.set(attr.value.id, {
-                    id: attr.value.id,
-                    value: attr.value.value,
-                    color: attr.value.color,
+            if (!valuesMap.has(attrId)) {
+                valuesMap.set(attrId, {
+                    id: attrId,
+                    value: attrValue,
+                    color: attrColor,
                 });
             }
         });
@@ -83,15 +117,25 @@ const getMatchingVariation = () => {
         return null;
 
     return props.product.variations.find((variation) => {
-        if (!variation.attributes) return false;
-        if (variation.attributes.length !== selectedKeys.length) return false;
+        const attrs = variation.attributeValues || variation.attributes || [];
+        if (!attrs.length) return false;
+        if (attrs.length !== selectedKeys.length) return false;
+
         return selectedKeys.every((attrKey) => {
             const selectedAttr = selectedAttributes.value[attrKey];
-            return variation.attributes.some(
-                (varAttr) =>
-                    varAttr.value.attribute.name.toLowerCase() === attrKey &&
-                    varAttr.value.id === selectedAttr.id,
-            );
+            return attrs.some((varAttr) => {
+                let varAttrName, varAttrId;
+                if (varAttr.attribute && typeof varAttr.value === 'string') {
+                    varAttrName = varAttr.attribute.name?.toLowerCase();
+                    varAttrId = varAttr.id;
+                } else if (varAttr.value && typeof varAttr.value === 'object') {
+                    varAttrName = varAttr.value.attribute?.name?.toLowerCase();
+                    varAttrId = varAttr.value.id;
+                } else {
+                    return false;
+                }
+                return varAttrName === attrKey && varAttrId === selectedAttr.id;
+            });
         });
     });
 };

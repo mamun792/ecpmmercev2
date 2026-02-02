@@ -14,18 +14,22 @@ use Illuminate\Support\Facades\Log;
 use App\Repository\Product\ProductRepository;
 use Illuminate\Support\Str;
 use App\Models\Campaign;
+use App\Services\Inventory\InventoryService;
 
 class CartService
 {
     protected $cartRepository;
     protected $productRepository;
+    protected $inventoryService;
 
     public function __construct(
         CartRepository $cartRepository,
-        ProductRepository $productRepository
+        ProductRepository $productRepository,
+        InventoryService $inventoryService
     ) {
         $this->cartRepository = $cartRepository;
         $this->productRepository = $productRepository;
+        $this->inventoryService = $inventoryService;
     }
 
     /**
@@ -54,7 +58,7 @@ class CartService
 
         // Get active cart to check existing quantities
         $cart = $this->cartRepository->findActiveCart($userId, $sessionId);
-        
+
         $existingQuantity = 0;
         if ($cart) {
             $existingItem = $cart->items->where('product_id', $data['product_id'])
@@ -129,36 +133,52 @@ class CartService
         // Add item to cart
         $cartItem = $this->cartRepository->addItem($cart, $itemData);
 
-        // Refresh cart with relationships
+        // Refresh cart with optimized relationships
         $cart->refresh();
-        $cart->load('items.product', 'items.variation.attributes.attribute', 'items.variation.attributes.value');
+        $cart->load([
+            'items.product:id,name,slug,feature_image,price,type',
+            'items.variation:id,product_id,price,image_path'
+        ]);
 
         return $cart;
     }
 
     /**
-     * Get cart data
+     * Get cart data with V2 inventory stock calculation
      */
     public function getCart($userId = null, $sessionId = null)
     {
         $cart = $this->cartRepository->findActiveCart($userId, $sessionId);
 
         if (!$cart) {
-            // Create an empty cart if none exists
-            // $cart = $this->cartRepository->create([
-            //     'user_id' => $userId,
-            //     'session_id' => $sessionId ?? Str::uuid(),
-            //     'status' => 'active',
-            //     'total' => 0
-            // ]);
             return null;
         }
 
-        // Load relationships
-        $cart->load('items.product', 'items.variation.attributes.attribute', 'items.variation.attributes.value');
-        // Log::info('Cart loaded', [
-        //     'cart' => $test
-        // ]);
+        // Load optimized relationships
+        $cart->load([
+            'items.product:id,name,slug,feature_image,price,type',
+            'items.variation:id,product_id,price,image_path'
+        ]);
+
+        // V2 Inventory: Calculate available stock for each cart item
+        $cart->items->each(function ($item) {
+            $availableStock = $this->inventoryService->getTotalStock(
+                $item->product_id,
+                $item->product_variation_id
+            );
+
+            // Get minimum threshold from inventory_stocks table
+            $inventoryRecord = \App\Models\InventoryStock::where('product_id', $item->product_id)
+                ->where('product_variation_id', $item->product_variation_id)
+                ->first();
+
+            $minThreshold = $inventoryRecord?->minimum_threshold ?? 20;
+
+            $item->available_stock = $availableStock;
+            $item->minimum_threshold = $minThreshold;
+            $item->is_low_stock = $availableStock > 0 && $availableStock <= $minThreshold;
+            $item->is_out_of_stock = $availableStock <= 0;
+        });
 
         return $cart;
     }
@@ -207,9 +227,12 @@ class CartService
                 $this->handleQuantityDecrease($cart, $cartItem, abs($data['quantity']));
             }
 
-            // Refresh cart with relationships
+            // Refresh cart with optimized relationships
             $cart->refresh();
-            $cart->load('items.product', 'items.variation.attributes.attribute', 'items.variation.attributes.value');
+            $cart->load([
+                'items.product:id,name,slug,feature_image,price,type',
+                'items.variation:id,product_id,price,image_path'
+            ]);
 
             DB::commit();
             return $cart;
@@ -283,19 +306,19 @@ class CartService
         try {
             $cartItem = \App\Models\CartItem::findOrFail($itemId);
             $cart = $cartItem->cart;
-            
+
             // Update cart total
             $cart->total -= $cartItem->price * $cartItem->quantity;
             $cart->save();
-            
+
             // Delete the item
             $cartItem->delete();
-            
+
             // If cart is empty, delete it
             if ($cart->items()->count() === 0) {
                 $cart->delete();
             }
-            
+
             DB::commit();
             return true;
         } catch (\Exception $e) {

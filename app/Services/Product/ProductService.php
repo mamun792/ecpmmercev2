@@ -127,17 +127,54 @@ class ProductService
 
   public function getSingleProduct($slug)
   {
-    return Cache::remember("product.{$slug}", 3600, function () use ($slug) {
+    $product = Cache::remember("product.{$slug}", 3600, function () use ($slug) {
       return Product::where('slug', $slug)
-        ->with(['category.parentRecursive', 'variations.attributes.value.attribute', 'brand', 'campaigns'])
+        ->with([
+          'category:id,name,slug,parent_id',
+          'category.parentRecursive:id,name,slug,parent_id',
+          'brand:id,brand_name',
+          'variations.attributeValues:attribute_values.id,product_variation_id,attribute_id,value',
+          'variations.attributeValues.attribute:id,name',
+          'variations.inventoryStock',
+          'inventoryStocks',
+          'campaigns'
+        ])
         ->withAvg('reviews', 'rating')
         ->withCount('reviews')
         ->first();
     });
+
+    if (!$product) {
+      return null;
+    }
+
+    // V2 Inventory: Calculate total stock from inventory_stocks table
+    $totalStock = $this->inventoryService->getTotalStock($product->id);
+    $product->stock = $totalStock;
+
+    // Get minimum threshold for low stock warning
+    $minThreshold = $product->inventoryStocks->min('minimum_threshold') ?? 20;
+    $product->minimum_threshold = $minThreshold;
+    $product->is_low_stock = $totalStock > 0 && $totalStock <= $minThreshold;
+
+    // V2 Inventory: Calculate stock for each variation
+    if ($product->type === 'variable' && $product->variations) {
+      $product->variations->each(function ($variation) use ($product) {
+        $variationStock = $this->inventoryService->getTotalStock($product->id, $variation->id);
+        $variation->stock = $variationStock;
+
+        // Get variation's minimum threshold from inventory_stock
+        $variationMinThreshold = $variation->inventoryStock->minimum_threshold ?? 20;
+        $variation->minimum_threshold = $variationMinThreshold;
+        $variation->is_low_stock = $variationStock > 0 && $variationStock <= $variationMinThreshold;
+      });
+    }
+
+    return $product;
   }
 
   public function categorywithproducts(){
-    return Cache::remember('products.category_grouped', 1800, function () {
+    $grouped = Cache::remember('products.category_grouped', 1800, function () {
             // Get root categories that are active, ordered by 'order'
             $rootCategories = Category::whereNull('parent_id')
                 ->where('status', 'active')
@@ -150,10 +187,18 @@ class ProductService
                 // Get all descendant category IDs (active ones)
                 $ids = $this->getAllDescendantCategoryIds($root->id);
 
-                // Fetch products for these categories
+                // Fetch products for these categories (V2 structure)
                 $products = Product::whereIn('category_id', $ids)
                     ->where('status', 'Published')
-                    ->with(['category', 'variations.attributes.value.attribute', 'campaigns', 'brand'])
+                    ->with([
+                        'category:id,name,slug',
+                        'variations.attributeValues:attribute_values.id,product_variation_id,attribute_id,value',
+                        'variations.attributeValues.attribute:id,name',
+                        'variations.inventoryStock',
+                        'inventoryStocks',
+                        'campaigns',
+                        'brand:id,brand_name'
+                    ])
                     ->withAvg('reviews', 'rating')
                     ->withCount('reviews')
                     ->orderBy('created_at', 'desc')
@@ -172,7 +217,13 @@ class ProductService
             // Optional: Include Uncategorized products at the end
             $uncategorized = Product::whereNull('category_id')
                 ->where('status', 'Published')
-                ->with(['category', 'variations.attributes.value.attribute'])
+                ->with([
+                    'category:id,name,slug',
+                    'variations.attributeValues:attribute_values.id,product_variation_id,attribute_id,value',
+                    'variations.attributeValues.attribute:id,name',
+                    'variations.inventoryStock',
+                    'inventoryStocks'
+                ])
                 ->withAvg('reviews', 'rating')
                 ->withCount('reviews')
                 ->orderBy('created_at', 'desc')
@@ -189,6 +240,20 @@ class ProductService
 
             return $grouped;
         });
+
+    // V2 Inventory: Calculate stock for all products and variations
+    foreach ($grouped as &$category) {
+        foreach ($category['products'] as $product) {
+            $product->stock = $this->inventoryService->getTotalStock($product->id);
+            if ($product->type === 'variable' && $product->variations) {
+                $product->variations->each(function ($variation) use ($product) {
+                    $variation->stock = $this->inventoryService->getTotalStock($product->id, $variation->id);
+                });
+            }
+        }
+    }
+
+    return $grouped;
   }
 
 
@@ -200,9 +265,12 @@ class ProductService
         $campaigns = Campaign::active()
             ->with([
                 'products',
-                'products.category.parentRecursive',
-                'products.variations',
-                'products.variations.attributes.value.attribute',
+                'products.category:id,name,slug,parent_id',
+                'products.category.parentRecursive:id,name,slug,parent_id',
+                'products.variations.attributeValues:attribute_values.id,product_variation_id,attribute_id,value',
+                'products.variations.attributeValues.attribute:id,name',
+                'products.variations.inventoryStock',
+                'products.inventoryStocks',
                 'products.campaigns'
             ])
             ->get();
@@ -211,6 +279,16 @@ class ProductService
         $campaigns->each(function($campaign) {
             $campaign->products->loadAvg('reviews', 'rating');
             $campaign->products->loadCount('reviews');
+
+            // V2 Inventory: Calculate stock for each product
+            $campaign->products->each(function($product) {
+                $product->stock = $this->inventoryService->getTotalStock($product->id);
+                if ($product->type === 'variable' && $product->variations) {
+                    $product->variations->each(function ($variation) use ($product) {
+                        $variation->stock = $this->inventoryService->getTotalStock($product->id, $variation->id);
+                    });
+                }
+            });
         });
 
         // Calculate time remaining for each campaign
@@ -365,6 +443,8 @@ class ProductService
         ->with([
             'category:id,name,slug',
             'brand:id,brand_name',
+            'variations.attributeValues:attribute_values.id,product_variation_id,attribute_id,value',
+            'variations.attributeValues.attribute:id,name',
             'campaigns'
         ])
         ->withAvg('reviews', 'rating')

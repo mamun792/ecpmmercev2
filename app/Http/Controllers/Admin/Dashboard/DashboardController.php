@@ -67,8 +67,6 @@ class DashboardController extends Controller
         // Chart + Performance Data
         $dailyOrdersData = $this->getDailyOrdersData();
         $productPerformanceData = $this->getProductPerformanceData();
-        $orderStatusData = $this->getOrderStatusData();
-        $paymentStatusData = $this->getPaymentStatusData();
 
         // Recent Orders
         $recentOrders = Order::with([
@@ -95,8 +93,6 @@ class DashboardController extends Controller
             'dailyOrdersData' => $dailyOrdersData,
             'monthlyOrdersData' => $this->getMonthlyOrdersData(),
             'productPerformanceData' => $productPerformanceData,
-            'orderStatusData' => $orderStatusData,
-            'paymentStatusData' => $paymentStatusData,
             'deliverySalesData' => $this->getDeliverySalesData(),
             'recentOrders' => $recentOrders,
             'locations' => $locations,
@@ -277,7 +273,12 @@ class DashboardController extends Controller
     private function getLowStockItems()
     {
         // Get inventory items with stock information - optimized query
-        $items = InventoryStock::with(['product:id,name', 'productVariation:id,product_id'])
+        $items = InventoryStock::with([
+                'product:id,name',
+                'productVariation:id,product_id',
+                'productVariation.attributeValues:attribute_values.id,product_variation_id,attribute_id,value',
+                'productVariation.attributeValues.attribute:id,name'
+            ])
             ->select('id', 'product_id', 'product_variation_id', 'available_quantity', 'minimum_threshold', 'maximum_threshold', 'track_inventory')
             ->where('track_inventory', true)
             ->orderByRaw('CASE
@@ -290,8 +291,11 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($item) {
                 $name = $item->product->name ?? 'Unknown Product';
-                if ($item->productVariation) {
-                    $name .= ' - Variation';
+                if ($item->productVariation && $item->productVariation->attributeValues) {
+                    $attrs = $item->productVariation->attributeValues
+                        ->map(fn($av) => $av->value)
+                        ->join(', ');
+                    $name .= ' - ' . $attrs;
                 }
 
                 $current = $item->available_quantity ?? 0;
