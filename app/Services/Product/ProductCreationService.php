@@ -64,17 +64,19 @@ class ProductCreationService
             $dto = ProductCreationDTO::fromRequest($request);
 
             return DB::transaction(function () use ($dto, $request) {
-                // Step 1: Validate uniqueness
+                // Step 1: Validate uniqueness (including smart slug handling)
                 $validationResult = $this->validateUniqueness($dto);
                 if (!$validationResult['success']) {
                     return $validationResult;
                 }
 
+                $uniqueSlug = $validationResult['slug'] ?? null;
+
                 // Step 2: Upload images and video
                 $mediaResult = $this->processMediaUploads($dto);
 
-                // Step 3: Create the product record
-                $product = $this->createProductRecord($dto, $mediaResult);
+                // Step 3: Create the product record with validated slug
+                $product = $this->createProductRecord($dto, $mediaResult, $uniqueSlug);
 
                 Log::info('✅ [ProductCreationService] Product created', [
                     'product_id' => $product->id,
@@ -152,20 +154,20 @@ class ProductCreationService
     // =====================================================
 
     /**
-     * Validate product uniqueness (slug, product_code)
+     * Validate product uniqueness (slug, product_code) - BIG TECH STYLE
+     * Handles soft-deleted products intelligently
      */
     private function validateUniqueness(ProductCreationDTO $dto): array
     {
         $baseSlug = Str::slug($dto->name);
 
-        // Check for duplicate slug
-        $existingProduct = Product::where('slug', $baseSlug)->first();
-        if ($existingProduct) {
-            return [
-                'success' => false,
-                'error' => 'A product with this name already exists. Please use a different name.',
-            ];
+        // Check for duplicate slug (including soft-deleted) - AMAZON STYLE
+        $result = $this->handleSlugConflict($baseSlug, $dto->name);
+        if (!$result['success']) {
+            return $result;
         }
+
+        $uniqueSlug = $result['slug'];
 
         // Check for duplicate product code (including soft-deleted)
         $existingCode = Product::withTrashed()
@@ -183,7 +185,10 @@ class ProductCreationService
             ];
         }
 
-        return ['success' => true];
+        return [
+            'success' => true,
+            'slug' => $uniqueSlug,
+        ];
     }
 
     /**
@@ -258,15 +263,20 @@ class ProductCreationService
     }
 
     /**
-     * Create the main product record
+     * Create the main product record with validated slug
      */
-    private function createProductRecord(ProductCreationDTO $dto, array $mediaResult): Product
+    private function createProductRecord(ProductCreationDTO $dto, array $mediaResult, string $uniqueSlug = null): Product
     {
         $productData = $dto->toProductArray(
             featureImagePath: $mediaResult['feature_image'],
             galleryImagePaths: $mediaResult['gallery_images'],
             videoPath: $mediaResult['video']
         );
+
+        // Use the validated unique slug
+        if ($uniqueSlug) {
+            $productData['slug'] = $uniqueSlug;
+        }
 
         // Auto-generate barcode if not provided
         if (empty($productData['barcode'])) {
@@ -617,5 +627,104 @@ class ProductCreationService
         }
 
         return $errors;
+    }
+
+    // =====================================================
+    // BIG TECH SLUG MANAGEMENT METHODS
+    // =====================================================
+
+    /**
+     * Handle slug conflicts intelligently - BIG TECH APPROACH
+     *
+     * Strategy Priority:
+     * 1. If soft-deleted exists → Ask user to restore or use different name
+     * 2. If active exists → Generate unique slug with timestamp
+     * 3. Otherwise → Use original slug
+     */
+    private function handleSlugConflict(string $baseSlug, string $productName): array
+    {
+        // Check for existing products with this slug
+        $existingActive = Product::where('slug', $baseSlug)->first();
+        $existingSoftDeleted = Product::onlyTrashed()->where('slug', $baseSlug)->first();
+
+        if ($existingSoftDeleted && !$existingActive) {
+            // OPTION 1: Soft-deleted exists - create new with unique slug (allow creation)
+            $uniqueSlug = $this->generateUniqueSlug($baseSlug);
+            return [
+                'success' => true,
+                'slug' => $uniqueSlug,
+                'message' => "Similar product was previously deleted. Creating new product with unique identifier: {$uniqueSlug}"
+            ];
+        }
+
+        if ($existingActive) {
+            // OPTION 2: Active exists - generate unique slug (Shopify style)
+            $uniqueSlug = $this->generateUniqueSlug($baseSlug);
+            return [
+                'success' => true,
+                'slug' => $uniqueSlug,
+                'message' => "Product name already exists. Using unique identifier: {$uniqueSlug}"
+            ];
+        }
+
+        // OPTION 3: No conflict - use original
+        return [
+            'success' => true,
+            'slug' => $baseSlug
+        ];
+    }
+
+    /**
+     * Generate unique slug by appending timestamp/counter
+     * Used by: Amazon, Shopify, eBay
+     */
+    private function generateUniqueSlug(string $baseSlug): string
+    {
+        $timestamp = now()->format('YmdHis');
+        $uniqueSlug = $baseSlug . '-' . $timestamp;
+
+        // Double-check uniqueness
+        $counter = 1;
+        while (Product::where('slug', $uniqueSlug)->exists()) {
+            $uniqueSlug = $baseSlug . '-' . $timestamp . '-' . $counter;
+            $counter++;
+        }
+
+        return $uniqueSlug;
+    }
+
+    /**
+     * Restore a soft-deleted product (Admin action)
+     * PUBLIC API for frontend to call
+     */
+    public function restoreSoftDeletedProduct(int $productId): array
+    {
+        try {
+            $product = Product::onlyTrashed()->findOrFail($productId);
+            $product->restore();
+
+            Log::info('🔄 Product restored from soft-delete', [
+                'product_id' => $productId,
+                'product_name' => $product->name,
+                'restored_at' => now()
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Product restored successfully!',
+                'product' => $product
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('❌ Failed to restore product', [
+                'product_id' => $productId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to restore product: ' . $e->getMessage()
+            ];
+        }
     }
 }

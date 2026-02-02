@@ -133,6 +133,7 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
     Route::put('/attributes/{id}/toggle-status', [AttributeController::class, 'toggleStatus'])->name('attributes.toggle-status');
 
     Route::post('/products/bulk-delete', [ProductController::class, 'bulkDeleteProducts'])->name('products.bulk-delete');
+    Route::post('/products/{slug}/restore', [ProductController::class, 'restore'])->name('products.restore');
 
     // categories
     Route::resource('categories', CategoryController::class);

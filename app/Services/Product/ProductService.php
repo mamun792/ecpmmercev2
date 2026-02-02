@@ -133,6 +133,10 @@ class ProductService
           'category:id,name,slug,parent_id',
           'category.parentRecursive:id,name,slug,parent_id',
           'brand:id,brand_name',
+          'variations' => function($query) {
+            // Only load active variations for frontend
+            $query->where('status', 'active');
+          },
           'variations.attributeValues:attribute_values.id,product_variation_id,attribute_id,value',
           'variations.attributeValues.attribute:id,name',
           'variations.inventoryStock',
@@ -157,7 +161,7 @@ class ProductService
     $product->minimum_threshold = $minThreshold;
     $product->is_low_stock = $totalStock > 0 && $totalStock <= $minThreshold;
 
-    // V2 Inventory: Calculate stock for each variation
+    // V2 Inventory: Calculate stock for each active variation
     if ($product->type === 'variable' && $product->variations) {
       $product->variations->each(function ($variation) use ($product) {
         $variationStock = $this->inventoryService->getTotalStock($product->id, $variation->id);
@@ -1052,7 +1056,9 @@ class ProductService
 
           $variation->update([
             'price' => $variationData['price'],
+            'cost_price' => $variationData['cost_price'] ?? null,
             'previous_price' => $variationData['previous_price'] ?? null,
+            'status' => $variationData['status'] ?? 'active',
             // stock is virtual, so we update inventory explicitly below
             'image_path' => $variationImagePath,
           ]);
@@ -1092,7 +1098,9 @@ class ProductService
           $variation = ProductVariation::create([
             'product_id' => $product->id,
             'price' => $variationData['price'],
+            'cost_price' => $variationData['cost_price'] ?? null,
             'previous_price' => $variationData['previous_price'] ?? null,
+            'status' => $variationData['status'] ?? 'active',
             // stock is handled via inventory service below
             'image_path' => $variationImagePath,
           ]);

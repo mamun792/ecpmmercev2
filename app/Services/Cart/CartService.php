@@ -90,6 +90,11 @@ class CartService
                 throw new ProductNotAvailableException('Product variation not found');
             }
 
+            // Check if variation is active
+            if ($variation->status !== 'active') {
+                throw new ProductNotAvailableException('This variation is currently not available');
+            }
+
             if ($variation->product_id != $data['product_id']) {
                 throw new ProductNotAvailableException('Selected product variation does not belong to this product');
             }

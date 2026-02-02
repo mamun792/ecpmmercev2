@@ -7,6 +7,7 @@ import "ckeditor5/ckeditor5.css";
 import { ClassicEditor, editorConfig } from "@/Helpers/ckeditor";
 import AttributeSelector from "@/Components/Product/AttributeSelector.vue";
 import InventoryManager from "@/Components/Product/InventoryManager.vue";
+import ProductConflictModal from "@/Components/Product/ProductConflictModal.vue";
 import {
     PlusIcon,
     XIcon,
@@ -108,6 +109,11 @@ const globalVariationPreviousPrice = ref("");
 // Per-variation validation messages (keyed by variation index)
 const variationPriceErrors = ref({});
 
+// Big Tech Style Conflict Resolution
+const showConflictModal = ref(false);
+const conflictData = ref(null);
+const pendingSubmission = ref(false);
+
 // --- Form Initialization & Helpers ---
 
 const parseJsonField = (field) => {
@@ -138,6 +144,13 @@ const formatCategories = (categories, level = 0) => {
 };
 
 const formattedCategories = computed(() => formatCategories(props.categories));
+
+// Get selected category name for conflict modal
+const selectedCategoryName = computed(() => {
+    if (!form.category_id) return null;
+    const category = props.categories.find(cat => cat.id == form.category_id);
+    return category?.name || null;
+});
 
 const removedVariations = ref(new Set());
 const selectedAttributesMap = ref({});
@@ -196,6 +209,8 @@ const form = useForm({
     sell_without_stock: false,
     min_quantity: 0,
     stock_data: [], // For initial inventory setup [{ location, quantity, notes }]
+    // Big Tech Style Conflict Resolution
+    restore_option: null, // 'create_new' when user chooses to create new product despite conflict
 });
 
 // Access Inertia page props to show flash messages
@@ -308,11 +323,17 @@ const initializeForm = () => {
 };
 
 const initializeVariations = () => {
+    // Safety check: ensure variations exist
+    if (!props.product?.variations) {
+        console.warn('Product variations not available for initialization');
+        return;
+    }
+
     // Collect all unique attribute values from existing variations
     const attributeValuesByName = {};
 
     props.product.variations.forEach((variation) => {
-        variation.attributes.forEach((attr) => {
+        variation.attributes?.forEach((attr) => {
             if (attr.value && attr.value.attribute) {
                 const attributeName = attr.value.attribute.name;
                 const attributeValueId = attr.attribute_value_id;
@@ -334,16 +355,19 @@ const initializeVariations = () => {
 
     // Populate selectedAttributes
     // Populate selectedAttributes
-    props.attributes.forEach((attr) => {
+    props.attributes?.forEach((attr) => {
         selectedAttributesMap.value[attr.name] =
             attributeValuesByName[attr.name] || [];
     });
 
     form.variations = props.product.variations.map((variation) => {
-        const normalizedAttributes = variation.attributes.map((attr) => {
+        // Safety check for variation attributes
+        const variationAttributes = variation.attributes || [];
+
+        const normalizedAttributes = variationAttributes.map((attr) => {
             const attributeName = attr.value?.attribute?.name || "Unknown";
             const attributeValueId = attr.attribute_value_id;
-            const attributeGroup = props.attributes.find(
+            const attributeGroup = props.attributes?.find(
                 (a) => a.name === attributeName
             );
             const attributeValueLabel =
@@ -365,7 +389,8 @@ const initializeVariations = () => {
             cost_price: variation.cost_price || "",
             previous_price: variation.previous_price || "",
             purchase_price: variation.purchase_price || "",
-            stock: variation.stock || "0",
+            stock: parseInt(variation.stock) || 0,
+            status: variation.status || "active",
             image_path: null,
             image_preview: variation.image_path,
             attributes: normalizedAttributes,
@@ -643,6 +668,7 @@ watch(
                     previous_price: "",
                     purchase_price: "",
                     stock: "0",
+                    status: "active",
                     image_path: null,
                     image_preview: null,
                     attributes: combination,
@@ -923,6 +949,64 @@ const updateInventorySettings = (settings) => {
     form.min_quantity = settings.min_quantity;
 };
 
+// Big Tech Style Conflict Resolution Handlers
+const handleConflictRestore = () => {
+    // The modal handles the restore API call
+    // Once successful, we redirect to products index
+    setTimeout(() => {
+        router.get(route("admin.products.index"));
+    }, 1000);
+};
+
+const handleConflictCreateNew = () => {
+    // Set the restore_option to create_new and resubmit
+    form.restore_option = 'create_new';
+    showConflictModal.value = false;
+    pendingSubmission.value = false;
+
+    // Resubmit the form with create_new option
+    const options = {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.success("Product created successfully with unique name!");
+            // Clean up object URLs
+            if (form.feature_image_preview && form.feature_image)
+                URL.revokeObjectURL(form.feature_image_preview);
+            if (form.upload_video_preview && form.upload_video)
+                URL.revokeObjectURL(form.upload_video_preview);
+            form.variations.forEach((v) => {
+                if (v.image_preview && v.image_path)
+                    URL.revokeObjectURL(v.image_preview);
+            });
+            galleryImagePreviews.value.forEach((p) => {
+                if (p.startsWith("blob:")) URL.revokeObjectURL(p);
+            });
+
+            setTimeout(() => {
+                router.get(route("admin.products.index"));
+            }, 1000);
+        },
+        onError: (errors) => {
+            console.error('Create new product errors:', errors);
+            toast.error(Object.values(errors)[0] || 'Failed to create product');
+        },
+    };
+
+    if (isEditMode.value) {
+        form.post(route("admin.products.update", props.product.id), options);
+    } else {
+        form.post(route("admin.products.store"), options);
+    }
+};
+
+const closeConflictModal = () => {
+    showConflictModal.value = false;
+    conflictData.value = null;
+    pendingSubmission.value = false;
+    form.restore_option = null;
+};
+
 const calculateTotalInitialStock = () => {
     return form.stock_data.reduce((total, item) => {
         const qty = parseInt(item.quantity) || 0;
@@ -1032,8 +1116,17 @@ const submit = () => {
         },
         onError: (errors) => {
             console.error('Form submission errors:', errors);
-            // When server returns validation errors or custom errors
-            // they come through the form.errors object
+
+            // Check if this is a conflict response (our custom conflict error)
+            if (errors.conflict_data && errors.conflict_message) {
+                // This is a Big Tech style conflict resolution
+                conflictData.value = errors.conflict_data;
+                showConflictModal.value = true;
+                pendingSubmission.value = true;
+                return; // Don't show toast error for conflicts
+            }
+
+            // Handle normal validation errors
             if (Object.keys(errors).length > 0) {
                 // Show first validation error
                 const firstError = Object.values(errors)[0];
@@ -2052,13 +2145,6 @@ const submit = () => {
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    @click="removeVariation(index)"
-                                                    class="p-2 text-gray-400 hover:text-white hover:bg-red-500 rounded-xl transition-all"
-                                                >
-                                                    <XIcon class="h-5 w-5" />
-                                                </button>
                                             </div>
 
                                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2127,12 +2213,45 @@ const submit = () => {
                                                         Stock
                                                     </label>
                                                     <input
-                                                        v-model="variation.stock"
+                                                        v-model.number="variation.stock"
                                                         type="number"
                                                         class="w-full py-3 px-4 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                                                         placeholder="0"
                                                     />
                                                 </div>
+                                            </div>
+
+                                            <!-- Status Toggle and Remove Actions -->
+                                            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                                                <div class="flex items-center gap-3">
+                                                    <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</label>
+                                                    <div class="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            @click="variation.status = variation.status === 'active' ? 'inactive' : 'active'"
+                                                            :class="[
+                                                                'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+                                                                variation.status === 'active'
+                                                                    ? 'bg-green-100 text-green-800 border border-green-200'
+                                                                    : 'bg-red-100 text-red-800 border border-red-200'
+                                                            ]"
+                                                        >
+                                                            {{ variation.status === 'active' ? 'Active' : 'Inactive' }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click="removeVariation(index)"
+                                                    :disabled="variation.id !== undefined && variation.id !== null"
+                                                    :class="[
+                                                        'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1',
+                                                        variation.id ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                    ]"
+                                                >
+                                                    <XIcon class="w-3.5 h-3.5" />
+                                                    Remove
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -2236,6 +2355,16 @@ const submit = () => {
             </div>
         </div>
     </div>
+
+    <!-- Big Tech Style Conflict Resolution Modal -->
+    <ProductConflictModal
+        :show="showConflictModal"
+        :conflict-data="conflictData"
+        :form-data="{...form, category_name: selectedCategoryName}"
+        @close="closeConflictModal"
+        @restore="handleConflictRestore"
+        @create-new="handleConflictCreateNew"
+    />
 </template>
 
 <style scoped>

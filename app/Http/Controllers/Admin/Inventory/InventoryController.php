@@ -517,4 +517,38 @@ class InventoryController extends Controller
             }),
         ];
     }
+
+    /**
+     * Toggle variation active/inactive status
+     */
+    public function toggleVariationStatus(Request $request)
+    {
+        $request->validate([
+            'variation_id' => 'required|exists:product_variations,id',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        try {
+            $variation = \App\Models\ProductVariation::findOrFail($request->variation_id);
+            $variation->update(['status' => $request->status]);
+
+            Log::info('Variation status updated', [
+                'variation_id' => $variation->id,
+                'new_status' => $request->status,
+                'user_id' => auth()->id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Variation status updated to ' . $request->status,
+                'status' => $request->status,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Variation Status Toggle Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update variation status',
+            ], 500);
+        }
+    }
 }

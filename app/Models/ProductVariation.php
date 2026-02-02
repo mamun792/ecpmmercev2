@@ -50,6 +50,11 @@ class ProductVariation extends Model
     ];
 
     /**
+     * Attributes to append to JSON serialization
+     */
+    protected $appends = ['stock'];
+
+    /**
      * Attribute casting
      */
     protected $casts = [

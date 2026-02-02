@@ -120,6 +120,16 @@ class ProductController extends Controller
             // Handles: images, variations, attributes, inventory stock - ALL in one transaction
             $result = $this->productCreationService->createProduct($request);
 
+            // Handle special case: Restore option for soft-deleted product (BIG TECH STYLE)
+            if (isset($result['action']) && $result['action'] === 'restore_option') {
+                return back()
+                    ->with('restore_option', [
+                        'message' => $result['error'],
+                        'deleted_product' => $result['deleted_product']
+                    ])
+                    ->withInput();
+            }
+
             if (!$result['success']) {
                 Log::error('❌ [ProductController] Product Store Failed', ['error' => $result['error']]);
                 return back()
@@ -149,6 +159,45 @@ class ProductController extends Controller
 
             return back()
                 ->with('error', 'An unexpected error occurred: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Restore a soft-deleted product (Big Tech Style)
+     * Called when user chooses to restore instead of creating duplicate
+     */
+    public function restore(Request $request)
+    {
+        try {
+            $productId = $request->input('product_id');
+
+            Log::info('🔄 [ProductController] Restoring soft-deleted product', [
+                'product_id' => $productId
+            ]);
+
+            $result = $this->productCreationService->restoreSoftDeletedProduct($productId);
+
+            if (!$result['success']) {
+                return back()
+                    ->with('error', $result['error'])
+                    ->withInput();
+            }
+
+            // Clear product cache
+            $this->clearProductCache();
+
+            return redirect()
+                ->route('admin.products.edit', $result['product'])
+                ->with('success', $result['message'] . ' You can now edit it.');
+
+        } catch (\Exception $e) {
+            Log::error('❌ [ProductController] Product Restore Failed', [
+                'error' => $e->getMessage()
+            ]);
+
+            return back()
+                ->with('error', 'Failed to restore product: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -185,8 +234,16 @@ class ProductController extends Controller
                 'category:id,name,slug',
                 'brand:id,brand_name',
                 'variations.inventoryStock',
+                'variations.attributes.value.attribute:id,name',
+                'variations.attributeValues.attribute:id,name',
                 'inventoryStocks'
             ]);
+
+            // Explicitly format variations to ensure inventoryStock is included
+            $product->variations->transform(function ($variation) {
+                $variation->inventoryStock;  // Access to ensure it's loaded
+                return $variation;
+            });
 
             $locations = $this->productCreationService->getFormData()['inventory_locations'];
 
