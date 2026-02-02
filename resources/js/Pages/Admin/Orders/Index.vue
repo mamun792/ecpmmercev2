@@ -27,6 +27,7 @@ import DeleteModal from "@/Components/Modal/DeleteModal.vue";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import axios from "axios";
 import StatusDropdown from "@/Components/Order/StatusDropdown.vue";
+import StatusChangeModal from "@/Components/Order/StatusChangeModal.vue";
 import FraudCheckerModal from "@/Components/Couriers/FraudCheckerModal.vue";
 import AdminNotesModal from "@/Components/Order/AdminNotesModal.vue";
 
@@ -50,6 +51,10 @@ const isDownloading = ref(false); // New loading state for invoice download
 const showAdminNotesModal = ref(false);
 const selectedOrderForNotes = ref(null);
 const viewMode = ref("table"); // View mode toggle - default to table
+
+// Status Change Modal
+const showStatusChangeModal = ref(false);
+const statusChangeOrder = ref(null);
 
 // Pagination computed values
 const currentPage = ref(props.orders.current_page || 1);
@@ -420,7 +425,40 @@ watch(
 // Create a loading state map to track which orders are being updated
 const updatingOrders = ref({});
 
-// Status update function using Composition API
+// Open status change modal
+const openStatusChangeModal = (order) => {
+    statusChangeOrder.value = order;
+    showStatusChangeModal.value = true;
+};
+
+// Confirm status change from modal
+const confirmStatusChange = async (newStatus) => {
+    if (!statusChangeOrder.value) return;
+    
+    const orderId = statusChangeOrder.value.id;
+    updatingOrders.value[orderId] = true;
+    showStatusChangeModal.value = false;
+
+    try {
+        const response = await axios.put(`/orders/${orderId}/status`, {
+            status: newStatus,
+        });
+        toast.success(
+            response.data.message || "Order status updated successfully"
+        );
+        router.reload();
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        toast.error(
+            error.response?.data?.message || "Failed to update order status"
+        );
+    } finally {
+        updatingOrders.value[orderId] = false;
+        statusChangeOrder.value = null;
+    }
+};
+
+// Legacy status update function (keeping for backward compatibility)
 const updateOrderStatus = async (orderId, newStatus) => {
     updatingOrders.value[orderId] = true;
 
@@ -1367,12 +1405,35 @@ const handleNotesSaved = (newNotes) => {
                                 </div>
                             </td>
                             <td class="px-1 py-3 text-sm">
-                                <StatusDropdown
-                                    v-model="order.status"
-                                    :order-id="order.id"
-                                    :is-loading="updatingOrders[order.id]"
-                                    @status-change="updateOrderStatus"
-                                />
+                                <!-- Click to open status change modal -->
+                                <button
+                                    @click="openStatusChangeModal(order)"
+                                    type="button"
+                                    class="w-full appearance-none rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all hover:shadow-md"
+                                    :class="{
+                                        'bg-blue-500 text-white border-blue-600': order.status === 'pending',
+                                        'bg-orange-500 text-white border-orange-600': order.status === 'processing',
+                                        'bg-amber-500 text-black border-amber-600': order.status === 'shipped',
+                                        'bg-green-500 text-white border-green-600': order.status === 'delivered',
+                                        'bg-red-500 text-white border-red-600': order.status === 'cancelled',
+                                        'bg-purple-500 text-white border-purple-600': order.status === 'returned',
+                                        'bg-gray-500 text-white border-gray-600': order.status === 'on_hold',
+                                        'bg-indigo-500 text-white border-indigo-600': order.status === 'confirmed',
+                                        'opacity-50 cursor-not-allowed': updatingOrders[order.id]
+                                    }"
+                                    :disabled="updatingOrders[order.id]"
+                                >
+                                    <div class="flex items-center justify-between">
+                                        <span class="capitalize font-medium">{{ order.status }}</span>
+                                        <svg v-if="!updatingOrders[order.id]" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                        <svg v-else class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </div>
+                                </button>
                             </td>
                             <td class="px-1 py-3 text-sm">
                                 <span
@@ -1700,6 +1761,16 @@ const handleNotesSaved = (newNotes) => {
             :customer-note="selectedOrderForNotes?.customer?.note"
             @close="closeAdminNotesModal"
             @saved="handleNotesSaved"
+        />
+
+        <!-- Status Change Confirmation Modal -->
+        <StatusChangeModal
+            :show="showStatusChangeModal"
+            :current-status="statusChangeOrder?.status"
+            :order-id="statusChangeOrder?.id"
+            :order-number="statusChangeOrder?.order_number"
+            @close="showStatusChangeModal = false; statusChangeOrder = null"
+            @confirm="confirmStatusChange"
         />
     </AdminLayout>
 </template>
