@@ -327,7 +327,7 @@ class InventoryController extends Controller
         try {
             $totalProducts = Product::where('status', 'active')->count();
             $totalStockValue = InventoryStock::join('products', 'inventory_stocks.product_id', '=', 'products.id')
-                ->selectRaw('SUM(available_quantity * cost_price) as total_value')
+                ->selectRaw('SUM(inventory_stocks.available_quantity * products.price) as total_value')
                 ->value('total_value') ?? 0;
 
             $lowStockCount = InventoryStock::whereRaw('available_quantity <= reorder_level')->count();

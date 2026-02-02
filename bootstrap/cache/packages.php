@@ -46,6 +46,13 @@
       0 => 'Laravel\\Sanctum\\SanctumServiceProvider',
     ),
   ),
+  'laravel/scout' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Laravel\\Scout\\ScoutServiceProvider',
+    ),
+  ),
   'laravel/tinker' => 
   array (
     'providers' => 
@@ -97,6 +104,13 @@
     'providers' => 
     array (
       0 => 'Spatie\\Permission\\PermissionServiceProvider',
+    ),
+  ),
+  'teamtnt/laravel-scout-tntsearch-driver' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'TeamTNT\\Scout\\TNTSearchScoutServiceProvider',
     ),
   ),
   'tightenco/ziggy' => 

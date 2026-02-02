@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Laravel\Scout\Searchable;
 
 class Product extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Searchable;
 
     protected $fillable = [
         'name',
@@ -79,6 +80,41 @@ class Product extends Model
     ];
 
     protected $appends = ['feature_image_url', 'avg_rating', 'reviews_count', 'stock', 'variations_count'];
+
+    /**
+     * Get the indexable data array for the model.
+     * Defines what fields will be searchable with TNTSearch
+     */
+    public function toSearchableArray()
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'product_code' => $this->product_code,
+            'barcode' => $this->barcode,
+            'short_description' => $this->short_description,
+            'search_keywords' => $this->search_keywords,
+            'category_name' => $this->category?->name,
+            'brand_name' => $this->brand?->brand_name,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs()
+    {
+        return 'products_index';
+    }
+
+    /**
+     * Determine if the model should be searchable.
+     * Only index Published products
+     */
+    public function shouldBeSearchable()
+    {
+        return $this->status === 'Published';
+    }
 
     // Load category including soft-deleted for historical records (orders, invoices)
     public function category()

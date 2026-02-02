@@ -62,13 +62,11 @@ class RevenueReportService
     {
         $query = DB::table('orders as o')
             ->join('order_items as oi', 'o.id', '=', 'oi.order_id')
-            ->join('products as p', 'oi.product_id', '=', 'p.id')
-            ->leftJoin('product_variations as pv', 'oi.product_variation_id', '=', 'pv.id')
             ->whereBetween('o.created_at', [$startDate, $endDate])
             ->where('o.status', '!=', 'cancelled')
             ->select([
                 DB::raw('SUM(o.total) as total_revenue'),
-                DB::raw('SUM(oi.quantity * COALESCE(pv.cost_price, p.cost_price, 0)) as product_cost'),
+                DB::raw('SUM(oi.quantity * COALESCE(oi.cost_price, 0)) as product_cost'),
                 DB::raw('SUM(o.shipping_cost) as shipping_cost'),
                 DB::raw('SUM(o.discount_total) as discount_cost'),
             ])
@@ -102,8 +100,6 @@ class RevenueReportService
 
             $trends = DB::table('orders as o')
                 ->leftJoin('order_items as oi', 'o.id', '=', 'oi.order_id')
-                ->leftJoin('products as p', 'oi.product_id', '=', 'p.id')
-                ->leftJoin('product_variations as pv', 'oi.product_variation_id', '=', 'pv.id')
                 ->where('o.created_at', '>=', $startDate)
                 ->where('o.status', '!=', 'cancelled')
                 ->select([
@@ -113,7 +109,7 @@ class RevenueReportService
                     DB::raw('SUM(o.shipping_cost) as shipping'),
                     DB::raw('SUM(o.discount_total) as discounts'),
                     DB::raw('COUNT(DISTINCT o.id) as order_count'),
-                    DB::raw('SUM(oi.quantity * COALESCE(pv.cost_price, p.cost_price, 0)) as product_cost'),
+                    DB::raw('SUM(oi.quantity * COALESCE(oi.cost_price, 0)) as product_cost'),
                 ])
                 ->groupBy('month')
                 ->orderBy('month', 'DESC')
@@ -145,7 +141,6 @@ class RevenueReportService
         $products = DB::table('order_items as oi')
             ->join('products as p', 'oi.product_id', '=', 'p.id')
             ->join('orders as o', 'oi.order_id', '=', 'o.id')
-            ->leftJoin('product_variations as pv', 'oi.product_variation_id', '=', 'pv.id')
             ->whereBetween('o.created_at', [$startDate, $endDate])
             ->where('o.status', '!=', 'cancelled')
             ->select([
@@ -154,8 +149,8 @@ class RevenueReportService
                 'p.feature_image',
                 DB::raw('SUM(oi.quantity) as units_sold'),
                 DB::raw('SUM(oi.final_price) as revenue'),
-                DB::raw('SUM(oi.quantity * COALESCE(pv.cost_price, p.cost_price, 0)) as total_cost'),
-                DB::raw('SUM(oi.quantity * (oi.unit_price - COALESCE(pv.cost_price, p.cost_price, 0))) as profit'),
+                DB::raw('SUM(oi.quantity * COALESCE(oi.cost_price, 0)) as total_cost'),
+                DB::raw('SUM(oi.quantity * (oi.unit_price - COALESCE(oi.cost_price, 0))) as profit'),
             ])
             ->groupBy('p.id', 'p.name', 'p.feature_image')
             ->orderByDesc('revenue')

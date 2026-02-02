@@ -260,6 +260,17 @@ class ProductRepository implements ProductRepositoryInterface
     }
 
     /**
+     * Get count of products with low stock (optimized for stats)
+     */
+    public function getLowStockCount(int $threshold = 10): int
+    {
+        return Product::whereHas('inventoryStocks', function ($query) use ($threshold) {
+            $query->where('available_quantity', '<=', $threshold)
+                  ->where('available_quantity', '>', 0);
+        })->count();
+    }
+
+    /**
      * Get out of stock products
      * Products with no inventory or zero stock
      */
@@ -273,6 +284,37 @@ class ProductRepository implements ProductRepositoryInterface
             // OR products with no inventory records at all
             ->orWhereDoesntHave('inventoryStocks');
         })->with(['inventoryStocks', 'category'])->get();
+    }
+
+    /**
+     * Get count of out of stock products (optimized for stats)
+     */
+    public function getOutOfStockCount(): int
+    {
+        return Product::where(function ($query) {
+            $query->whereHas('inventoryStocks', function ($q) {
+                $q->where('available_quantity', '<=', 0);
+            })->orWhereDoesntHave('inventoryStocks');
+        })->count();
+    }
+
+    /**
+     * Get all product stats in one optimized query
+     */
+    public function getProductStats(): array
+    {
+        // Main stats in single query
+        $stats = Product::selectRaw('
+            COUNT(*) as total_products,
+            SUM(CASE WHEN status = "Published" THEN 1 ELSE 0 END) as published_products
+        ')->first();
+
+        return [
+            'total_products' => (int) $stats->total_products,
+            'published_products' => (int) $stats->published_products,
+            'low_stock_products' => $this->getLowStockCount(),
+            'out_of_stock_products' => $this->getOutOfStockCount(),
+        ];
     }
 
     /**
@@ -295,12 +337,15 @@ class ProductRepository implements ProductRepositoryInterface
      */
     protected function buildQuery(?ProductFilterDTO $filters): Builder
     {
+        // Optimize eager loading - only load necessary data for index page
+        // Deep nested variations loading causes N+1, load only on detail pages
         $query = Product::with([
-            'category',
-            'brand',
-            'inventoryStocks',
-            'variations.attributes.value.attribute',
-            'variations.inventoryStock'
+            'category:id,name,slug',  // Select only needed columns
+            'brand:id,brand_name',
+            'inventoryStocks' => function($q) {
+                $q->select('product_id', DB::raw('SUM(available_quantity) as total_stock'))
+                  ->groupBy('product_id');
+            }
         ])->withCount('variations'); // Count variations for UI
 
         if (!$filters) {

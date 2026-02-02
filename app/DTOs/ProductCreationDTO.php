@@ -5,6 +5,7 @@ namespace App\DTOs;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Big Tech Style DTO for Product Creation
@@ -219,7 +220,7 @@ class ProductCreationDTO
      */
     public function toProductArray(?string $featureImagePath = null, ?array $galleryImagePaths = null, ?string $videoPath = null): array
     {
-        return [
+        $data = [
             'name' => $this->name,
             'product_code' => $this->productCode,
             'category_id' => $this->categoryId,
@@ -230,10 +231,7 @@ class ProductCreationDTO
             'status' => $this->status,
             'type' => $this->type,
             'price' => $this->price,
-            'cost_price' => $this->costPrice,
             'previous_price' => $this->previousPrice,
-            'purchase_price' => $this->purchasePrice,
-            'stock' => $this->stock,
             'feature_image' => $featureImagePath,
             'gallery_images' => $galleryImagePaths ? json_encode($galleryImagePaths) : null,
             'upload_video' => $videoPath,
@@ -241,9 +239,6 @@ class ProductCreationDTO
             'is_daily_product' => $this->isDailyProduct,
             'is_pre_order' => $this->isPreOrder,
             'is_free_delivery' => $this->isFreeDelivery,
-            'track_inventory' => $this->trackQuantity,
-            'allow_backorders' => $this->sellWithoutStock,
-            'min_quantity' => $this->minQuantity,
             'remarks' => $this->remarks,
             'meta_title' => $this->metaTitle,
             'meta_description' => $this->metaDescription,
@@ -252,6 +247,34 @@ class ProductCreationDTO
             'view_count' => 0,
             'sold_stock' => 0,
         ];
+
+        // Add cost_price if it exists in the table
+        if ($this->costPrice !== null) {
+            $data['cost_price'] = $this->costPrice;
+        }
+
+        // Add optional fields if they exist in database schema
+        if (Schema::hasColumn('products', 'stock')) {
+            $data['stock'] = $this->stock;
+        }
+
+        if (Schema::hasColumn('products', 'purchase_price') && $this->purchasePrice !== null) {
+            $data['purchase_price'] = $this->purchasePrice;
+        }
+
+        if (Schema::hasColumn('products', 'track_inventory')) {
+            $data['track_inventory'] = $this->trackQuantity;
+        }
+
+        if (Schema::hasColumn('products', 'allow_backorders')) {
+            $data['allow_backorders'] = $this->sellWithoutStock;
+        }
+
+        if (Schema::hasColumn('products', 'min_quantity') && $this->minQuantity !== null) {
+            $data['min_quantity'] = $this->minQuantity;
+        }
+
+        return $data;
     }
 
     /**

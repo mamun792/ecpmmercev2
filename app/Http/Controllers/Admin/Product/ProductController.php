@@ -60,13 +60,8 @@ class ProductController extends Controller
             $categories = Category::select('id', 'name')->where('status', 'active')->get();
             $brands = \App\Models\Brand::select('id', 'brand_name as name')->where('status', 'active')->get();
 
-            // Get summary stats
-            $stats = [
-                'total_products' => Product::count(),
-                'published_products' => Product::where('status', 'Published')->count(),
-                'low_stock_products' => $this->productRepository->getLowStock()->count(),
-                'out_of_stock_products' => $this->productRepository->getOutOfStock()->count(),
-            ];
+            // Get optimized stats in 1-2 queries instead of 4
+            $stats = $this->productRepository->getProductStats();
 
             return Inertia::render('Admin/Product/Index', [
                 'products' => $products,

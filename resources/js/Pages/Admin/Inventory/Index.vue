@@ -215,8 +215,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { Head } from '@inertiajs/vue3'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { Head, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import Pagination from '@/Components/Pagination.vue'
 import StockAdjustmentModal from '@/Components/Admin/Inventory/StockAdjustmentModal.vue'
@@ -284,11 +284,21 @@ const getStockStatusClass = (item) => {
 const fetchInventory = async () => {
   loading.value = true
   try {
-    window.location.href = route('admin.inventory.index', filters.value)
+    router.visit(route('admin.inventory.index', filters.value), {
+      preserveState: true,
+      preserveScroll: true,
+      only: ['inventory', 'analytics'],
+      onSuccess: () => {
+        loading.value = false
+      },
+      onError: () => {
+        loading.value = false
+        toast.error('Failed to fetch inventory data')
+      }
+    })
   } catch (error) {
     console.error('Error fetching inventory:', error)
     toast.error('Failed to fetch inventory data')
-  } finally {
     loading.value = false
   }
 }
@@ -344,13 +354,29 @@ const exportInventory = async () => {
   }
 }
 
+// Auto-refresh interval
+let refreshInterval = null
+
 onMounted(() => {
-  // Auto-refresh every 30 seconds for real-time updates
-  setInterval(() => {
-    if (!showAdjustModal.value && !showTransferModal.value && !showHistoryModal.value) {
+  // Auto-refresh every 60 seconds for real-time updates (reduced from 30s to be less aggressive)
+  // Only refresh if user is still on this page and no modals are open
+  refreshInterval = setInterval(() => {
+    if (
+      !showAdjustModal.value &&
+      !showTransferModal.value &&
+      !showHistoryModal.value &&
+      !document.hidden // Only refresh if page is visible
+    ) {
       fetchInventory()
     }
-  }, 30000)
+  }, 60000) // Changed to 60 seconds
+})
+
+onUnmounted(() => {
+  // Clean up interval when component unmounts
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
 })
 </script>
 
