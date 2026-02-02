@@ -538,17 +538,10 @@ class InventoryController extends Controller
                 'user_id' => auth()->id(),
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Variation status updated to ' . $request->status,
-                'status' => $request->status,
-            ]);
+            return back()->with('success', 'Variation status updated to ' . $request->status);
         } catch (\Exception $e) {
             Log::error('Variation Status Toggle Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update variation status',
-            ], 500);
+            return back()->with('error', 'Failed to update variation status');
         }
     }
 }

@@ -105,6 +105,7 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
         Route::get('/alerts', [InventoryController::class, 'getLowStockAlerts'])->name('alerts');
         Route::put('/reorder-level', [InventoryController::class, 'updateReorderLevel'])->name('reorder-level');
         Route::post('/reports', [InventoryController::class, 'generateReport'])->name('reports');
+        Route::post('/variation/toggle-status', [InventoryController::class, 'toggleVariationStatus'])->name('variation.toggle-status');
     });
 
     // Reports

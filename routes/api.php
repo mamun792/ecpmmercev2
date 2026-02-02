@@ -47,7 +47,6 @@ Route::middleware(['auth:api', 'role:admin'])->prefix('inventory')->group(functi
     Route::get('/alerts', [InventoryController::class, 'getLowStockAlerts'])->name('api.inventory.alerts');
     Route::put('/reorder-level', [InventoryController::class, 'updateReorderLevel'])->name('api.inventory.reorder-level');
     Route::post('/reports', [InventoryController::class, 'generateReport'])->name('api.inventory.reports');
-    Route::post('/variation/toggle-status', [InventoryController::class, 'toggleVariationStatus'])->name('api.inventory.variation.toggle-status');
 });
 
 
