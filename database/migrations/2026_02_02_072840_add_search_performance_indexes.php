@@ -16,18 +16,18 @@ return new class extends Migration
         Schema::table('products', function (Blueprint $table) {
             // Status index for filtering published products
             $table->index('status', 'idx_products_status');
-            
+
             // Category and brand indexes for filtering
             $table->index('category_id', 'idx_products_category');
             $table->index('brand_id', 'idx_products_brand');
-            
+
             // Price range filtering
             $table->index('price', 'idx_products_price');
-            
+
             // Barcode and product code for quick lookup
             $table->index('barcode', 'idx_products_barcode');
             $table->index('product_code', 'idx_products_code');
-            
+
             // Composite index for common filter combinations
             $table->index(['status', 'category_id'], 'idx_products_status_category');
             $table->index(['status', 'brand_id'], 'idx_products_status_brand');

@@ -51,16 +51,11 @@ class ProductService
     // Cache for 30 minutes (1800 seconds)
     return Cache::remember($cacheKey, 1800, function () use ($search, $perPage) {
       $query = Product::with([
-        'category.parentRecursive',
-        'brand',
+        'category:id,name,slug,parent_id',
+        'category.parentRecursive:id,name,slug,parent_id',
+        'brand:id,brand_name',
         'inventoryStocks', // V2 inventory integration
         'variations.inventoryStock', // V2 variation inventory
-        'variations.attributes.value' => function($q) {
-          $q->withTrashed(); // Load soft-deleted values to check
-        },
-        'variations.attributes.value.attribute' => function($q) {
-          $q->withTrashed(); // Load soft-deleted attributes to check
-        },
         'campaigns'
       ])->withAvg('reviews', 'rating')
         ->withCount('reviews');
@@ -367,7 +362,11 @@ class ProductService
     $attributeFilters = $params['attributes'] ?? [];
 
     $query = Product::where('status', 'Published')
-        ->with(['category', 'brand', 'variations.attributes.value.attribute', 'campaigns'])
+        ->with([
+            'category:id,name,slug',
+            'brand:id,brand_name',
+            'campaigns'
+        ])
         ->withAvg('reviews', 'rating')
         ->withCount('reviews');
 

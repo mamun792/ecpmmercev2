@@ -15,7 +15,7 @@ class ProductSearchService
 {
     /**
      * Search products with fuzzy matching (typo tolerant)
-     * 
+     *
      * @param string $query Search term
      * @param array $filters Additional filters (category, brand, price range)
      * @param int $perPage Items per page
@@ -81,7 +81,7 @@ class ProductSearchService
 
     /**
      * Get search suggestions (autocomplete)
-     * 
+     *
      * @param string $query Partial search term
      * @param int $limit Number of suggestions
      * @return array
@@ -197,7 +197,7 @@ class ProductSearchService
     protected function getIndexSize(): float
     {
         $indexPath = storage_path('tntsearch/products_index.index');
-        
+
         if (file_exists($indexPath)) {
             return round(filesize($indexPath) / 1024 / 1024, 2);
         }

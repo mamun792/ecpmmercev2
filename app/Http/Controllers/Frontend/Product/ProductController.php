@@ -70,6 +70,7 @@ class ProductController extends Controller
 
     /**
      * Search suggestions endpoint (AJAX - returns JSON)
+     * Uses TNTSearch fuzzy search for typo tolerance
      */
     public function searchSuggestions(Request $request)
     {
@@ -80,20 +81,9 @@ class ProductController extends Controller
             return response()->json(['suggestions' => []]);
         }
 
-        $cacheKey = 'search_suggestions_' . md5($query) . '_' . $limit;
-
-        $suggestions = Cache::remember($cacheKey, 300, function () use ($query, $limit) {
-            return Product::where('status', 'Published')
-                ->where(function ($q) use ($query) {
-                    $q->where('name', 'like', "%{$query}%")
-                        ->orWhere('product_code', 'like', "%{$query}%")
-                        ->orWhere('product_tags', 'like', "%{$query}%");
-                })
-                ->with(['category:id,name,slug'])
-                ->select(['id', 'name', 'slug', 'price', 'previous_price', 'feature_image', 'category_id'])
-                ->limit($limit)
-                ->get();
-        });
+        // Use ProductSearchService for fuzzy search
+        $searchService = app(\App\Services\Search\ProductSearchService::class);
+        $suggestions = $searchService->getSuggestions($query, $limit);
 
         return response()->json([
             'suggestions' => $suggestions
@@ -135,7 +125,7 @@ class ProductController extends Controller
         $reviewService = app(\App\Services\Review\ReviewService::class);
         $reviews = $reviewService->getFormattedProductReviews($product['id']);
         $reviewStats = $reviewService->getReviewStats($product['id']);
-        
+
         // Check if current user/guest can review
         $userId = \Illuminate\Support\Facades\Auth::id();
         // Use cart_session_id cookie for guests (same as cart and order system)

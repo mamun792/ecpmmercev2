@@ -159,8 +159,13 @@ class ProductController extends Controller
      */
     public function show($id)
     {
-        $product = Product::with(['variations.attributes.value.attribute'])->findOrFail($id);
-        //return $product;
+        $product = Product::with([
+            'category:id,name,slug',
+            'brand:id,brand_name',
+            'variations.inventoryStock',
+            'inventoryStocks'
+        ])->findOrFail($id);
+
         return Inertia::render('Admin/Product/Show', [
             'product' => $product
         ]);
@@ -176,7 +181,12 @@ class ProductController extends Controller
             $categories = $this->productService->getAllCategories();
             $brands = $this->productService->getAllBrands();
 
-            $product = $product->load(['variations.attributes.value.attribute', 'inventoryStocks']);
+            $product = $product->load([
+                'category:id,name,slug',
+                'brand:id,brand_name',
+                'variations.inventoryStock',
+                'inventoryStocks'
+            ]);
 
             $locations = $this->productCreationService->getFormData()['inventory_locations'];
 
