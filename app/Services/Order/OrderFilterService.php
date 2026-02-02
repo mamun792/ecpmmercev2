@@ -7,7 +7,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * Order Filter Service - Big Tech Pattern
- * 
+ *
  * Clean, maintainable filter logic separated from controller
  * Each filter method is independent and testable
  */
@@ -38,7 +38,7 @@ class OrderFilterService
     protected function filterByStatus(Builder $query, string $status): Builder
     {
         $validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned', 'on_hold', 'confirmed', 'incomplete'];
-        
+
         if (!in_array($status, $validStatuses)) {
             return $query;
         }
@@ -52,7 +52,7 @@ class OrderFilterService
     protected function filterByPaymentStatus(Builder $query, string $status): Builder
     {
         $validStatuses = ['unpaid', 'paid', 'refunded', 'failed'];
-        
+
         if (!in_array($status, $validStatuses)) {
             return $query;
         }
@@ -67,7 +67,7 @@ class OrderFilterService
     protected function filterByCustomer(Builder $query, string $search): Builder
     {
         $search = trim($search);
-        
+
         if (empty($search)) {
             return $query;
         }
@@ -86,7 +86,7 @@ class OrderFilterService
     protected function filterByOrderNumber(Builder $query, string $number): Builder
     {
         $number = trim($number);
-        
+
         if (empty($number)) {
             return $query;
         }
@@ -126,7 +126,7 @@ class OrderFilterService
     protected function filterByMinTotal(Builder $query, $amount): Builder
     {
         $amount = (float) $amount;
-        
+
         if ($amount <= 0) {
             return $query;
         }
@@ -140,7 +140,7 @@ class OrderFilterService
     protected function filterByMaxTotal(Builder $query, $amount): Builder
     {
         $amount = (float) $amount;
-        
+
         if ($amount <= 0) {
             return $query;
         }
@@ -212,7 +212,7 @@ class OrderFilterService
     protected function filterByShippingArea(Builder $query, string $area): Builder
     {
         $validAreas = ['inside_dhaka', 'outside_dhaka'];
-        
+
         if (!in_array($area, $validAreas)) {
             return $query;
         }

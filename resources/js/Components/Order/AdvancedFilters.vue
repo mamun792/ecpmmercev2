@@ -71,16 +71,16 @@ watch([() => localFilters.value.date_from, () => localFilters.value.date_to], ()
 // Active filter count
 const activeFilterCount = computed(() => {
     let count = 0;
-    const filterKeys = ['status', 'payment_status', 'customer_search', 'order_number', 
-                        'date_from', 'date_to', 'date_preset', 'min_total', 'max_total', 
+    const filterKeys = ['status', 'payment_status', 'customer_search', 'order_number',
+                        'date_from', 'date_to', 'date_preset', 'min_total', 'max_total',
                         'shipping_area', 'has_courier'];
-    
+
     filterKeys.forEach(key => {
         if (localFilters.value[key] && localFilters.value[key] !== '') {
             count++;
         }
     });
-    
+
     return count;
 });
 
@@ -140,7 +140,7 @@ const toggleAdvanced = () => {
                         class="px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-2"
                     >
                         {{ showAdvanced ? 'Hide' : 'Show' }} Advanced
-                        <ChevronDown 
+                        <ChevronDown
                             :class="['w-4 h-4 transition-transform', showAdvanced ? 'rotate-180' : '']"
                         />
                     </button>
@@ -193,9 +193,9 @@ const toggleAdvanced = () => {
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                         <option value="">All Payments</option>
-                        <option 
-                            v-for="status in paymentStatusOptions" 
-                            :key="status.value" 
+                        <option
+                            v-for="status in paymentStatusOptions"
+                            :key="status.value"
                             :value="status.value"
                         >
                             {{ status.label }}
@@ -240,7 +240,7 @@ const toggleAdvanced = () => {
             <div v-show="showAdvanced" class="px-6 pb-6 border-t border-gray-200 bg-gray-50">
                 <div class="pt-6 space-y-4">
                     <h4 class="text-sm font-semibold text-gray-700 mb-4">Advanced Options</h4>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <!-- Date From -->
                         <div class="space-y-2">
@@ -302,9 +302,9 @@ const toggleAdvanced = () => {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="">All Areas</option>
-                                <option 
-                                    v-for="area in shippingAreas" 
-                                    :key="area.value" 
+                                <option
+                                    v-for="area in shippingAreas"
+                                    :key="area.value"
                                     :value="area.value"
                                 >
                                     {{ area.label }}

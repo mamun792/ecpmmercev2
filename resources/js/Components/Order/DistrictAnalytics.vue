@@ -3,12 +3,12 @@ import { ref, computed, onMounted } from 'vue'
 import { router } from '@inertiajs/vue3'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  MapPin, 
-  DollarSign, 
-  Package, 
+import {
+  TrendingUp,
+  TrendingDown,
+  MapPin,
+  DollarSign,
+  Package,
   BarChart3,
   Search,
   ArrowUpRight,
@@ -38,7 +38,7 @@ const filteredLocations = computed(() => {
 
   // Search filter
   if (searchQuery.value) {
-    filtered = filtered.filter(loc => 
+    filtered = filtered.filter(loc =>
       loc.district.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
   }
@@ -66,7 +66,7 @@ const topDistricts = computed(() => {
 const getHeatmapColor = (revenue) => {
   const maxRevenue = Math.max(...props.locations.map(l => l.total_revenue))
   const intensity = (revenue / maxRevenue) * 100
-  
+
   if (intensity >= 80) return 'from-red-500 to-red-600'
   if (intensity >= 60) return 'from-orange-500 to-orange-600'
   if (intensity >= 40) return 'from-yellow-500 to-yellow-600'
@@ -109,7 +109,7 @@ onMounted(() => {
 
 const initializeMap = () => {
   const map = L.map('enhanced-order-map').setView([23.7, 90.4], 7)
-  
+
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19
@@ -119,7 +119,7 @@ const initializeMap = () => {
     if (loc.lat && loc.lng) {
       const maxRevenue = Math.max(...props.locations.map(l => l.total_revenue))
       const intensity = (loc.total_revenue / maxRevenue) * 100
-      
+
       let color = '#3b82f6' // blue
       if (intensity >= 80) color = '#ef4444' // red
       else if (intensity >= 60) color = '#f97316' // orange
@@ -176,7 +176,7 @@ const initializeMap = () => {
               </strong>
             </div>
           </div>
-          <button 
+          <button
             onclick="window.location.href='/admin/orders?shipping_district=${loc.district}'"
             style="
               margin-top: 12px;
@@ -212,34 +212,34 @@ const initializeMap = () => {
           <p class="text-indigo-100 mt-2">Last 30 days compared to previous period</p>
         </div>
         <div class="flex gap-2">
-          <button 
+          <button
             @click="viewMode = 'grid'"
             :class="[
               'px-4 py-2 rounded-lg font-semibold transition-all',
-              viewMode === 'grid' 
-                ? 'bg-white text-indigo-600' 
+              viewMode === 'grid'
+                ? 'bg-white text-indigo-600'
                 : 'bg-white/20 hover:bg-white/30'
             ]"
           >
             Grid
           </button>
-          <button 
+          <button
             @click="viewMode = 'map'; setTimeout(initializeMap, 100)"
             :class="[
               'px-4 py-2 rounded-lg font-semibold transition-all',
-              viewMode === 'map' 
-                ? 'bg-white text-indigo-600' 
+              viewMode === 'map'
+                ? 'bg-white text-indigo-600'
                 : 'bg-white/20 hover:bg-white/30'
             ]"
           >
             Map
           </button>
-          <button 
+          <button
             @click="viewMode = 'list'"
             :class="[
               'px-4 py-2 rounded-lg font-semibold transition-all',
-              viewMode === 'list' 
-                ? 'bg-white text-indigo-600' 
+              viewMode === 'list'
+                ? 'bg-white text-indigo-600'
                 : 'bg-white/20 hover:bg-white/30'
             ]"
           >
@@ -301,34 +301,34 @@ const initializeMap = () => {
           Top Performing Districts
         </h3>
         <div class="flex gap-2">
-          <button 
+          <button
             @click="sortBy = 'revenue'"
             :class="[
               'px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
-              sortBy === 'revenue' 
-                ? 'bg-indigo-100 text-indigo-700' 
+              sortBy === 'revenue'
+                ? 'bg-indigo-100 text-indigo-700'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             ]"
           >
             By Revenue
           </button>
-          <button 
+          <button
             @click="sortBy = 'orders'"
             :class="[
               'px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
-              sortBy === 'orders' 
-                ? 'bg-indigo-100 text-indigo-700' 
+              sortBy === 'orders'
+                ? 'bg-indigo-100 text-indigo-700'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             ]"
           >
             By Orders
           </button>
-          <button 
+          <button
             @click="sortBy = 'growth'"
             :class="[
               'px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
-              sortBy === 'growth' 
-                ? 'bg-indigo-100 text-indigo-700' 
+              sortBy === 'growth'
+                ? 'bg-indigo-100 text-indigo-700'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             ]"
           >
@@ -338,14 +338,14 @@ const initializeMap = () => {
       </div>
 
       <div class="space-y-4">
-        <div 
-          v-for="(district, index) in topDistricts" 
+        <div
+          v-for="(district, index) in topDistricts"
           :key="district.district"
           class="group relative overflow-hidden rounded-xl border-2 border-gray-200 hover:border-indigo-400 transition-all cursor-pointer"
           @click="viewDistrictOrders(district.district)"
         >
           <!-- Rank Badge -->
-          <div 
+          <div
             :class="[
               'absolute top-0 left-0 w-12 h-12 flex items-center justify-center text-white font-bold text-lg',
               index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : '',
@@ -359,7 +359,7 @@ const initializeMap = () => {
           </div>
 
           <!-- Heatmap Background -->
-          <div 
+          <div
             :class="['absolute inset-0 opacity-5 bg-gradient-to-r', getHeatmapColor(district.total_revenue)]"
           ></div>
 
@@ -393,7 +393,7 @@ const initializeMap = () => {
                   <TrendingDown v-else-if="district.growth < 0" class="w-4 h-4" />
                   <span>{{ district.growth >= 0 ? '+' : '' }}{{ district.growth }}%</span>
                 </div>
-                <button 
+                <button
                   class="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-semibold text-sm group-hover:translate-x-1 transition-transform"
                 >
                   <span>View Orders</span>
@@ -404,7 +404,7 @@ const initializeMap = () => {
 
             <!-- Progress Bar -->
             <div class="mt-4 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
+              <div
                 :class="['h-full bg-gradient-to-r transition-all duration-500', getHeatmapColor(district.total_revenue)]"
                 :style="{ width: `${(district.total_revenue / stats.total_revenue) * 100}%` }"
               ></div>
@@ -425,7 +425,7 @@ const initializeMap = () => {
       <div class="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
         <div class="relative">
           <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input 
+          <input
             v-model="searchQuery"
             type="text"
             placeholder="Search districts..."
@@ -436,14 +436,14 @@ const initializeMap = () => {
 
       <!-- Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div 
+        <div
           v-for="district in filteredLocations"
           :key="district.district"
           class="bg-white rounded-xl shadow-md hover:shadow-xl border-2 border-gray-200 hover:border-indigo-400 transition-all cursor-pointer group"
           @click="viewDistrictOrders(district.district)"
         >
           <div :class="['h-2 rounded-t-xl bg-gradient-to-r', getHeatmapColor(district.total_revenue)]"></div>
-          
+
           <div class="p-5">
             <div class="flex items-start justify-between mb-4">
               <h4 class="text-lg font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">
@@ -486,7 +486,7 @@ const initializeMap = () => {
       <div class="p-4 border-b border-gray-200 bg-gray-50">
         <div class="relative">
           <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input 
+          <input
             v-model="searchQuery"
             type="text"
             placeholder="Search districts..."
@@ -510,7 +510,7 @@ const initializeMap = () => {
             </tr>
           </thead>
           <tbody>
-            <tr 
+            <tr
               v-for="(district, index) in filteredLocations"
               :key="district.district"
               :class="[
@@ -521,7 +521,7 @@ const initializeMap = () => {
             >
               <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
-                  <div 
+                  <div
                     :class="[
                       'w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white',
                       index < 3 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : 'bg-gray-400'

@@ -1005,14 +1005,14 @@ const clearAllFilters = () => {
             </div>
 
             <!-- Filter Chips - Show Active Filters -->
-            <FilterChips 
+            <FilterChips
                 :filters="filters"
                 @remove="removeFilter"
                 @clear-all="clearAllFilters"
             />
 
             <!-- Advanced Filters Component -->
-            <AdvancedFilters 
+            <AdvancedFilters
                 v-model="filters"
                 :status-counts="statusCounts"
                 @apply="applyFilters"

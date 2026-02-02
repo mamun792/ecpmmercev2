@@ -280,10 +280,10 @@ class DashboardController extends Controller
         $items = InventoryStock::with(['product:id,name', 'productVariation:id,product_id'])
             ->select('id', 'product_id', 'product_variation_id', 'available_quantity', 'minimum_threshold', 'maximum_threshold', 'track_inventory')
             ->where('track_inventory', true)
-            ->orderByRaw('CASE 
-                WHEN available_quantity <= minimum_threshold THEN 1 
-                WHEN available_quantity <= (minimum_threshold * 1.5) THEN 2 
-                ELSE 3 
+            ->orderByRaw('CASE
+                WHEN available_quantity <= minimum_threshold THEN 1
+                WHEN available_quantity <= (minimum_threshold * 1.5) THEN 2
+                ELSE 3
             END')
             ->orderBy('available_quantity', 'asc')
             ->limit(10)
@@ -293,14 +293,14 @@ class DashboardController extends Controller
                 if ($item->productVariation) {
                     $name .= ' - Variation';
                 }
-                
+
                 $current = $item->available_quantity ?? 0;
                 $threshold = $item->minimum_threshold ?? 10;
                 $max = $item->maximum_threshold ?? ($threshold * 3);
-                
+
                 // Calculate percentage
                 $percentage = $max > 0 ? round(($current / $max) * 100, 1) : 0;
-                
+
                 // Determine status
                 $status = 'good';
                 if ($current <= $threshold) {
@@ -308,7 +308,7 @@ class DashboardController extends Controller
                 } elseif ($current <= ($threshold * 1.5)) {
                     $status = 'warning';
                 }
-                
+
                 return [
                     'id' => $item->id,
                     'name' => $name,
@@ -355,7 +355,7 @@ class DashboardController extends Controller
 
         return $topProducts->map(function ($item) use ($products) {
             $product = $products->get($item->product_id);
-            
+
             if (!$product) {
                 return null;
             }
@@ -366,7 +366,7 @@ class DashboardController extends Controller
                 ->whereBetween('orders.created_at', [now()->subDays(60), now()->subDays(30)])
                 ->sum('order_items.final_price');
 
-            $growthPercent = $previousRevenue > 0 
+            $growthPercent = $previousRevenue > 0
                 ? round((($item->total_revenue - $previousRevenue) / $previousRevenue) * 100, 1)
                 : 100;
 

@@ -17,8 +17,8 @@ const salesPeriod = ref('week'); // 'week' or 'month'
 
 // Get chart data based on selected period
 const currentChartData = computed(() => {
-    return salesPeriod.value === 'week' 
-        ? props.data.dailyOrdersData 
+    return salesPeriod.value === 'week'
+        ? props.data.dailyOrdersData
         : (props.data.monthlyOrdersData || props.data.dailyOrdersData);
 });
 
@@ -28,7 +28,7 @@ const salesMetrics = computed(() => {
     const totalSales = data.reduce((sum, item) => sum + item.orders, 0);
     const totalRevenue = data.reduce((sum, item) => sum + parseFloat(item.revenue), 0);
     const avgConversion = totalSales > 0 ? (totalRevenue / totalSales).toFixed(2) : 0;
-    
+
     return {
         totalSales,
         revenue: totalRevenue,
@@ -629,8 +629,8 @@ const activeTab = ref("all");
                                 <div class="flex space-x-2">
                                     <button
                                         @click="salesPeriod = 'week'"
-                                        :class="salesPeriod === 'week' 
-                                            ? 'bg-blue-600 text-white' 
+                                        :class="salesPeriod === 'week'
+                                            ? 'bg-blue-600 text-white'
                                             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'"
                                         class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
                                     >
@@ -638,8 +638,8 @@ const activeTab = ref("all");
                                     </button>
                                     <button
                                         @click="salesPeriod = 'month'"
-                                        :class="salesPeriod === 'month' 
-                                            ? 'bg-blue-600 text-white' 
+                                        :class="salesPeriod === 'month'
+                                            ? 'bg-blue-600 text-white'
                                             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'"
                                         class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
                                     >
@@ -711,8 +711,8 @@ const activeTab = ref("all");
                             </a>
                         </div>
                         <div class="space-y-4">
-                            <div 
-                                v-for="(product, index) in data.topProducts" 
+                            <div
+                                v-for="(product, index) in data.topProducts"
                                 :key="product.id"
                                 class="flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors cursor-pointer"
                             >
@@ -883,8 +883,8 @@ const activeTab = ref("all");
                         </div>
                         <div class="p-4 sm:p-6 max-h-[500px] overflow-y-auto">
                             <div class="space-y-3">
-                                <div 
-                                    v-for="item in data.inventoryItems" 
+                                <div
+                                    v-for="item in data.inventoryItems"
                                     :key="item.id"
                                     :class="[
                                         'flex items-center justify-between p-3 rounded-lg border transition-all',
@@ -900,7 +900,7 @@ const activeTab = ref("all");
                                             item.status === 'warning' ? 'bg-yellow-200 dark:bg-yellow-900/30' : '',
                                             item.status === 'good' ? 'bg-green-200 dark:bg-green-900/30' : ''
                                         ]">
-                                            <div 
+                                            <div
                                                 class="h-2 rounded-full transition-all"
                                                 :class="[
                                                     item.status === 'critical' ? 'bg-red-600' : '',
@@ -912,15 +912,15 @@ const activeTab = ref("all");
                                         </div>
                                         <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ item.current }}/{{ item.max }}</p>
                                     </div>
-                                    <svg 
+                                    <svg
                                         class="w-5 h-5 flex-shrink-0"
                                         :class="[
                                             item.status === 'critical' ? 'text-red-600 dark:text-red-400' : '',
                                             item.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : '',
                                             item.status === 'good' ? 'text-green-600 dark:text-green-400' : ''
                                         ]"
-                                        fill="none" 
-                                        stroke="currentColor" 
+                                        fill="none"
+                                        stroke="currentColor"
                                         viewBox="0 0 24 24"
                                     >
                                         <path v-if="item.status === 'critical'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
