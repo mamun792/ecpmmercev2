@@ -618,58 +618,71 @@ const clearAllFilters = () => {
         </div>
         <!-- <pre>{{ orders }}</pre> -->
 
-        <div class="order_management p-1 rounded-lg">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-4">
-                    <h1 class="text-2xl font-bold text-gray-800">
-                        Order Management
-                    </h1>
-                    <Link :href="route('admin.orders.incomplete')" class="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold shadow hover:bg-amber-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
-                        </svg>
-                        Incomplete: {{ props.statusCounts.find(s => s.status === 'incomplete')?.count || 0 }}
+        <div class="order_management p-3 sm:p-6 rounded-lg">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                            <span class="text-2xl">📦</span>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+                                📦 Order Management - Track Every Sale!
+                            </h1>
+                            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">💡 <strong>Quick Guide:</strong> Monitor orders, update status, track payments • {{ from }}-{{ to }} of {{ total }} orders</p>
+                        </div>
+                    </div>
+                    <Link :href="route('admin.orders.incomplete')" class="inline-flex items-center gap-2 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:from-amber-200 hover:to-amber-300 transition-all duration-300 active:scale-95 touch-manipulation">
+                        <span class="text-lg">⏰</span>
+                        <span class="hidden sm:inline">Incomplete Orders:</span>
+                        <span class="sm:hidden">Incomplete:</span>
+                        <span class="px-2 py-0.5 bg-amber-600 text-white rounded-full text-xs font-black">{{ props.statusCounts.find(s => s.status === 'incomplete')?.count || 0 }}</span>
                     </Link>
                 </div>
-                <button @click="resetFilters" class="btn bg-white border px-3 py-1 rounded text-sm">Reset Filters</button>
+                <button @click="resetFilters" class="btn bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border border-gray-300 px-4 py-2 rounded-xl text-sm font-bold text-gray-700 shadow-sm transition-all duration-300 active:scale-95 touch-manipulation flex items-center gap-2" title="Clear all filters and show all orders">
+                    <span class="text-lg">🔄</span>
+                    <span class="hidden sm:inline">Reset All Filters</span>
+                    <span class="sm:hidden">Reset</span>
+                </button>
             </div>
 
-            <!-- Status Cards -->
+            <!-- Enhanced Status Cards with Better UX -->
             <div
                 class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-6"
             >
-
-
-                <!-- Total Orders Card -->
+                <!-- Total Orders Card - Enhanced -->
                 <div
                     @click="selectStatus('')"
-                    class="relative overflow-hidden rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all duration-300 group"
+                    class="relative overflow-hidden rounded-xl shadow-sm hover:shadow-lg cursor-pointer transition-all duration-300 group touch-manipulation"
                     :class="{
-                        'bg-gradient-to-br from-blue-600 to-blue-800 text-white ring-2 ring-blue-400 ring-offset-2':
+                        'bg-gradient-to-br from-blue-600 to-blue-800 text-white ring-4 ring-blue-400 ring-offset-2 shadow-xl':
                             filters.status === '',
-                        'bg-white hover:bg-gray-50 border border-gray-200':
+                        'bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300':
                             filters.status !== '',
                     }"
+                    title="Click to view all orders regardless of status"
                 >
-                    <div class="p-5 relative z-10">
+                    <div class="p-4 sm:p-5 relative z-10">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <h3
-                                    class="text-sm font-medium mb-1"
+                                    class="text-sm font-bold mb-1 flex items-center gap-2"
                                     :class="
                                         filters.status === ''
                                             ? 'text-blue-100'
-                                            : 'text-gray-500'
+                                            : 'text-gray-600'
                                     "
                                 >
-                                    Total Orders
+                                    <span>📦</span>
+                                    <span class="hidden sm:inline">Total Orders</span>
+                                    <span class="sm:hidden">Total</span>
                                 </h3>
                                 <p
-                                    class="text-3xl font-bold"
+                                    class="text-2xl sm:text-3xl font-black"
                                     :class="
                                         filters.status === ''
                                             ? 'text-white'
-                                            : 'text-gray-800'
+                                            : 'text-gray-900'
                                     "
                                 >
                                     {{
@@ -679,16 +692,17 @@ const clearAllFilters = () => {
                                     }}
                                 </p>
                                 <p
-                                    class="text-sm mt-1"
+                                    class="text-xs sm:text-sm mt-1 font-semibold flex items-center gap-1"
                                     :class="
                                         filters.status === ''
                                             ? 'text-blue-100'
                                             : 'text-gray-600'
                                     "
                                 >
-                                    ৳{{ Number(props.statusCounts.find(
+                                    <span>💰</span>
+                                    <span>৳{{ Number(props.statusCounts.find(
                                         (s) => s.status === "total"
-                                    )?.sales || 0).toFixed(2) }}
+                                    )?.sales || 0).toFixed(2) }}</span>
                                 </p>
                             </div>
                             <div
@@ -698,6 +712,7 @@ const clearAllFilters = () => {
                                         ? 'bg-blue-500/30 text-white'
                                         : 'bg-blue-100 text-blue-600'
                                 "
+                            >
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -838,64 +853,86 @@ const clearAllFilters = () => {
                 </div>
             </div>
 
-            <!-- Status Tabs - Big Tech Style -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-                <div class="border-b border-gray-200">
+            <!-- Enhanced Status Navigation Tabs -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
+                <div class="border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-850">
+                    <div class="p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                                <span class="text-white text-lg">📈</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    📈 Order Status - Track Progress Easy!
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">💡 <strong>Tip:</strong> Click any status to filter orders instantly</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-b border-gray-200 dark:border-gray-700">
                     <div class="flex items-center overflow-x-auto scrollbar-hide">
-                        <!-- All Orders Tab -->
+                        <!-- All Orders Tab - Enhanced -->
                         <button
                             @click="selectStatus('')"
                             :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
+                                'flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 text-sm font-bold border-b-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 touch-manipulation',
                                 filters.status === ''
-                                    ? 'border-orange-600 text-orange-600 bg-orange-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                                    ? 'border-orange-600 text-orange-600 bg-orange-50 dark:bg-orange-900/20'
+                                    : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
                             ]"
+                            title="Show all orders regardless of status"
                         >
                             <div class="flex items-center gap-2">
-                                <span>All Orders</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === '' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700'">
+                                <span class="text-lg">📦</span>
+                                <span class="hidden sm:inline">All Orders</span>
+                                <span class="sm:hidden">All</span>
+                                <span class="px-2 py-0.5 rounded-full text-xs font-black"
+                                      :class="filters.status === '' ? 'bg-orange-600 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200'">
                                     {{ props.statusCounts.find((s) => s.status === 'total')?.count || 0 }}
                                 </span>
                             </div>
                         </button>
 
-                        <!-- Pending Tab -->
+                        <!-- Pending Tab - Enhanced -->
                         <button
                             @click="selectStatus('pending')"
                             :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
+                                'flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 text-sm font-bold border-b-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 touch-manipulation',
                                 filters.status === 'pending'
-                                    ? 'border-amber-600 text-amber-600 bg-amber-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                                    ? 'border-amber-600 text-amber-600 bg-amber-50 dark:bg-amber-900/20'
+                                    : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
                             ]"
+                            title="Orders waiting for processing"
                         >
                             <div class="flex items-center gap-2">
-                                <Clock class="w-4 h-4" />
-                                <span>Pending</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'pending' ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700'">
+                                <span class="text-lg">⏰</span>
+                                <span class="hidden sm:inline">Pending</span>
+                                <span class="sm:hidden">Wait</span>
+                                <span class="px-2 py-0.5 rounded-full text-xs font-black"
+                                      :class="filters.status === 'pending' ? 'bg-amber-600 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200'">
                                     {{ props.statusCounts.find((s) => s.status === 'pending')?.count || 0 }}
                                 </span>
                             </div>
                         </button>
 
-                        <!-- Processing Tab -->
+                        <!-- Processing Tab - Enhanced -->
                         <button
                             @click="selectStatus('processing')"
                             :class="[
-                                'flex-shrink-0 px-6 py-4 text-sm font-semibold border-b-2 transition-all duration-200 hover:bg-gray-50',
+                                'flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 text-sm font-bold border-b-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 touch-manipulation',
                                 filters.status === 'processing'
-                                    ? 'border-blue-600 text-blue-600 bg-blue-50'
-                                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                                    ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                                    : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
                             ]"
+                            title="Orders currently being prepared"
                         >
                             <div class="flex items-center gap-2">
-                                <Package class="w-4 h-4" />
-                                <span>Processing</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs font-bold"
-                                      :class="filters.status === 'processing' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'">
+                                <span class="text-lg">⚙️</span>
+                                <span class="hidden sm:inline">Processing</span>
+                                <span class="sm:hidden">Prep</span>
+                                <span class="px-2 py-0.5 rounded-full text-xs font-black"
+                                      :class="filters.status === 'processing' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200'">
                                     {{ props.statusCounts.find((s) => s.status === 'processing')?.count || 0 }}
                                 </span>
                             </div>
@@ -1020,236 +1057,313 @@ const clearAllFilters = () => {
                 class="mb-6"
             />
 
-            <div class="mb-6 flex justify-end items-center space-x-2">
-                <button
-                    v-if="selectedOrders.length > 0"
-                    @click="sendBulkToSteadfast"
-                    class="px-2 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600"
-                    :disabled="isDownloading"
-                >
-                    Send {{ selectedOrders.length }} Orders to Steadfast
-                </button>
-                <button
-                    v-if="selectedOrders.length > 0"
-                    @click="sendBulkToPathao"
-                    class="px-2 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600"
-                    :disabled="isDownloading"
-                >
-                    Send {{ selectedOrders.length }} Orders to Pathao
-                </button>
-                <!-- <button
-                    v-if="selectedOrders.length > 0"
-                    @click="downloadBulkInvoice"
-                    class="px-2 py-2 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="isDownloading"
-                >
-                    <span v-if="isDownloading">Downloading...</span>
-                    <span v-else
-                        >Download {{ selectedOrders.length }} Invoices</span
-                    >
-                </button> -->
+            <!-- Enhanced Bulk Actions Section - User Friendly -->
+            <div class="mb-6" v-if="selectedOrders.length > 0">
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl border border-blue-200 dark:border-blue-700 p-4 shadow-sm">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                <span class="text-xl text-white">⚡</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    ⚡ Bulk Actions - Power Tools!
+                                </h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                                    💡 <strong>{{ selectedOrders.length }}</strong> orders selected • Choose action below
+                                </p>
+                            </div>
+                        </div>
 
-                <button
-                    v-if="selectedOrders.length > 0"
-                    @click="printBulkInvoice"
-                    class="px-4 py-2 bg-purple-500 text-white rounded-md text-sm font-medium hover:bg-purple-600"
-                >
-                    Print {{ selectedOrders.length }} Invoices
-                </button>
-            </div>
+                        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                            <!-- Steadfast Courier Button -->
+                            <button
+                                @click="sendBulkToSteadfast"
+                                class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 touch-manipulation flex-shrink-0"
+                                :disabled="isDownloading"
+                                title="Send selected orders to Steadfast courier service"
+                            >
+                                <span class="text-lg">🚚</span>
+                                <span class="hidden sm:inline">Send to Steadfast</span>
+                                <span class="sm:hidden">Steadfast</span>
+                                <span class="px-2 py-0.5 bg-blue-700 text-white rounded-full text-xs font-black">{{ selectedOrders.length }}</span>
+                            </button>
 
-            <!-- Per Page Filter -->
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center">
-                    <label class="text-sm font-medium text-gray-700 mr-2"
-                        >Show</label
-                    >
-                    <select
-                        v-model="filters.per_page"
-                        class="rounded-md border-gray-300 shadow-sm text-sm"
-                    >
-                        <option
-                            v-for="option in perPageOptions"
-                            :key="option"
-                            :value="option"
-                        >
-                            {{ option }}
-                        </option>
-                    </select>
-                    <span class="text-sm text-gray-700 ml-2">entries</span>
+                            <!-- Pathao Courier Button -->
+                            <button
+                                @click="sendBulkToPathao"
+                                class="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 touch-manipulation flex-shrink-0"
+                                :disabled="isDownloading"
+                                title="Send selected orders to Pathao courier service"
+                            >
+                                <span class="text-lg">🛵</span>
+                                <span class="hidden sm:inline">Send to Pathao</span>
+                                <span class="sm:hidden">Pathao</span>
+                                <span class="px-2 py-0.5 bg-emerald-700 text-white rounded-full text-xs font-black">{{ selectedOrders.length }}</span>
+                            </button>
+
+                            <!-- Print Invoices Button -->
+                            <button
+                                @click="printBulkInvoice"
+                                class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 touch-manipulation flex-shrink-0"
+                                title="Print invoices for all selected orders"
+                            >
+                                <span class="text-lg">🖨️</span>
+                                <span class="hidden sm:inline">Print Invoices</span>
+                                <span class="sm:hidden">Print</span>
+                                <span class="px-2 py-0.5 bg-purple-700 text-white rounded-full text-xs font-black">{{ selectedOrders.length }}</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- <pre>{{ orders }}</pre> -->
+            <!-- Enhanced Per Page Filter - User Friendly -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
+                            <span class="text-white text-sm">📋</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                📋 Display Settings - Your Choice!
+                            </h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">💡 <strong>Tip:</strong> Show more orders per page for faster browsing</p>
+                        </div>
+                    </div>
 
-            <!-- Orders Table -->
-            <div
-                class="overflow-x-auto rounded-xl shadow-lg border border-gray-100"
-            >
-                <table class="min-w-full divide-y table-auto">
-                    <thead class="bg-gray-900 text-white">
-                        <tr>
-                            <th
-                                class="px-3 py-4 text-left text-xs font-semibold uppercase tracking-wider w-12 rounded-tl-xl transition-colors duration-200"
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                <span>📄</span>
+                                <span class="hidden sm:inline">Orders per page:</span>
+                                <span class="sm:hidden">Per page:</span>
+                            </label>
+                            <select
+                                v-model="filters.per_page"
+                                @change="updateFilters"
+                                class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-bold text-gray-900 dark:text-gray-100 shadow-sm hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 touch-manipulation"
+                                title="Select how many orders to show per page"
                             >
-                                <input
-                                    type="checkbox"
-                                    :checked="selectAll"
-                                    @change="toggleSelectAll"
-                                    class="rounded text-blue-500 focus:ring-blue-500 bg-gray-800 border-gray-600"
-                                />
-                            </th>
-                            <th
-                                @click="toggleSort('order_number')"
-                                class="px-3 py-4 text-left text-xs min-w-[150px] font-semibold uppercase tracking-wider cursor-pointer !hover:bg-gray-800 transition-colors duration-200"
-                            >
-                                <div class="flex items-center gap-1">
-                                    Order {{ getSortIcon("order_number") }}
-                                </div>
-                            </th>
-                            <th
-                                @click="toggleSort('customer_name')"
-                                class="px-3 py-4 text-left text-xs min-w-[150px] font-semibold uppercase tracking-wider cursor-pointer !hover:bg-gray-800 transition-colors duration-200"
-                            >
-                                <div class="flex items-center gap-1">
-                                    Customer {{ getSortIcon("customer_name") }}
-                                </div>
-                            </th>
-                            <th
-                                class="px-3 py-4 text-left text-xs min-w-[200px] font-semibold uppercase tracking-wider transition-colors duration-200"
-                            >
-                                Products
-                            </th>
-                            <th
-                                @click="toggleSort('total')"
-                                class="px-3 py-4 text-left text-xs min-w-[100px] font-semibold uppercase tracking-wider cursor-pointer !hover:bg-gray-800 transition-colors duration-200"
-                            >
-                                <div class="flex items-center gap-1">
-                                    Total {{ getSortIcon("total") }}
-                                </div>
-                            </th>
-                            <th
-                                @click="toggleSort('status')"
-                                class="px-3 py-4 text-left text-xs min-w-[150px] font-semibold uppercase tracking-wider cursor-pointer !hover:bg-gray-800 transition-colors duration-200"
-                            >
-                                <div class="flex items-center gap-1">
-                                    Status {{ getSortIcon("status") }}
-                                </div>
-                            </th>
-                            <th
-                                @click="toggleSort('payment_status')"
-                                class="px-3 py-4 text-left text-xs font-semibold min-w-[100px] uppercase tracking-wider cursor-pointer !hover:bg-gray-800 transition-colors duration-200"
-                            >
-                                <div class="flex items-center gap-1">
-                                    Payment {{ getSortIcon("payment_status") }}
-                                </div>
-                            </th>
-                            <th
-                                class="px-3 py-4 text-left text-xs min-w-[150px] font-semibold uppercase tracking-wider transition-colors duration-200"
-                            >
-                                Courier Info
-                            </th>
-                            <th
-                                class="px-3 py-4 text-left text-xs min-w-[50px] font-semibold uppercase tracking-wider rounded-tr-xl transition-colors duration-200"
-                            >
-                                Actions
-                            </th>
+                                <option value="10">10 orders</option>
+                                <option value="25">25 orders</option>
+                                <option value="50">50 orders</option>
+                                <option value="100">100 orders</option>
+                            </select>
+                        </div>
+
+                        <div class="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                            <span class="flex items-center gap-1">
+                                <span>📊</span>
+                                <span>Showing <strong class="text-gray-900 dark:text-gray-100">{{ from }}-{{ to }}</strong> of <strong class="text-gray-900 dark:text-gray-100">{{ total }}</strong></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Bulk Actions Section - User Friendly -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <!-- Table Header Section -->
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700 p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                            <span class="text-white text-lg">📋</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                📋 Orders Data Table - Manage Orders Easy!
+                            </h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">💡 <strong>Guide:</strong> Click checkboxes to select • Click order ID to view details • Use actions for quick updates</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-900 dark:bg-gray-900">
+                            <tr>
+                                <th class="px-3 py-4 text-left text-xs font-bold uppercase tracking-wider w-12 text-gray-300">
+                                    <div class="flex items-center gap-2" title="Select all orders on this page">
+                                        <input
+                                            type="checkbox"
+                                            :checked="selectAll"
+                                            @change="toggleSelectAll"
+                                            class="rounded text-blue-500 focus:ring-blue-500 bg-gray-800 border-gray-600 w-4 h-4 touch-manipulation"
+                                        />
+                                        <span class="text-xs">Select All</span>
+                                    </div>
+                                </th>
+                                <th
+                                    @click="toggleSort('order_number')"
+                                    class="px-3 py-4 text-left text-xs min-w-[150px] font-bold uppercase tracking-wider cursor-pointer hover:bg-gray-800 transition-colors duration-200 text-gray-300"
+                                    title="Sort by order number"
+                                >
+                                    <div class="flex items-center gap-1">
+                                        <span>🏷️ Order ID</span> {{ getSortIcon("order_number") }}
+                                    </div>
+                                </th>
+                                <th
+                                    @click="toggleSort('customer_name')"
+                                    class="px-3 py-4 text-left text-xs min-w-[150px] font-bold uppercase tracking-wider cursor-pointer hover:bg-gray-800 transition-colors duration-200 text-gray-300"
+                                    title="Sort by customer name"
+                                >
+                                    <div class="flex items-center gap-1">
+                                        <span>👤 Customer</span> {{ getSortIcon("customer_name") }}
+                                    </div>
+                                </th>
+                                <th class="px-3 py-4 text-left text-xs min-w-[200px] font-bold uppercase tracking-wider text-gray-300">
+                                    🛍️ Products
+                                </th>
+                                <th
+                                    @click="toggleSort('total')"
+                                    class="px-3 py-4 text-left text-xs min-w-[100px] font-bold uppercase tracking-wider cursor-pointer hover:bg-gray-800 transition-colors duration-200 text-gray-300"
+                                    title="Sort by total amount"
+                                >
+                                    <div class="flex items-center gap-1">
+                                        <span>💰 Total</span> {{ getSortIcon("total") }}
+                                    </div>
+                                </th>
+                                <th
+                                    @click="toggleSort('status')"
+                                    class="px-3 py-4 text-left text-xs min-w-[150px] font-bold uppercase tracking-wider cursor-pointer hover:bg-gray-800 transition-colors duration-200 text-gray-300"
+                                    title="Sort by order status"
+                                >
+                                    <div class="flex items-center gap-1">
+                                        <span>📊 Status</span> {{ getSortIcon("status") }}
+                                    </div>
+                                </th>
+                                <th
+                                    @click="toggleSort('payment_status')"
+                                    class="px-3 py-4 text-left text-xs font-bold min-w-[100px] uppercase tracking-wider cursor-pointer hover:bg-gray-800 transition-colors duration-200 text-gray-300"
+                                    title="Sort by payment status"
+                                >
+                                    <div class="flex items-center gap-1">
+                                        <span>💳 Payment</span> {{ getSortIcon("payment_status") }}
+                                    </div>
+                                </th>
+                                <th class="px-3 py-4 text-left text-xs min-w-[150px] font-bold uppercase tracking-wider text-gray-300">
+                                    🚚 Courier Info
+                                </th>
+                                <th class="px-3 py-4 text-left text-xs min-w-[120px] font-bold uppercase tracking-wider text-gray-300">
+                                    ⚡ Actions
+                                </th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         <tr
                             v-for="(order, index) in visibleOrders"
                             :key="order.id"
-                            class="hover:bg-gray-50 transition-colors duration-150"
+                            class="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 group"
                             :class="{
-                                'bg-blue-50/50': selectedOrders.includes(
-                                    order.id
-                                ),
+                                'bg-blue-50/70 dark:bg-blue-900/30 ring-2 ring-blue-400 ring-opacity-50': selectedOrders.includes(order.id),
                             }"
                         >
+                            <!-- Enhanced Checkbox Cell -->
+                            <td class="px-3 py-4 text-sm w-12">
+                                <div class="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        :value="order.id"
+                                        :checked="selectedOrders.includes(order.id)"
+                                        @change="toggleOrderSelection(order.id)"
+                                        class="rounded text-blue-500 focus:ring-blue-500 bg-white border-gray-300 w-4 h-4 touch-manipulation"
+                                        :title="`Select order ${order.order_number}`"
+                                    />
+                                </div>
+                            </td>
 
-                            <td class="px-1 py-3 text-sm">
-                                <input
-                                    type="checkbox"
-                                    :value="order.id"
-                                    :checked="selectedOrders.includes(order.id)"
-                                    @change="toggleOrderSelection(order.id)"
-                                    class="rounded text-blue-500"
-                                />
-                            </td>
-                            <td class="px-1 py-3 text-sm">
-                                <p
-                                    class="font-semibold text-sm bg-green-500 text-white px-2 py-1 rounded inline-flex items-center gap-1"
-                                >
-                                    {{ order.order_number }}
-                                    <span v-if="order.admin_notes" class="inline-flex items-center justify-center w-4 h-4 bg-blue-500 rounded-full text-white text-[10px] font-bold" title="Has admin notes">
-                                        N
+                            <!-- Enhanced Order ID Cell -->
+                            <td class="px-3 py-4 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 rounded-xl inline-flex items-center gap-2 shadow-sm">
+                                        <span>🏷️</span>
+                                        <span>{{ order.order_number }}</span>
+                                        <span v-if="order.admin_notes"
+                                              class="inline-flex items-center justify-center w-5 h-5 bg-blue-500 rounded-full text-white text-[10px] font-black"
+                                              title="Has admin notes - click to view">
+                                            📝
+                                        </span>
                                     </span>
-                                </p>
-                                <p class="mt-1 text-black flex items-center gap-1">
-                                    <span v-if="isToday(order.date)" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-800 border border-green-300">
-                                        TODAY
-                                    </span>
-                                    Date: {{ formatOrderDate(order.date) }}
-                                </p>
-                                <p class="text-xs text-gray-500">
-                                    Updated:
-                                    {{ formatOrderDate(order.updated_at) }}
-                                </p>
+                                </div>
+                                <div class="mt-2 space-y-1">
+                                    <div class="text-xs text-gray-700 dark:text-gray-300 font-medium flex items-center gap-1">
+                                        <span v-if="isToday(order.date)" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-300">
+                                            🌟 TODAY
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <span>📅</span>
+                                            <span>{{ formatOrderDate(order.date) }}</span>
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                        <span>🔄</span>
+                                        <span>Updated: {{ formatOrderDate(order.updated_at) }}</span>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="px-1 py-3 text-sm">
-                                <div
-                                    class="border border-gray-200 rounded-lg p-3 bg-gradient-to-br from-white to-gray-50 hover:shadow-md transition-shadow"
-                                >
-                                    <p
-                                        class="truncate flex items-center flex-wrap font-medium text-gray-800"
-                                    >
-                                        <User class="w-4 h-4 mr-1 text-blue-600" />{{
-                                            truncateText(order.customer.name, 2)
-                                        }}
-                                    </p>
-                                    <p class="text-gray-600 flex items-center text-xs mt-1">
-                                        <Mail class="w-3 h-3 mr-1 text-gray-500" />{{
-                                            order.customer?.email
-                                        }}
-                                    </p>
-                                    <p class="text-gray-600 flex items-center text-xs mt-1">
-                                        <Phone class="w-3 h-3 mr-1 text-gray-500" />{{
-                                            order.customer?.phone
-                                        }}
-                                    </p>
-                                    <p class="text-gray-600 flex items-center text-xs mt-1">
-                                        <MapPin class="w-3 h-3 mr-1 text-gray-500" />{{
-                                            order.customer?.address
-                                        }}
-                                    </p>
-                                    <p v-if="order.customer?.note && order.customer.note !== 'N/A'" class="flex text-green-800 bg-green-200 py-1 rounded text-sm mt-1 items-center">
-                                        <Hash class="w-4 h-4 mr-1" />Note:
-                                        {{ order.customer?.note || "N/A" }}
-                                    </p>
-                                    <div v-if="order.admin_notes" class="mt-2">
-                                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-2">
-                                            <div class="flex items-start gap-2">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                                <div class="flex-1 min-w-0">
-                                                    <p class="text-xs font-semibold text-blue-800 mb-0.5">Admin Notes:</p>
-                                                    <p class="text-xs text-blue-700 line-clamp-2">{{ order.admin_notes }}</p>
+
+                            <!-- Enhanced Customer Cell -->
+                            <td class="px-3 py-4 text-sm">
+                                <div class="border border-gray-200 dark:border-gray-600 rounded-xl p-3 bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-750 hover:shadow-md transition-all duration-200 group-hover:border-blue-300">
+                                    <div class="space-y-2">
+                                        <!-- Customer Name -->
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-lg">👤</span>
+                                            <span class="font-bold text-gray-900 dark:text-gray-100 truncate">
+                                                {{ truncateText(order.customer.name, 2) }}
+                                            </span>
+                                        </div>
+
+                                        <!-- Customer Email -->
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span>📧</span>
+                                            <span class="text-gray-600 dark:text-gray-400 truncate">{{ order.customer?.email }}</span>
+                                        </div>
+
+                                        <!-- Customer Phone -->
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span>📞</span>
+                                            <span class="text-gray-600 dark:text-gray-400">{{ order.customer?.phone }}</span>
+                                        </div>
+
+                                        <!-- Customer Address -->
+                                        <div class="flex items-start gap-2 text-xs">
+                                            <span>📍</span>
+                                            <span class="text-gray-600 dark:text-gray-400 line-clamp-2">{{ order.customer?.address }}</span>
+                                        </div>
+
+                                        <!-- Customer Note -->
+                                        <div v-if="order.customer?.note && order.customer.note !== 'N/A'"
+                                             class="flex items-start gap-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1.5 rounded-lg text-xs">
+                                            <span>📝</span>
+                                            <div>
+                                                <span class="font-semibold">Note:</span>
+                                                <span class="ml-1">{{ order.customer?.note || "N/A" }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Admin Notes Section -->
+                                        <div v-if="order.admin_notes" class="mt-3">
+                                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-2">
+                                                <div class="flex items-start gap-2">
+                                                    <span class="text-blue-600 text-sm">📋</span>
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="text-xs font-bold text-blue-800 dark:text-blue-300 mb-0.5">🔒 Admin Notes:</p>
+                                                        <p class="text-xs text-blue-700 dark:text-blue-400 line-clamp-2">{{ order.admin_notes }}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <button
+                                            @click="openAdminNotesModal(order)"
+                                            class="w-full mt-2 inline-flex items-center justify-center gap-1 bg-gradient-to-r from-blue-100 to-blue-200 hover:from-blue-200 hover:to-blue-300 text-blue-800 px-2 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95 touch-manipulation">
+                                            <span>📝</span>
+                                            <span>{{ order.admin_notes ? 'Edit Notes' : 'Add Notes' }}</span>
+                                        </button>
                                     </div>
-                                    <button
-                                        @click="openAdminNotesModal(order)"
-                                        class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all"
-                                        :class="order.admin_notes ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        {{ order.admin_notes ? 'Edit Notes' : 'Add Notes' }}
-                                    </button>
                                 </div>
                             </td>
                             <td class="px-1 py-3 text-sm">
@@ -1579,95 +1693,128 @@ const clearAllFilters = () => {
                 </table>
             </div>
 
-            <!-- Pagination -->
-            <div class="flex items-center justify-between mt-4">
-                <div class="text-sm text-gray-700 dark:text-gray-300">
-                    Showing <span class="font-medium">{{ from }}</span> to
-                    <span class="font-medium">{{ to }}</span> of
-                    <span class="font-medium">{{ total }}</span> orders
-                </div>
-                <div class="flex space-x-1">
-                    <button
-                        @click="goToPage(1)"
-                        :disabled="currentPage === 1 || loading"
-                        class="pagination-button"
-                    >
-                        «
-                    </button>
-                    <button
-                        @click="goToPage(currentPage - 1)"
-                        :disabled="currentPage === 1 || loading"
-                        class="pagination-button"
-                    >
-                        ‹
-                    </button>
-                    <template v-if="lastPage <= 7">
+            <!-- Enhanced Pagination - User Friendly -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mt-6">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <!-- Results Summary -->
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-2xl">📊</span>
+                        <span class="text-gray-600 dark:text-gray-400 font-medium">
+                            <strong class="text-gray-900 dark:text-gray-100">{{ from }}-{{ to }}</strong>
+                            of
+                            <strong class="text-gray-900 dark:text-gray-100">{{ total }}</strong>
+                            orders
+                        </span>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <div class="flex items-center gap-2">
+                        <!-- First Page -->
                         <button
-                            v-for="page in lastPage"
-                            :key="page"
-                            @click="goToPage(page)"
-                            :disabled="loading"
-                            class="pagination-button"
-                            :class="{ active: currentPage === page }"
-                        >
-                            {{ page }}
-                        </button>
-                    </template>
-                    <template v-else>
-                        <button
-                            v-if="currentPage > 3"
                             @click="goToPage(1)"
-                            class="pagination-button"
+                            :disabled="currentPage === 1 || loading"
+                            class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 touch-manipulation"
+                            title="Go to first page"
                         >
-                            1
+                            ⏮️
                         </button>
-                        <span v-if="currentPage > 4" class="pagination-ellipsis"
-                            >...</span
-                        >
-                        <template v-for="page in lastPage" :key="page">
-                            <button
-                                v-if="
-                                    page >= currentPage - 1 &&
-                                    page <= currentPage + 1
-                                "
-                                @click="goToPage(page)"
-                                class="pagination-button"
-                                :class="{ active: currentPage === page }"
-                            >
-                                {{ page }}
-                            </button>
-                        </template>
-                        <span
-                            v-if="currentPage < lastPage - 3"
-                            class="pagination-ellipsis"
-                            >...</span
-                        >
+
+                        <!-- Previous Page -->
                         <button
-                            v-if="currentPage < lastPage - 2"
-                            @click="goToPage(lastPage)"
-                            class="pagination-button"
+                            @click="goToPage(currentPage - 1)"
+                            :disabled="currentPage === 1 || loading"
+                            class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 touch-manipulation"
+                            title="Go to previous page"
                         >
-                            {{ lastPage }}
+                            ⬅️
                         </button>
-                    </template>
-                    <button
-                        @click="goToPage(currentPage + 1)"
-                        :disabled="currentPage === lastPage || loading"
-                        class="pagination-button"
-                    >
-                        ›
-                    </button>
-                    <button
-                        @click="goToPage(lastPage)"
-                        :disabled="currentPage === lastPage || loading"
-                        class="pagination-button"
-                    >
-                        »
-                    </button>
+
+                        <!-- Page Numbers -->
+                        <div class="hidden sm:flex items-center gap-1">
+                            <template v-if="lastPage <= 7">
+                                <button
+                                    v-for="page in lastPage"
+                                    :key="page"
+                                    @click="goToPage(page)"
+                                    :disabled="loading"
+                                    class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl border transition-all duration-200 active:scale-95 touch-manipulation"
+                                    :class="currentPage === page
+                                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
+                                        : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                                    :title="`Go to page ${page}`"
+                                >
+                                    {{ page }}
+                                </button>
+                            </template>
+                            <template v-else>
+                                <button
+                                    v-if="currentPage > 3"
+                                    @click="goToPage(1)"
+                                    class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 active:scale-95 touch-manipulation"
+                                    title="Go to page 1"
+                                >
+                                    1
+                                </button>
+                                <span v-if="currentPage > 4" class="flex items-center justify-center w-10 h-10 text-gray-400 text-lg font-bold">⋯</span>
+
+                                <template v-for="page in lastPage" :key="page">
+                                    <button
+                                        v-if="page >= currentPage - 1 && page <= currentPage + 1"
+                                        @click="goToPage(page)"
+                                        class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl border transition-all duration-200 active:scale-95 touch-manipulation"
+                                        :class="currentPage === page
+                                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
+                                            : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                                        :title="`Go to page ${page}`"
+                                    >
+                                        {{ page }}
+                                    </button>
+                                </template>
+
+                                <span v-if="currentPage < lastPage - 3" class="flex items-center justify-center w-10 h-10 text-gray-400 text-lg font-bold">⋯</span>
+                                <button
+                                    v-if="currentPage < lastPage - 2"
+                                    @click="goToPage(lastPage)"
+                                    class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 active:scale-95 touch-manipulation"
+                                    :title="`Go to page ${lastPage}`"
+                                >
+                                    {{ lastPage }}
+                                </button>
+                            </template>
+                        </div>
+
+                        <!-- Mobile Page Indicator -->
+                        <div class="sm:hidden flex items-center gap-2">
+                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl">
+                                Page {{ currentPage }} of {{ lastPage }}
+                            </span>
+                        </div>
+
+                        <!-- Next Page -->
+                        <button
+                            @click="goToPage(currentPage + 1)"
+                            :disabled="currentPage === lastPage || loading"
+                            class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 touch-manipulation"
+                            title="Go to next page"
+                        >
+                            ➡️
+                        </button>
+
+                        <!-- Last Page -->
+                        <button
+                            @click="goToPage(lastPage)"
+                            :disabled="currentPage === lastPage || loading"
+                            class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 touch-manipulation"
+                            title="Go to last page"
+                        >
+                            ⏭️
+                        </button>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Delete Confirmation Modal -->
+        <!-- Delete Confirmation Modal -->
             <DeleteModal
                 :item-id="orderToDelete"
                 item-name="order"
