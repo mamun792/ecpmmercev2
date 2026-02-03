@@ -81,9 +81,11 @@ onMounted(() => {
     search.value = searchParam;
   }
   // Initialize quantities for all products
-  props.products.data.forEach(product => {
-    quantities.value[product.id] = 1;
-  });
+  if (props.products && props.products.data) {
+    props.products.data.forEach(product => {
+      quantities.value[product.id] = 1;
+    });
+  }
 });
 
 // Go back to previous page
@@ -93,6 +95,7 @@ const goBack = () => {
 
 // Compute filtered products based on search
 const filteredProducts = computed(() => {
+  if (!props.products || !props.products.data) return [];
   if (!search.value) return props.products.data;
   const searchTerm = search.value.toLowerCase();
   return props.products.data.filter(product =>
@@ -146,14 +149,32 @@ const getUniqueAttributes = (product) => {
   const attributes = {};
   if (product.variations && product.variations.length > 0) {
     product.variations.forEach(variation => {
-      variation.attributes.forEach(attr => {
-        const attrName = attr.value.attribute.name;
-        const attrValue = attr.value.value;
-        if (!attributes[attrName]) {
-          attributes[attrName] = new Set();
-        }
-        attributes[attrName].add(attrValue);
-      });
+      // Use variationAttributes instead of attributes
+      if (variation.variationAttributes && variation.variationAttributes.length > 0) {
+        variation.variationAttributes.forEach(attr => {
+          // Check if attr.value exists and has the nested structure
+          if (attr.value && attr.value.attribute && attr.value.attribute.name) {
+            const attrName = attr.value.attribute.name;
+            const attrValue = attr.value.value;
+            if (!attributes[attrName]) {
+              attributes[attrName] = new Set();
+            }
+            attributes[attrName].add(attrValue);
+          }
+        });
+      } else if (variation.attributes && variation.attributes.length > 0) {
+        // Fallback for old structure
+        variation.attributes.forEach(attr => {
+          if (attr.value && attr.value.attribute && attr.value.attribute.name) {
+            const attrName = attr.value.attribute.name;
+            const attrValue = attr.value.value;
+            if (!attributes[attrName]) {
+              attributes[attrName] = new Set();
+            }
+            attributes[attrName].add(attrValue);
+          }
+        });
+      }
     });
   }
   return attributes;
@@ -179,10 +200,15 @@ const getAvailableVariations = (product) => {
   }
 
   const matchingVariations = product.variations.filter(variation => {
-    return variation.attributes.every(attr => {
-      const attrName = attr.value.attribute.name;
-      const attrValue = attr.value.value;
-      return selectedAttrs[attrName] === attrValue;
+    // Check variationAttributes first, then fallback to attributes
+    const attrs = variation.variationAttributes || variation.attributes || [];
+    return attrs.every(attr => {
+      if (attr.value && attr.value.attribute && attr.value.attribute.name) {
+        const attrName = attr.value.attribute.name;
+        const attrValue = attr.value.value;
+        return selectedAttrs[attrName] === attrValue;
+      }
+      return false;
     });
   });
 
@@ -197,11 +223,20 @@ const getAvailableVariations = (product) => {
 
 // Get attributes for an order item
 const getItemAttributes = (item) => {
-  if (!item.product_variation || !item.product_variation.attributes) return [];
-  return item.product_variation.attributes.map(attr => ({
-    name: attr.value.attribute.name,
-    value: attr.value.value,
-  }));
+  if (!item.product_variation) return [];
+
+  // Check for variationAttributes first (new structure), then fallback to attributes
+  const attrs = item.product_variation.variationAttributes || item.product_variation.attributes || [];
+
+  return attrs.map(attr => {
+    if (attr.value && attr.value.attribute && attr.value.attribute.name) {
+      return {
+        name: attr.value.attribute.name,
+        value: attr.value.value,
+      };
+    }
+    return null;
+  }).filter(attr => attr !== null);
 };
 
 // Handle attribute selection
@@ -680,9 +715,11 @@ const submitForm = () => {
                         </div>
                         <div>
                           <div class="font-semibold text-gray-900">{{ truncateName(item.product.name, 1) }}</div>
-                          <div v-if="item.product_variation && item.product_variation.attributes && item.product_variation.attributes.length > 0" class="flex flex-wrap gap-1 mt-1">
-                            <span v-for="attr in item.product_variation.attributes" :key="attr.id" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              {{ attr.value.attribute.name }}: {{ attr.value.value }}
+                          <div v-if="item.product_variation && ((item.product_variation.variationAttributes && item.product_variation.variationAttributes.length > 0) || (item.product_variation.attributes && item.product_variation.attributes.length > 0))" class="flex flex-wrap gap-1 mt-1">
+                            <span v-for="attr in (item.product_variation.variationAttributes || item.product_variation.attributes)" :key="attr.id" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              <template v-if="attr.value && attr.value.attribute && attr.value.attribute.name">
+                                {{ attr.value.attribute.name }}: {{ attr.value.value }}
+                              </template>
                             </span>
                           </div>
                         </div>

@@ -56,10 +56,10 @@ trait OrderEagerLoading
                     'image_path'
                 ]);
             },
-            'items.productVariation.attributeValues' => function ($query) {
+            'items.productVariation.variationAttributes.value' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributeValues.attribute' => function ($query) {
+            'items.productVariation.variationAttributes.value.attribute' => function ($query) {
                 $query->withTrashed();
             },
         ];
@@ -68,7 +68,7 @@ trait OrderEagerLoading
     /**
      * Full eager loading for order detail/edit views
      * Includes all relationships needed for editing
-     * V2 Inventory: Uses attributeValues instead of attributes.value.attribute
+     * V2 Inventory: Uses proper variation attributes relationship
      */
     protected function getOrderDetailEagerLoads(): array
     {
@@ -79,10 +79,10 @@ trait OrderEagerLoading
             'items.productVariation' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributeValues:id,product_variation_id,attribute_id,value' => function ($query) {
+            'items.productVariation.variationAttributes.value' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributeValues.attribute:id,name' => function ($query) {
+            'items.productVariation.variationAttributes.value.attribute' => function ($query) {
                 $query->withTrashed();
             },
             'items.productVariation.inventoryStock',
@@ -94,7 +94,7 @@ trait OrderEagerLoading
     /**
      * Eager loading for invoice generation
      * Includes all product/variation details with soft deleted data
-     * V2 Inventory: Uses attributeValues instead of attributes.value.attribute
+     * V2 Inventory: Uses proper variation attributes relationship
      */
     protected function getInvoiceEagerLoads(): array
     {
@@ -105,10 +105,10 @@ trait OrderEagerLoading
             'items.productVariation' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributeValues:id,product_variation_id,attribute_id,value' => function ($query) {
+            'items.productVariation.variationAttributes.value' => function ($query) {
                 $query->withTrashed();
             },
-            'items.productVariation.attributeValues.attribute:id,name' => function ($query) {
+            'items.productVariation.variationAttributes.value.attribute' => function ($query) {
                 $query->withTrashed();
             },
         ];
