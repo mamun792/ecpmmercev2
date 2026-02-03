@@ -613,84 +613,96 @@ const submitForm = () => {
 <template>
   <Head title="Edit Order" />
   <AdminLayout>
-    <div class="w-full bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen p-4 md:p-8">
-      <!-- Header Section -->
+    <div class="w-full bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen p-4 md:p-8">
+      <!-- Header Section with Enhanced Design -->
       <div class="mb-8">
-        <div class="flex justify-between items-start gap-4">
-          <div class="flex-1">
-            <div class="flex items-center gap-3 mb-2">
-              <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z" />
-                </svg>
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8">
+          <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+            <div class="flex-1">
+              <div class="flex items-center gap-4 mb-4">
+                <div class="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 p-4 rounded-xl shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">✏️ Editing Order</p>
+                  <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Order #{{ order.id }}</h1>
+                </div>
               </div>
-              <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Order #{{ order.id }}</h1>
+              <div class="flex flex-wrap gap-4">
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 px-4 py-3 rounded-xl border border-gray-200">
+                  <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">📊 Status</p>
+                  <p class="text-sm font-semibold text-gray-700 mt-1">
+                    <span :class="['inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm',
+                      order.status === 'completed' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' :
+                      order.status === 'pending' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' :
+                      order.status === 'cancelled' ? 'bg-gradient-to-r from-red-500 to-rose-600 text-white' :
+                      'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+                    ]">
+                      {{ order.status.toUpperCase() }}
+                    </span>
+                  </p>
+                </div>
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-3 rounded-xl border border-blue-200">
+                  <p class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-1">🕐 Last Updated</p>
+                  <p class="text-sm font-semibold text-gray-700 mt-1">{{ new Date(order.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}</p>
+                </div>
+              </div>
             </div>
-            <div class="flex flex-wrap gap-4 ml-12 mt-2">
-              <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</p>
-                <p class="text-sm font-medium text-gray-700 mt-1">
-                  <span :class="['inline-flex items-center px-3 py-1 rounded-full text-xs font-medium',
-                    order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                    'bg-blue-100 text-blue-800'
-                  ]">
-                    {{ order.status }}
-                  </span>
-                </p>
-              </div>
-              <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Updated</p>
-                <p class="text-sm font-medium text-gray-700 mt-1">{{ new Date(order.updated_at).toLocaleDateString() }}</p>
-              </div>
-            </div>
+            <button @click="goBack" class="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-xl transition-all duration-200 hover:shadow-lg font-semibold text-sm group transform hover:-translate-y-0.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Orders
+            </button>
           </div>
-          <button @click="goBack" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg transition-all duration-200 hover:shadow-md font-medium text-sm group">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back
-          </button>
         </div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <!-- Left Column: Order Items & Customer Info -->
         <div class="lg:col-span-1 space-y-6 lg:space-y-8">
-          <!-- Order Items Card (Top) -->
-          <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
-            <div class="bg-gradient-to-r from-primary/6 to-primary/10 px-6 py-4 border-b border-gray-200">
+          <!-- Order Items Card (Top) with Enhanced Design -->
+          <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-600 px-6 py-5 border-b border-purple-300">
               <div class="flex justify-between items-start">
                 <div>
-                  <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2 mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M7 4a3 3 0 000 6h10a3 3 0 100-6H7zM7 10a3 3 0 000 6h10a3 3 0 100-6H7z" />
-                    </svg>
-                    Order Items
+                  <h2 class="text-xl font-bold text-white flex items-center gap-3 mb-2">
+                    <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M7 4a3 3 0 000 6h10a3 3 0 100-6H7zM7 10a3 3 0 000 6h10a3 3 0 100-6H7z" />
+                      </svg>
+                    </div>
+                    🛒 Order Items
                   </h2>
-                  <p class="text-sm text-gray-600">{{ displayOrderItems.length }} item{{ displayOrderItems.length !== 1 ? 's' : '' }} in this order</p>
+                  <p class="text-sm text-purple-100 font-medium">{{ displayOrderItems.length }} item{{ displayOrderItems.length !== 1 ? 's' : '' }} in this order</p>
                 </div>
                 <!-- Save/Cancel buttons for pending quantity changes -->
-                <div v-if="hasPendingChanges" class="flex items-center gap-2">
-                  <span class="text-xs text-amber-600 font-medium">Unsaved changes</span>
+                <div v-if="hasPendingChanges" class="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
+                  <span class="text-xs text-yellow-200 font-bold flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    Unsaved
+                  </span>
                   <button
                     @click="cancelQuantityChanges"
                     :disabled="loading"
-                    class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    class="px-3 py-1.5 text-xs font-bold text-white bg-white/20 hover:bg-white/30 rounded-lg disabled:opacity-50 transition-all"
                   >
-                    Cancel
+                    ✕ Cancel
                   </button>
                   <button
                     @click="saveQuantityChanges"
                     :disabled="loading"
-                    class="px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1"
+                    class="px-3 py-1.5 text-xs font-bold text-purple-600 bg-white hover:bg-gray-100 rounded-lg disabled:opacity-50 transition-all flex items-center gap-1 shadow-md"
                   >
                     <svg v-if="loading" class="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Save Changes
+                    ✓ Save
                   </button>
                 </div>
               </div>
@@ -803,59 +815,77 @@ const submitForm = () => {
             </div>
           </div>
 
-          <!-- Customer Information Card (Bottom) -->
-          <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
-            <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
-              <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM9 6a3 3 0 11-6 0 3 3 0 016 0zm0 0a3 3 0 11-6 0 3 3 0 016 0zM9 10a3 3 0 11-6 0 3 3 0 016 0zm0 0a3 3 0 11-6 0 3 3 0 016 0zm0 0a3 3 0 11-6 0 3 3 0 016 0zm7-4a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Customer Info
+          <!-- Customer Information Card (Bottom) with Enhanced Design -->
+          <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 via-blue-600 to-cyan-600 px-6 py-5 border-b border-blue-300">
+              <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                👤 Customer Information
               </h2>
             </div>
 
-            <div class="p-6 space-y-5">
+            <div class="p-6 space-y-6">
               <div>
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Customer Name</label>
-                <input v-model="form.customer_name" type="text" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Enter customer name" />
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">👤</span> Customer Name
+                </label>
+                <input v-model="form.customer_name" type="text" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 font-medium" placeholder="Enter customer name" />
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Phone Number</label>
-                <input v-model="form.customer_phone" type="text" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Enter phone number" />
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">📱</span> Phone Number
+                </label>
+                <input v-model="form.customer_phone" type="text" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 font-medium" placeholder="Enter phone number" />
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Email Address</label>
-                <input v-model="form.customer_email" type="email" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Enter email address" />
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">📧</span> Email Address
+                </label>
+                <input v-model="form.customer_email" type="email" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 font-medium" placeholder="Enter email address" />
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Shipping Address</label>
-                <textarea v-model="form.shipping_address" rows="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none" placeholder="Enter shipping address"></textarea>
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">📍</span> Shipping Address
+                </label>
+                <textarea v-model="form.shipping_address" rows="4" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none hover:border-gray-300 font-medium" placeholder="Enter shipping address"></textarea>
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Admin Notes</label>
-                <textarea v-model="form.admin_notes" rows="3" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none" placeholder="Enter admin notes (internal use only)"></textarea>
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">📝</span> Admin Notes
+                </label>
+                <textarea v-model="form.admin_notes" rows="3" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none hover:border-gray-300 font-medium bg-purple-50/30" placeholder="Internal notes (not visible to customers)"></textarea>
               </div>
 
-              <div class="border-t border-gray-200 pt-4">
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Payment Status</label>
-                <select v-model="form.payment_status" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white">
+              <div class="border-t-2 border-gray-100 pt-6 mt-2">
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">💳</span> Payment Status
+                </label>
+                <select v-model="form.payment_status" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white hover:border-gray-300 font-semibold cursor-pointer">
                   <option v-for="(status, key) in paymentStatuses" :key="key" :value="key">{{ status }}</option>
                 </select>
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Payment Method</label>
-                <select v-model="form.payment_method" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white">
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">💰</span> Payment Method
+                </label>
+                <select v-model="form.payment_method" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white hover:border-gray-300 font-semibold cursor-pointer">
                   <option v-for="(method, key) in paymentMethods" :key="key" :value="key">{{ method }}</option>
                 </select>
               </div>
 
-              <div class="border-t border-gray-200 pt-4">
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Order Status</label>
+              <div class="border-t-2 border-gray-100 pt-6 mt-2">
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">🏷️</span> Order Status
+                </label>
                 <StatusDropdown
                   v-model="form.status"
                   :order-id="order.id"
@@ -865,63 +895,77 @@ const submitForm = () => {
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Delivery Area</label>
-                <select v-model="form.area" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white">
-                  <option value="inside_dhaka">Inside Dhaka</option>
-                  <option value="outside_dhaka">Outside Dhaka</option>
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">🚚</span> Delivery Area
+                </label>
+                <select v-model="form.area" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all bg-white hover:border-gray-300 font-semibold cursor-pointer">
+                  <option value="inside_dhaka">📍 Inside Dhaka</option>
+                  <option value="outside_dhaka">🌍 Outside Dhaka</option>
                 </select>
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Shipping Cost (৳)</label>
-                <input v-model.number="form.shipping_cost" type="number" min="0" step="0.01" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Enter shipping cost" />
+                <label class="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  <span class="text-lg">💵</span> Shipping Cost
+                </label>
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">৳</span>
+                  <input v-model.number="form.shipping_cost" type="number" min="0" step="0.01" class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all hover:border-gray-300 font-bold text-lg" placeholder="0.00" />
+                </div>
               </div>
 
-              <!-- Discount Settings -->
-              <div class="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                <div class="flex items-center justify-between mb-3">
-                  <h3 class="text-sm font-medium text-gray-700">Discount Settings</h3>
-                  <div class="text-xs text-gray-500">Optional</div>
+              <!-- Discount Settings with Enhanced Design -->
+              <div class="mt-6 p-5 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <span class="text-lg">🎁</span> Discount Settings
+                  </h3>
+                  <span class="px-2 py-1 bg-white text-xs font-bold text-amber-600 rounded-lg shadow-sm">Optional</span>
                 </div>
-                <div class="flex items-end space-x-2">
+                <div class="flex items-end space-x-3">
                   <div class="flex-1">
-                    <label class="text-xs text-gray-500 block mb-1">Order Discount</label>
+                    <label class="text-xs text-gray-700 font-bold block mb-2">💰 Discount Amount</label>
                     <input
                       v-model.number="form.discount"
                       type="number"
                       min="0"
                       step="0.01"
-                      class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                      placeholder="Enter discount amount"
+                      class="w-full px-4 py-2.5 text-sm font-semibold border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 hover:border-amber-300 transition-all"
+                      placeholder="Enter amount"
                     />
                   </div>
-                  <div class="w-32">
-                    <label class="text-xs text-gray-500 block mb-1">Type</label>
+                  <div class="w-36">
+                    <label class="text-xs text-gray-700 font-bold block mb-2">📊 Type</label>
                     <select
                       v-model="form.discount_type"
-                      class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white"
+                      class="w-full px-4 py-2.5 text-sm font-bold border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white hover:border-amber-300 transition-all cursor-pointer"
                     >
-                      <option value="fixed">Fixed</option>
-                      <option value="percentage">Percent</option>
+                      <option value="fixed">৳ Fixed</option>
+                      <option value="percentage">% Percent</option>
                     </select>
                   </div>
                 </div>
-                <div class="mt-2 text-xs text-gray-500">
-                  {{ form.discount_type === 'percentage' ?
-                    'Percentage will be applied to subtotal' :
-                    'Fixed amount will be deducted from total' }}
+                <div class="mt-3 p-3 bg-white/60 rounded-lg">
+                  <p class="text-xs text-gray-600 font-medium flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    {{ form.discount_type === 'percentage' ?
+                      'Percentage discount will be applied to the subtotal' :
+                      'Fixed amount will be deducted from the total' }}
+                  </p>
                 </div>
               </div>
 
-              <button @click="submitForm" :disabled="loading" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 text-white py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold shadow-sm hover:shadow-md">
-                <svg v-if="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <button @click="submitForm" :disabled="loading" class="w-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-green-600 hover:from-emerald-600 hover:via-emerald-700 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0">
+                <svg v-if="loading" class="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
                 </svg>
-                <span>{{ loading ? 'Updating...' : 'Save Changes' }}</span>
+                <span>{{ loading ? '⏳ Updating Order...' : '✅ Save All Changes' }}</span>
               </button>
             </div>
           </div>
@@ -929,39 +973,43 @@ const submitForm = () => {
 
         <!-- Right Column: Available Products -->
         <div class="lg:col-span-2">
-          <!-- Products Card -->
-          <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
-            <div class="bg-gradient-to-r from-emerald-50 to-emerald-100 px-6 py-4 border-b border-gray-200">
-              <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2 mb-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 6H6.28l-.31-1.243A1 1 0 005 4H3z" />
-                </svg>
-                Available Products
+          <!-- Products Card with Enhanced Design -->
+          <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-500 via-green-600 to-teal-600 px-6 py-5 border-b border-emerald-300">
+              <h2 class="text-xl font-bold text-white flex items-center gap-3 mb-2">
+                <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 6H6.28l-.31-1.243A1 1 0 005 4H3z" />
+                  </svg>
+                </div>
+                🛍️ Available Products
               </h2>
-              <p class="text-sm text-gray-600">Add products to this order</p>
+              <p class="text-sm text-emerald-100 font-medium">Search and add products to this order</p>
             </div>
 
-            <!-- Filters -->
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <!-- Filters with Enhanced Design -->
+            <div class="px-6 py-5 border-b-2 border-gray-100 bg-gradient-to-r from-gray-50 to-gray-100">
               <div class="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
-                <div class="flex items-center gap-3">
-                  <label for="perPage" class="text-sm font-medium text-gray-700">Show per page:</label>
-                  <select v-model="perPage" @change="updatePerPage" class="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-medium bg-white">
+                <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                  <label for="perPage" class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                    <span>📋</span> Show:
+                  </label>
+                  <select v-model="perPage" @change="updatePerPage" class="px-3 py-2 border-2 border-gray-200 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 text-sm font-bold bg-white hover:border-gray-300 transition-all cursor-pointer">
                     <option value="10">10</option>
                     <option value="25">25</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
                   </select>
                 </div>
-                <div class="relative w-full sm:w-72">
-                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div class="relative w-full sm:w-80">
+                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
                     </svg>
                   </div>
-                  <input v-model="search" type="text" placeholder="Search products..." class="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm font-medium" />
-                  <button v-if="search" @click="clearSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600">
-                    <svg class="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <input v-model="search" type="text" placeholder="🔍 Search products by name, ID..." class="block w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-semibold hover:border-gray-300 transition-all shadow-sm" />
+                  <button v-if="search" @click="clearSearch" class="absolute inset-y-0 right-0 pr-4 flex items-center hover:scale-110 transition-transform">
+                    <svg class="h-5 w-5 text-gray-400 hover:text-red-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                     </svg>
                   </button>
@@ -969,17 +1017,17 @@ const submitForm = () => {
               </div>
             </div>
 
-            <!-- Products Table -->
+            <!-- Products Table with Enhanced Design -->
             <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
+              <table class="min-w-full divide-y-2 divide-gray-200">
+                <thead class="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50">
                   <tr>
-                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Product</th>
-                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Price</th>
-                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Stock</th>
-                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Qty</th>
-                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Variations</th>
-                    <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Action</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-gray-800 uppercase tracking-wider">🏷️ Product</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-gray-800 uppercase tracking-wider">💰 Price</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-gray-800 uppercase tracking-wider">📦 Stock</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-gray-800 uppercase tracking-wider">🔢 Quantity</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-gray-800 uppercase tracking-wider">🎨 Variations</th>
+                    <th scope="col" class="px-6 py-4 text-right text-xs font-extrabold text-gray-800 uppercase tracking-wider">⚡ Action</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
