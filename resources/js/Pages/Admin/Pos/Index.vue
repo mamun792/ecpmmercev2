@@ -821,32 +821,44 @@ onMounted(async () => {
     <Head title="Point of Sale" />
     <AdminLayout>
         <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
-            <!-- Header -->
+            <!-- Enhanced Header with Guidance -->
             <div class="bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 shadow-lg border-b-2 border-orange-200 dark:border-orange-900/50">
-                <div class="px-6 py-6">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
-                                <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
-                                </svg>
+                <div class="px-4 sm:px-6 py-4 sm:py-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3 sm:gap-4">
+                            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                                <span class="text-2xl sm:text-3xl">🎪</span>
                             </div>
                             <div>
-                                <h1 class="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
-                                    Point of Sale
+                                <h1 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+                                    🎪 Point of Sale - Made Simple!
                                 </h1>
-                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Smart POS System v2.0</p>
+                                <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">💡 <strong>Quick Guide:</strong> Find products → Add to cart → Select customer → Complete sale</p>
+                                <div class="flex items-center gap-4 mt-1 text-xs">
+                                    <span class="flex items-center gap-1 text-emerald-600">
+                                        <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                                        ✅ Ready to sell
+                                    </span>
+                                    <span class="flex items-center gap-1 text-blue-600">
+                                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                        📱 Touch-friendly interface
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <div class="flex items-center gap-3">
-                                <div class="px-4 py-2 rounded-xl text-sm font-bold border-2 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm">
-                                    <span class="text-xs uppercase tracking-wider">Items</span>
-                                    <span class="ml-2 text-lg">{{ cartItemsCount }}</span>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 sm:gap-3">
+                                <div class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold border-2 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm">
+                                    <span class="text-xs uppercase tracking-wider flex items-center gap-1">
+                                        📦 <span class="hidden sm:inline">Items</span>
+                                    </span>
+                                    <span class="ml-1 sm:ml-2 text-lg font-black">{{ cartItemsCount }}</span>
                                 </div>
-                                <div class="px-4 py-2 rounded-xl text-sm font-bold border-2 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 shadow-sm">
-                                    <span class="text-xs uppercase tracking-wider">Total</span>
-                                    <span class="ml-2 text-lg">৳{{ formatPrice(cartTotal) }}</span>
+                                <div class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold border-2 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 shadow-sm">
+                                    <span class="text-xs uppercase tracking-wider flex items-center gap-1">
+                                        💰 <span class="hidden sm:inline">Total</span>
+                                    </span>
+                                    <span class="ml-1 sm:ml-2 text-lg font-black">৳{{ formatPrice(cartTotal) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -857,46 +869,70 @@ onMounted(async () => {
             <div class="flex flex-col lg:flex-row h-full">
                 <!-- Products Section -->
                 <div class="w-full xl:w-2/3 p-6">
-                    <!-- Search and Filters -->
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 border-gray-100 dark:border-gray-700 p-6 mb-6">
-                        <div class="flex items-center justify-between mb-4">
+                    <!-- Enhanced Product Search Section -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 border-gray-100 dark:border-gray-700 p-4 sm:p-6 mb-6">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/>
-                                    </svg>
+                                    <span class="text-white text-lg">🔍</span>
                                 </div>
-                                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Product Search</h3>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        🔍 Product Search - Find Anything Fast!
+                                    </h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">💡 <strong>Pro Tip:</strong> Use name, code, or scan barcode to find products instantly</p>
+                                </div>
                             </div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                                Showing {{ paginationInfo.from }}-{{ paginationInfo.to }} of {{ paginationInfo.total }} products
+                            <div class="text-sm text-gray-500 dark:text-gray-400 font-medium flex items-center gap-2">
+                                <span class="flex items-center gap-1">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                    <span class="hidden sm:inline">Showing</span>
+                                </span>
+                                <span class="font-bold text-gray-700 dark:text-gray-300">{{ paginationInfo.from }}-{{ paginationInfo.to }}</span>
+                                <span class="hidden sm:inline">of</span>
+                                <span class="font-bold text-gray-700 dark:text-gray-300">{{ paginationInfo.total }}</span>
+                                <span class="hidden sm:inline">products</span>
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-between gap-6">
-                            <div class="flex items-center space-x-4 flex-1">
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">
+                            <div class="flex items-center space-x-2 sm:space-x-4 flex-1">
                                 <div class="flex-1 relative">
                                     <input
                                         v-model="searchQuery"
                                         type="text"
-                                        placeholder="Search products by name, code, or barcode..."
-                                        class="w-full pl-12 pr-6 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 text-sm font-medium shadow-sm transition-all"
+                                        placeholder="🔍 Search by name, code, or scan barcode... (e.g., 'iPhone', 'ABC123')"
+                                        class="w-full pl-12 pr-6 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 text-sm font-medium shadow-sm transition-all touch-manipulation"
+                                        @keyup.enter="handleSearch"
+                                        title="Type product name, code, or scan barcode to search"
                                     />
                                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"/>
-                                        </svg>
+                                        <span class="text-lg">🔍</span>
                                     </div>
+                                    <!-- Search button for mobile -->
+                                    <button
+                                        @click="handleSearch"
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-orange-600 hover:text-orange-700 transition-colors"
+                                        title="Click to search or press Enter"
+                                    >
+                                        <span class="text-sm font-bold hidden sm:inline">⏎ Search</span>
+                                        <span class="sm:hidden">⏎</span>
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Per Page Selector -->
+                            <!-- Items Per Page Selector with User-Friendly Labels -->
                             <div class="flex items-center gap-3">
-                                <span class="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Show:</span>
+                                <span class="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1">
+                                    <span>📊</span>
+                                    <span class="hidden sm:inline">Show:</span>
+                                    <span class="sm:hidden">Per Page:</span>
+                                </span>
                                 <select
                                     :value="perPage"
                                     @change="changePerPage($event.target.value)"
-                                    class="px-4 py-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all"
+                                    class="px-3 sm:px-4 py-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all touch-manipulation"
+                                    title="Choose how many products to show at once"
                                 >
                                     <option value="10">10</option>
                                     <option value="25">25</option>
@@ -1197,32 +1233,59 @@ onMounted(async () => {
                         </div>
                     </div>
 
-                    <div class="p-4 border-b">
+                    <div class="p-4 sm:p-6 border-b bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
                         <div class="flex items-center justify-between">
-                            <h2 class="text-lg font-semibold text-gray-900">
-                                Shopping Cart
-                            </h2>
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                                    <span class="text-white text-lg">🛍</span>
+                                </div>
+                                <div>
+                                    <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        🛍 Shopping Cart
+                                    </h2>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">💡 Review items before checkout</p>
+                                </div>
+                            </div>
+                            <div v-if="cartItemsCount > 0" class="text-right">
+                                <div class="text-sm font-bold text-orange-600 dark:text-orange-400">
+                                    {{ cartItemsCount }} item{{ cartItemsCount !== 1 ? 's' : '' }}
+                                </div>
+                                <div class="text-xs text-gray-500">➡️ Ready to checkout</div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- User Selection -->
-                    <div class="p-4 border-b">
-                        <h3 class="text-sm font-medium text-gray-700 mb-2">
-                            Select Customer
-                        </h3>
+                    <!-- Enhanced Customer Selection -->
+                    <div class="p-4 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-6 h-6 rounded bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                <span class="text-white text-sm">👤</span>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    👤 Select Customer - Who's Shopping Today?
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">💡 Search existing customer or create new one</p>
+                            </div>
+                        </div>
                         <div class="relative">
                             <input
                                 v-model="userSearchQuery"
                                 type="text"
-                                placeholder="Search users by name, phone or email..."
-                                class="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="🔍 Search customer by name, phone or email... (e.g., 'John Doe', '01712345678')"
+                                class="w-full pl-10 pr-10 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm font-medium shadow-sm transition-all touch-manipulation"
+                                title="Type customer name, phone number, or email to search"
                             />
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-lg">🔍</span>
+                            </div>
                             <button
                                 v-if="selectedUser"
                                 @click="clearUserSelection"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 touch-manipulation"
+                                title="Clear selected customer"
                             >
-                                ×
+                                <span class="text-lg">❌</span>
                             </button>
                         </div>
                         <div
@@ -1245,58 +1308,67 @@ onMounted(async () => {
                         </div>
                         <button
                             @click="showUserModal = true"
-                            class="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                            class="mt-3 w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-300 active:scale-95 touch-manipulation flex items-center justify-center gap-2"
+                            title="Click to add a new customer to the system"
                         >
-                            Create New User
+                            <span class="text-lg">👥</span>
+                            <span>➤ Create New Customer</span>
                         </button>
                     </div>
 
-                    <!-- Shipping Details -->
-                    <div class="p-4 border-b bg-white">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-sm font-medium text-gray-700">
-                                Shipping Details
-                            </h3>
+                    <!-- Enhanced Shipping Details -->
+                    <div class="p-4 sm:p-6 border-b bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-6 h-6 rounded bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                                <span class="text-white text-sm">🚚</span>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    🚚 Shipping Details - Where Should We Deliver?
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">💡 Fill in customer and delivery information</p>
+                            </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             <!-- Customer Details -->
                             <div>
-                                <label class="text-xs text-gray-500 block mb-1"
-                                    >Name</label
-                                >
+                                <label class="text-xs text-gray-600 dark:text-gray-400 block mb-1.5 font-semibold flex items-center gap-1">
+                                    👤 <span>Customer Name</span>
+                                </label>
                                 <input
                                     v-model="shippingForm.customer_name"
                                     type="text"
-                                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                    placeholder="Enter customer name..."
+                                    class="w-full px-3 py-2.5 text-sm border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-gray-100 touch-manipulation transition-all"
+                                    title="Enter the customer's full name"
                                 />
                             </div>
 
                             <div>
-                                <label class="text-xs text-gray-500 block mb-1"
-                                    >Phone</label
-                                >
+                                <label class="text-xs text-gray-600 dark:text-gray-400 block mb-1.5 font-semibold flex items-center gap-1">
+                                    📱 <span>Phone Number</span>
+                                </label>
                                 <input
                                     v-model="shippingForm.customer_phone"
-                                    type="text"
-                                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                    type="tel"
+                                    placeholder="01XXXXXXXXX"
+                                    class="w-full px-3 py-2.5 text-sm border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-gray-100 touch-manipulation transition-all"
+                                    title="Enter customer's phone number with country code"
                                 />
                             </div>
 
                             <div>
-                                <label class="text-xs text-gray-500 block mb-1"
-                                    >Area</label
-                                >
+                                <label class="text-xs text-gray-600 dark:text-gray-400 block mb-1.5 font-semibold flex items-center gap-1">
+                                    🗺️ <span>Delivery Area</span>
+                                </label>
                                 <select
                                     v-model="shippingForm.area"
-                                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                    class="w-full px-3 py-2.5 text-sm border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-gray-100 touch-manipulation transition-all"
+                                    title="Select delivery area to calculate shipping cost"
                                 >
-                                    <option value="inside_dhaka">
-                                        Inside Dhaka
-                                    </option>
-                                    <option value="outside_dhaka">
-                                        Outside Dhaka
-                                    </option>
+                                    <option value="inside_dhaka">🏢 Inside Dhaka (Fast Delivery)</option>
+                                    <option value="outside_dhaka">🏘️ Outside Dhaka (Regular Delivery)</option>
                                 </select>
                             </div>
 

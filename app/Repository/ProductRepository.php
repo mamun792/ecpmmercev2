@@ -337,14 +337,22 @@ class ProductRepository implements ProductRepositoryInterface
      */
     protected function buildQuery(?ProductFilterDTO $filters): Builder
     {
-        // Optimize eager loading - only load necessary data for index page
-        // Deep nested variations loading causes N+1, load only on detail pages
+        // Load variations with attributes for the stock display in products index
         $query = Product::with([
             'category:id,name,slug',  // Select only needed columns
             'brand:id,brand_name',
             'inventoryStocks' => function($q) {
                 $q->select('product_id', DB::raw('SUM(available_quantity) as total_stock'))
                   ->groupBy('product_id');
+            },
+            // Load variations with attributes for the variation breakdown display
+            'variations' => function($q) {
+                $q->select('id', 'product_id', 'sku', 'variation_code', 'price', 'is_default')
+                  ->with([
+                      'attributes.value.attribute:id,name', // Load attribute names and values
+                      'inventoryStock:product_variation_id,available_quantity' // Load variation stock
+                  ])
+                  ->limit(10); // Limit to prevent performance issues
             }
         ])->withCount('variations'); // Count variations for UI
 

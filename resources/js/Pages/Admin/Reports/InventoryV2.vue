@@ -178,12 +178,28 @@ const categories = computed(() => {
   <AdminLayout>
     <div class="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
 
-      <!-- Modern Header - Shopify Style -->
+      <!-- Modern Header - User-Friendly -->
       <div class="bg-white border-b border-gray-200 -mx-4 -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8 px-4 md:px-6 lg:px-8 py-6 mb-8">
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
-            <h1 class="text-3xl font-semibold text-gray-900 mb-1">Inventory Analytics</h1>
-            <p class="text-sm text-gray-600">Monitor stock levels, track performance, and optimize inventory</p>
+            <h1 class="text-3xl font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              📈 Inventory Analytics - Made Simple!
+            </h1>
+            <p class="text-sm text-gray-600">💡 <strong>Quick Guide:</strong> Check stock levels, spot what needs restocking, and track your product performance</p>
+            <div class="flex items-center gap-4 mt-2 text-xs">
+              <span class="flex items-center gap-1 text-green-600">
+                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                ✅ Green = Good Stock
+              </span>
+              <span class="flex items-center gap-1 text-amber-600">
+                <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+                ⚠️ Orange = Running Low
+              </span>
+              <span class="flex items-center gap-1 text-red-600">
+                <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                🚨 Red = Out of Stock
+              </span>
+            </div>
           </div>
 
           <div class="flex gap-2">
@@ -191,17 +207,19 @@ const categories = computed(() => {
               @click="exportCSV"
               :disabled="isLoading"
               class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
+              title="Download data as spreadsheet file"
             >
               <FileText class="w-4 h-4" />
-              CSV
+              📄 Download CSV
             </button>
             <button
               @click="exportPDF"
               :disabled="isLoading"
               class="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 shadow-sm"
+              title="Download report as PDF file"
             >
               <Download class="w-4 h-4" />
-              PDF
+              🗁️ PDF Report
             </button>
           </div>
         </div>
@@ -215,11 +233,11 @@ const categories = computed(() => {
             <div class="p-2 bg-blue-50 rounded-lg">
               <Package class="w-5 h-5 text-blue-600" />
             </div>
-            <Info class="w-4 h-4 text-gray-400 cursor-help" title="Total unique products" />
+            <Info class="w-4 h-4 text-gray-400 cursor-help" title="💡 Total number of different products in your store" />
           </div>
           <div class="text-3xl font-semibold text-gray-900 mb-1">{{ formatNumber(totalProducts) }}</div>
-          <div class="text-sm font-medium text-gray-600">Products</div>
-          <div class="mt-3 text-xs text-gray-500">{{ inStockProducts }} in stock, {{ lowStockProducts }} low, {{ outOfStockProducts }} out</div>
+          <div class="text-sm font-medium text-gray-600">📦 Products in Store</div>
+          <div class="mt-3 text-xs text-gray-500">💡 {{ inStockProducts }} ready to sell, {{ lowStockProducts }} need soon, {{ outOfStockProducts }} need now</div>
         </div>
 
         <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
@@ -227,13 +245,13 @@ const categories = computed(() => {
             <div class="p-2 bg-emerald-50 rounded-lg">
               <Archive class="w-5 h-5 text-emerald-600" />
             </div>
-            <Info class="w-4 h-4 text-gray-400 cursor-help" title="Total units in warehouse" />
+            <Info class="w-4 h-4 text-gray-400 cursor-help" title="💡 Total units available for customers to buy right now" />
           </div>
           <div class="text-3xl font-semibold text-gray-900 mb-1">{{ formatNumber(totalStock) }}</div>
-          <div class="text-sm font-medium text-gray-600">Units Available</div>
+          <div class="text-sm font-medium text-gray-600">📊 Ready to Sell</div>
           <div class="mt-3 flex items-center gap-1">
-            <div class="text-xs text-gray-500">Turnover: {{ turnoverRate }}%</div>
-            <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div class="text-xs text-gray-500">Sales Rate: {{ turnoverRate }}%</div>
+            <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden" title="How fast products are selling">
               <div class="h-full bg-emerald-500 rounded-full" :style="{ width: turnoverRate + '%' }"></div>
             </div>
           </div>
@@ -244,11 +262,11 @@ const categories = computed(() => {
             <div class="p-2 bg-purple-50 rounded-lg">
               <TrendingUp class="w-5 h-5 text-purple-600" />
             </div>
-            <Info class="w-4 h-4 text-gray-400 cursor-help" title="Total units sold (all-time)" />
+            <Info class="w-4 h-4 text-gray-400 cursor-help" title="💡 Total units sold to customers (lifetime sales)" />
           </div>
           <div class="text-3xl font-semibold text-gray-900 mb-1">{{ formatNumber(totalSold) }}</div>
-          <div class="text-sm font-medium text-gray-600">Units Sold</div>
-          <div class="mt-3 text-xs text-gray-500">Historical sales performance</div>
+          <div class="text-sm font-medium text-gray-600">🛒 Already Sold</div>
+          <div class="mt-3 text-xs text-gray-500">💡 Total units delivered to customers</div>
         </div>
 
         <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
@@ -256,11 +274,11 @@ const categories = computed(() => {
             <div class="p-2 bg-orange-50 rounded-lg">
               <DollarSign class="w-5 h-5 text-orange-600" />
             </div>
-            <Info class="w-4 h-4 text-gray-400 cursor-help" title="Current inventory value" />
+            <Info class="w-4 h-4 text-gray-400 cursor-help" title="💡 What your current inventory is worth in money" />
           </div>
           <div class="text-3xl font-semibold text-gray-900 mb-1">{{ formatCurrency(totalValue) }}</div>
-          <div class="text-sm font-medium text-gray-600">Stock Value</div>
-          <div class="mt-3 text-xs text-gray-500">{{ formatCurrency(totalValue / (totalProducts || 1)) }} avg per product</div>
+          <div class="text-sm font-medium text-gray-600">💰 Inventory Worth</div>
+          <div class="mt-3 text-xs text-gray-500">💡 {{ formatCurrency(totalValue / (totalProducts || 1)) }} average per product</div>
         </div>
       </div>
 
@@ -272,9 +290,9 @@ const categories = computed(() => {
               <CheckCircle class="w-5 h-5 text-green-600" />
             </div>
             <div class="flex-1">
-              <div class="text-lg font-semibold text-gray-900 mb-1">{{ inStockProducts }} Products</div>
-              <div class="text-sm text-gray-600 mb-2">Healthy stock levels</div>
-              <div class="text-xs text-green-700 font-medium">✓ No action required</div>
+              <div class="text-lg font-semibold text-gray-900 mb-1">✅ {{ inStockProducts }} Products</div>
+              <div class="text-sm text-gray-600 mb-2">Have plenty of stock</div>
+              <div class="text-xs text-green-700 font-medium">😎 Great! These products are ready for customers</div>
             </div>
           </div>
         </div>
@@ -285,9 +303,9 @@ const categories = computed(() => {
               <AlertTriangle class="w-5 h-5 text-amber-600" />
             </div>
             <div class="flex-1">
-              <div class="text-lg font-semibold text-gray-900 mb-1">{{ lowStockProducts }} Products</div>
-              <div class="text-sm text-gray-600 mb-2">Running low on stock</div>
-              <div class="text-xs text-amber-700 font-medium">⚠ Reorder recommended</div>
+              <div class="text-lg font-semibold text-gray-900 mb-1">⚠️ {{ lowStockProducts }} Products</div>
+              <div class="text-sm text-gray-600 mb-2">Running low - restock soon!</div>
+              <div class="text-xs text-amber-700 font-medium">📅 Order more before they run out completely</div>
             </div>
           </div>
         </div>
@@ -298,43 +316,46 @@ const categories = computed(() => {
               <XCircle class="w-5 h-5 text-red-600" />
             </div>
             <div class="flex-1">
-              <div class="text-lg font-semibold text-gray-900 mb-1">{{ outOfStockProducts }} Products</div>
-              <div class="text-sm text-gray-600 mb-2">Completely out of stock</div>
-              <div class="text-xs text-red-700 font-medium">⚠ Urgent restocking needed</div>
+              <div class="text-lg font-semibold text-gray-900 mb-1">🚨 {{ outOfStockProducts }} Products</div>
+              <div class="text-sm text-gray-600 mb-2">Completely out - customers can't buy!</div>
+              <div class="text-xs text-red-700 font-medium">🏃‍♂️ Restock immediately to avoid lost sales</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Filters Section - Modern Design -->
+      <!-- Filters Section - User-Friendly -->
       <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
         <div class="flex items-center gap-2 mb-5">
           <Filter class="w-5 h-5 text-gray-600" />
-          <h3 class="text-base font-semibold text-gray-900">Filters</h3>
+          <h3 class="text-base font-semibold text-gray-900">🔍 Search & Filter Products</h3>
+          <span class="text-xs text-gray-500 ml-2">💡 Find exactly what you're looking for</span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <!-- Search -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1.5">Search</label>
+            <label class="block text-xs font-medium text-gray-700 mb-1.5">🔍 Search Products</label>
             <div class="relative">
               <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 v-model="searchQuery"
                 type="text"
-                placeholder="Product name or SKU..."
+                placeholder="Type product name..."
                 class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 @keyup.enter="applyFilters"
+                title="💡 Type any part of a product name to find it"
               >
             </div>
           </div>
 
           <!-- Category -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1.5">Category</label>
+            <label class="block text-xs font-medium text-gray-700 mb-1.5">📎 Filter by Category</label>
             <select
               v-model="selectedCategory"
               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              title="💡 Show products from specific categories only"
             >
               <option value="">All Categories</option>
               <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
@@ -343,24 +364,26 @@ const categories = computed(() => {
 
           <!-- Stock Status -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1.5">Stock Status</label>
+            <label class="block text-xs font-medium text-gray-700 mb-1.5">🚦 Filter by Stock Status</label>
             <select
               v-model="stockStatus"
               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              title="💡 Show only products with specific stock levels"
             >
               <option value="all">All Status</option>
-              <option value="in_stock">In Stock</option>
-              <option value="low_stock">Low Stock</option>
-              <option value="out_of_stock">Out of Stock</option>
+              <option value="in_stock">✅ Good Stock</option>
+              <option value="low_stock">⚠️ Running Low</option>
+              <option value="out_of_stock">🚨 Out of Stock</option>
             </select>
           </div>
 
           <!-- Sort -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1.5">Sort By</label>
+            <label class="block text-xs font-medium text-gray-700 mb-1.5">🔄 Sort Products By</label>
             <select
               v-model="sortBy"
               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              title="💡 Change the order products are displayed"
             >
               <option value="name">Name (A-Z)</option>
               <option value="stock">Stock Level</option>
@@ -376,15 +399,17 @@ const categories = computed(() => {
             @click="applyFilters"
             :disabled="isLoading"
             class="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 inline-flex items-center gap-2"
+            title="📍 Apply your search and filters"
           >
             <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': isLoading }" />
-            Apply
+            🔍 Apply Filters
           </button>
           <button
             @click="resetFilters"
             class="px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-all"
+            title="🧽 Clear all filters and show everything"
           >
-            Reset
+            🧽 Clear All
           </button>
         </div>
       </div>
@@ -392,20 +417,21 @@ const categories = computed(() => {
       <!-- Products Table - Clean Minimal Design -->
       <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div class="border-b border-gray-200 px-6 py-4">
-          <h3 class="text-sm font-semibold text-gray-900">Products ({{ products?.length || 0 }})</h3>
+          <h3 class="text-sm font-semibold text-gray-900">📋 Product List ({{ products?.length || 0 }} found)</h3>
+          <p class="text-xs text-gray-500 mt-1">💡 Click on any product name to see more details</p>
         </div>
 
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead>
               <tr class="bg-gray-50 border-b border-gray-200">
-                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
-                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
-                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
-                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
-                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Sold</th>
-                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
-                <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider" title="Product name and image">📦 Product</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider" title="Which category this product belongs to">📎 Category</th>
+                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider" title="Simple or Variable product type">🔄 Type</th>
+                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider" title="How many units are available right now">📊 Stock</th>
+                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider" title="How many units have been sold">🛒 Sold</th>
+                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider" title="Selling price">💰 Price</th>
+                <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider" title="Current stock status">🚦 Status</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -463,8 +489,14 @@ const categories = computed(() => {
               <tr v-if="!products || !products.length">
                 <td colspan="7" class="px-6 py-16 text-center">
                   <Package class="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p class="text-sm font-medium text-gray-900 mb-1">No products found</p>
-                  <p class="text-sm text-gray-500">Try adjusting your filters</p>
+                  <p class="text-sm font-medium text-gray-900 mb-1">🔍 No products found</p>
+                  <p class="text-sm text-gray-500">💡 Try changing your search terms or clear all filters</p>
+                  <button
+                    @click="resetFilters"
+                    class="mt-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1 rounded-lg transition-colors"
+                  >
+                    🧽 Clear All Filters
+                  </button>
                 </td>
               </tr>
             </tbody>

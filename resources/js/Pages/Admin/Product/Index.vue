@@ -32,15 +32,46 @@
 
           <!-- Main Actions & Search (Top of Table) -->
           <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col">
-            <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-               <div>
-                  <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
-                      <Package class="w-6 h-6 text-white" />
+            <div class="p-3 sm:p-4 lg:p-6 border-b border-gray-100 dark:border-gray-700">
+              <!-- Mobile-first header layout -->
+               <div class="space-y-3 sm:space-y-2">
+                  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div class="flex-1">
+                      <h1 class="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2 sm:gap-3">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+                          <Package class="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+                        </div>
+                        <span class="text-base sm:text-2xl">📦 Product Management</span>
+                      </h1>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium mt-1 sm:mt-1.5 ml-10 sm:ml-13">💡 <strong>Quick Guide:</strong> Manage products easily • {{ from }}-{{ to }} of {{ total }} items</p>
                     </div>
-                    Catalog Inventory
-                  </h1>
-                  <p class="text-sm text-gray-600 dark:text-gray-400 font-medium mt-1.5 ml-13">Showing {{ from }}-{{ to }} of {{ total }} units</p>
+                    <!-- Mobile New Product Button -->
+                    <div class="flex-shrink-0">
+                      <Link
+                        :href="route('admin.products.create')"
+                        class="group flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-300 active:scale-95 touch-manipulation"
+                        title="Click to add a new product to your store"
+                      >
+                        <Plus class="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-90 transition-transform duration-300" />
+                        <span class="hidden xs:inline">➤ Add New Product</span>
+                        <span class="xs:hidden">Add</span>
+                      </Link>
+                    </div>
+                  </div>
+                  <!-- Status indicators - responsive layout -->
+                  <div class="flex flex-wrap items-center gap-2 sm:gap-4 text-xs ml-10 sm:ml-13">
+                    <span class="flex items-center gap-1 text-green-600">
+                      <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                      ✅ Published = Live on website
+                    </span>
+                    <span class="flex items-center gap-1 text-gray-500">
+                      <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                      ⏸️ Draft = Hidden from customers
+                    </span>
+                    <span class="text-blue-600">
+                      🔄 Click arrows to see variations
+                    </span>
+                  </div>
                </div>
 
                <div class="flex items-center gap-3">
@@ -65,9 +96,10 @@
                   <Link
                     :href="route('admin.products.create')"
                     class="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-300 active:scale-95"
+                    title="Click to add a new product to your store"
                   >
                     <Plus class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                    New Product
+                    ➤ Add New Product
                   </Link>
                </div>
             </div>
@@ -145,24 +177,38 @@
                 </div>
             </div>
 
-        <!-- Polished Data Table -->
+        <!-- Responsive Data Table -->
         <div class="overflow-x-auto custom-scrollbar">
-          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-850">
-              <tr>
-                <th class="px-6 py-4 text-left">
-                  <input type="checkbox"
-                    class="w-4 h-4 rounded border-2 border-gray-400 dark:border-gray-500 text-orange-600 focus:ring-2 focus:ring-orange-500 shadow-sm transition-all cursor-pointer"
-                    :checked="selectedProductIds.length === productData.length && hasProducts"
-                    @change="toggleSelectAll" />
-                </th>
-                <th class="px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Image</th>
-                <th class="px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider min-w-[200px]">Product Details</th>
-                <th class="px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider min-w-[150px]">Identity</th>
-                <th class="px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Financials</th>
-                <th class="px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Inventory</th>
-                <th class="px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                <th class="px-6 py-4 text-center text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+          <div class="inline-block min-w-full align-middle">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-850">
+                <tr>
+                  <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Select products for bulk actions">
+                    <span class="hidden sm:inline">☑️ Select</span>
+                    <span class="sm:hidden">☑️</span>
+                  </th>
+                  <th class="px-2 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Product photo">
+                    <span class="hidden sm:inline">🖼️ Image</span>
+                    <span class="sm:hidden">🖼️</span>
+                  </th>
+                  <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider min-w-[160px] sm:min-w-[200px]" title="Product name and description">
+                    <span class="hidden sm:inline">📦 Product Details</span>
+                    <span class="sm:hidden">📦 Product</span>
+                  </th>
+                  <th class="hidden md:table-cell px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider min-w-[150px]" title="SKU and barcode information">🏷️ Identity</th>
+                  <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Pricing information">
+                    <span class="hidden sm:inline">💰 Price</span>
+                    <span class="sm:hidden">💰</span>
+                  </th>
+                  <th class="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Stock levels and availability">
+                    <span class="hidden sm:inline">📊 Stock</span>
+                    <span class="sm:hidden">📊</span>
+                  </th>
+                  <th class="hidden lg:table-cell px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Published or draft status">🚦 Status</th>
+                  <th class="px-3 sm:px-6 py-3 sm:py-4 text-center text-[9px] sm:text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Edit, delete, or view details">
+                    <span class="hidden sm:inline">⚙️ Actions</span>
+                    <span class="sm:hidden">⚙️</span>
+                  </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
@@ -178,16 +224,16 @@
             <!-- Actual Data -->
             <template v-else>
               <template v-for="(item, index) in productData" :key="item.id || `product-${index}`">
-                <!-- Main Row -->
+                <!-- Mobile-Responsive Main Row -->
                 <tr class="group hover:bg-orange-50/30 dark:hover:bg-orange-900/5 transition-all duration-200">
-                  <td class="px-6 py-5">
+                  <td class="px-3 sm:px-6 py-4 sm:py-5">
                     <input type="checkbox"
-                      class="w-4 h-4 rounded border-2 border-gray-400 dark:border-gray-500 text-orange-600 focus:ring-2 focus:ring-orange-500 transition-all cursor-pointer"
+                      class="w-4 h-4 rounded border-2 border-gray-400 dark:border-gray-500 text-orange-600 focus:ring-2 focus:ring-orange-500 transition-all cursor-pointer touch-manipulation"
                       :checked="isSelected(item.id)" @change="toggleSelection(item.id)" />
                   </td>
-                  <td class="px-6 py-5">
-                    <div class="relative w-16 h-16 shrink-0 group-hover:scale-105 transition-transform duration-500">
-                        <img class="w-full h-full rounded-2xl object-cover bg-gray-50 dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm"
+                  <td class="px-2 sm:px-6 py-4 sm:py-5">
+                    <div class="relative w-12 h-12 sm:w-16 sm:h-16 shrink-0 group-hover:scale-105 transition-transform duration-500">
+                        <img class="w-full h-full rounded-xl sm:rounded-2xl object-cover bg-gray-50 dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm"
                           :src="getFeatureImageUrl(item)" :alt="item.name" />
                         <div v-if="item.is_daily_product" class="absolute -top-2 -right-2 bg-amber-400 text-white p-1 rounded-lg shadow-lg">
                             <Plus class="w-2 h-2 fill-current" />
@@ -238,27 +284,50 @@
                         </div>
                     </div>
                   </td>
-                  <td class="px-6 py-5 whitespace-nowrap">
+                  <td class="px-3 sm:px-6 py-4 sm:py-5 whitespace-nowrap">
                     <div class="flex flex-col">
-                      <div class="flex items-center gap-2">
-                        <span class="text-base font-black text-gray-900 dark:text-gray-100">৳{{ formatCurrency(getDisplayPrice(item)) }}</span>
-                        <span v-if="item.type === 'variable'" class="text-[10px] text-gray-500 font-bold uppercase">VARIABLE</span>
+                      <div class="flex items-center gap-1 sm:gap-2">
+                        <span class="text-sm sm:text-base font-black text-gray-900 dark:text-gray-100">৳{{ formatCurrency(getDisplayPrice(item)) }}</span>
+                        <span v-if="item.type === 'variable'" class="text-[8px] sm:text-[10px] text-gray-500 font-bold uppercase hidden sm:inline">VAR</span>
                       </div>
-
-                      <span v-if="getPreviousPrice(item) !== null" class="text-xs text-gray-400 line-through font-medium">
+                      <span v-if="getPreviousPrice(item) !== null" class="text-[10px] sm:text-xs text-gray-400 line-through font-medium">
                         ৳{{ formatCurrency(getPreviousPrice(item)) }}
                       </span>
                     </div>
                   </td>
-                  <td class="px-6 py-5 whitespace-nowrap">
+                  <td class="px-3 sm:px-6 py-4 sm:py-5">
                     <div class="flex flex-col gap-1">
-                        <div class="flex items-center gap-2">
-                             <div class="h-2 w-2 rounded-full shadow-sm" :class="item.stock > 10 ? 'bg-green-500' : (item.stock > 0 ? 'bg-amber-500' : 'bg-red-500')"></div>
-                             <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ item.stock }} Units</span>
+                        <div class="flex items-center gap-1 sm:gap-2">
+                             <div class="h-2 w-2 rounded-full shadow-sm flex-shrink-0" :class="item.stock > 10 ? 'bg-green-500' : (item.stock > 0 ? 'bg-amber-500' : 'bg-red-500')"></div>
+                             <span class="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 truncate">
+                               <span class="hidden sm:inline">📊 </span>{{ item.stock }} <span class="hidden sm:inline">Units</span><span class="sm:hidden">u</span>
+                             </span>
                         </div>
-                        <span class="text-[10px] font-bold uppercase tracking-tight" :class="item.stock > 10 ? 'text-green-600/70' : 'text-amber-600/70'">
-                            {{ item.stock_status.replace('_', ' ') }}
+                        <span class="text-[8px] sm:text-[10px] font-bold uppercase tracking-tight truncate" :class="item.stock > 10 ? 'text-green-600/70' : (item.stock > 0 ? 'text-amber-600/70' : 'text-red-600/70')">
+                            <span class="hidden sm:inline">{{ item.stock > 10 ? '✅ GOOD STOCK' : (item.stock > 0 ? '⚠️ RUNNING LOW' : '🚨 OUT OF STOCK') }}</span>
+                            <span class="sm:hidden">{{ item.stock > 10 ? '✅ GOOD' : (item.stock > 0 ? '⚠️ LOW' : '🚨 OUT') }}</span>
                         </span>
+                        <!-- Show variation breakdown for variable products - Mobile Responsive -->
+                        <div v-if="item.type === 'variable' && item.variations?.length" class="mt-1 text-[8px] sm:text-[9px] text-gray-500 space-y-0.5">
+                          <div class="flex items-center gap-1 text-blue-600">
+                            <span>🔄</span>
+                            <span class="font-semibold truncate">{{ item.variations.length }} <span class="hidden sm:inline">variations</span><span class="sm:hidden">var</span>:</span>
+                          </div>
+                          <template v-for="(variation, idx) in item.variations.slice(0, item.variations.length > 6 ? 2 : 3)" :key="variation.id">
+                            <div class="flex items-center justify-between px-1.5 sm:px-2 py-0.5 bg-gray-50 dark:bg-gray-800 rounded text-[7px] sm:text-[8px]">
+                              <span class="truncate max-w-[60px] sm:max-w-[80px]" :title="getVariationLabel(variation)">
+                                {{ getVariationLabel(variation) }}
+                              </span>
+                              <span class="font-semibold text-gray-700 dark:text-gray-300 ml-1 flex-shrink-0">
+                                {{ variation.inventory_stock?.available_quantity ?? 0 }}u
+                              </span>
+                            </div>
+                          </template>
+                          <div v-if="item.variations.length > (item.variations.length > 6 ? 2 : 3)" class="text-[7px] sm:text-[8px] text-blue-600 font-semibold px-1.5 sm:px-2">
+                            <span class="hidden sm:inline">👁️ +{{ item.variations.length - 3 }} more (click ▼ to see all)</span>
+                            <span class="sm:hidden">👁️ +{{ item.variations.length - 2 }} more</span>
+                          </div>
+                        </div>
                     </div>
                   </td>
                   <td class="px-6 py-5 whitespace-nowrap">
@@ -267,6 +336,7 @@
                             @click="toggleStatus(item)"
                             class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-blue-500/10 shadow-inner"
                             :class="item.status === 'Published' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'"
+                            :title="item.status === 'Published' ? '✅ Product is live on website - click to hide' : '⏸️ Product is hidden - click to publish'"
                         >
                           <span
                             aria-hidden="true"
@@ -274,26 +344,48 @@
                             :class="item.status === 'Published' ? 'translate-x-4' : 'translate-x-0'"
                           />
                         </button>
-                        <span class="text-[10px] font-black uppercase tracking-widest" :class="item.status === 'Published' ? 'text-blue-600' : 'text-gray-400'">
+                        <span class="text-[10px] font-black uppercase tracking-widest flex items-center gap-1" :class="item.status === 'Published' ? 'text-blue-600' : 'text-gray-400'">
+                            {{ item.status === 'Published' ? '✅' : '⏸️' }}
                             {{ item.status }}
                         </span>
                     </div>
                   </td>
-                  <td class="px-6 py-5 whitespace-nowrap">
-                    <div class="flex justify-center items-center gap-1">
-                      <Link :href="route('admin.products.edit', item.id)"
-                           class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-90">
-                        <SquarePen class="w-4 h-4" />
-                      </Link>
-                      <button @click="openDeleteModal(item.id)"
-                             class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-90">
-                        <Trash2Icon class="w-4 h-4" />
-                      </button>
-                      <button @click="toggleExpanded(item.id)"
-                             class="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all active:scale-90">
-                        <ChevronDown v-if="!expandedRows[item.id]" class="w-4 h-4" />
-                        <ChevronUp v-else class="w-4 h-4" />
-                      </button>
+                  <td class="px-2 sm:px-6 py-4 sm:py-5 whitespace-nowrap">
+                    <div class="flex justify-center items-center gap-0.5 sm:gap-1">
+                      <!-- Mobile: Stack vertically for better touch -->
+                      <div class="flex sm:flex-row flex-col sm:gap-1 gap-0.5">
+                        <Link :href="route('admin.products.edit', item.id)"
+                             class="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg sm:rounded-xl transition-all active:scale-90 touch-manipulation"
+                             title="✏️ Edit this product">
+                          <SquarePen class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </Link>
+                        <button @click="openDeleteModal(item.id)"
+                               class="p-1.5 sm:p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg sm:rounded-xl transition-all active:scale-90 touch-manipulation"
+                               title="🗑️ Delete this product permanently">
+                          <Trash2Icon class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                        <button @click="toggleExpanded(item.id)"
+                               class="p-1.5 sm:p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg sm:rounded-xl transition-all active:scale-90 touch-manipulation"
+                               :title="!expandedRows[item.id] ? '👁️ View detailed info and variations' : '🙈 Hide detailed info'">
+                          <ChevronDown v-if="!expandedRows[item.id]" class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <ChevronUp v-else class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+                      <!-- Mobile Status Toggle - Show on mobile only -->
+                      <div class="lg:hidden ml-1">
+                        <button
+                            @click="toggleStatus(item)"
+                            class="relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/10 shadow-inner touch-manipulation"
+                            :class="item.status === 'Published' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'"
+                            :title="item.status === 'Published' ? '✅ Live - tap to hide' : '⏸️ Hidden - tap to publish'"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-lg ring-0 transition duration-300 ease-in-out"
+                            :class="item.status === 'Published' ? 'translate-x-3' : 'translate-x-0'"
+                          />
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -331,26 +423,36 @@
                           <div class="text-sm text-gray-700" v-html="item.short_description"></div>
                         </div>
                         <div v-if="item.type === 'variable' && item.variations?.length" class="mt-4 col-span-2 md:col-span-1">
-                          <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Variations</p>
+                          <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">🔄 Variations & Stock</p>
                           <div class="space-y-3">
-                            <div v-for="variation in item.variations" :key="variation.id" class="flex items-center justify-between gap-4">
+                            <div v-for="variation in item.variations" :key="variation.id" class="flex items-center justify-between gap-4 p-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
                               <div class="flex items-center gap-3">
-                                <img :src="getVariationImageUrl(variation)" class="w-12 h-12 rounded-lg object-cover" />
+                                <img :src="getVariationImageUrl(variation)" class="w-12 h-12 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
                                 <div class="min-w-0">
-                                  <div class="text-sm font-black text-gray-900 dark:text-gray-100 truncate">
-                                    {{ variation.sku || variation.variation_code || `Variation #${variation.id}` }}
-                                    <span v-if="variation.is_default" class="ml-2 px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full font-bold">Default</span>
+                                  <div class="text-sm font-black text-gray-900 dark:text-gray-100 truncate flex items-center gap-2">
+                                    {{ getVariationLabel(variation) || `Variation #${variation.id}` }}
+                                    <span v-if="variation.is_default" class="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full font-bold">⭐ Default</span>
                                   </div>
                                   <div class="text-xs text-gray-500 truncate">
                                     <template v-for="attr in variation.attributes" :key="attr.id">
-                                      <span class="mr-2">{{ attr.value.attribute.name }}: {{ attr.value.value }}</span>
+                                      <span class="mr-2 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded text-[10px] font-medium">
+                                        {{ attr.value.attribute.name }}: {{ attr.value.value }}
+                                      </span>
                                     </template>
                                   </div>
                                 </div>
                               </div>
                               <div class="text-right">
-                                <div class="text-base font-black text-gray-900 dark:text-gray-100">৳{{ variation.price }}</div>
-                                <div class="text-xs text-gray-500">{{ variation.inventory_stock?.available_quantity ?? variation.stock ?? 0 }} Units</div>
+                                <div class="text-base font-black text-gray-900 dark:text-gray-100">💰 ৳{{ variation.price }}</div>
+                                <div class="flex items-center gap-1 justify-end mt-1">
+                                  <div class="h-2 w-2 rounded-full" :class="(variation.inventory_stock?.available_quantity ?? 0) > 10 ? 'bg-green-500' : ((variation.inventory_stock?.available_quantity ?? 0) > 0 ? 'bg-amber-500' : 'bg-red-500')"></div>
+                                  <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                    📊 {{ variation.inventory_stock?.available_quantity ?? 0 }} Units
+                                  </span>
+                                </div>
+                                <div class="text-[10px] font-bold uppercase tracking-tight mt-0.5" :class="(variation.inventory_stock?.available_quantity ?? 0) > 10 ? 'text-green-600/70' : ((variation.inventory_stock?.available_quantity ?? 0) > 0 ? 'text-amber-600/70' : 'text-red-600/70')">
+                                  {{ (variation.inventory_stock?.available_quantity ?? 0) > 10 ? '✅ GOOD' : ((variation.inventory_stock?.available_quantity ?? 0) > 0 ? '⚠️ LOW' : '🚨 OUT') }}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -381,6 +483,7 @@
             </template>
             </tbody>
           </table>
+          </div>
         </div>
 
         <!-- Pagination Controls -->
@@ -851,6 +954,21 @@ function getVariationImageUrl(variation) {
   return normalizeImageUrl(variation.image_url ?? variation.image_path, { width: 96, height: 96 });
 }
 
+function getVariationLabel(variation) {
+  if (!variation) return '';
+
+  // First try to create a label from attributes
+  if (variation.attributes && variation.attributes.length) {
+    const attrs = variation.attributes.map(attr => {
+      return `${attr.value?.attribute?.name || 'Unknown'}: ${attr.value?.value || 'Unknown'}`;
+    }).join(', ');
+    if (attrs) return attrs;
+  }
+
+  // Fallback to SKU or variation code or ID
+  return variation.sku || variation.variation_code || `Variation #${variation.id}`;
+}
+
 // Short description helpers
 function stripHtml(html) {
   if (!html) return '';
@@ -916,6 +1034,31 @@ const debouncedSearch = () => {
 
 .shadow-inner-lg {
     box-shadow: inset 0 2px 15px 0 rgba(0, 0, 0, 0.02);
+}
+
+/* Mobile Responsive Utilities */
+@media (max-width: 640px) {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  .xs\:hidden {
+    display: none;
+  }
+
+  .xs\:inline {
+    display: inline;
+  }
+}
+
+@media (min-width: 400px) {
+  .xs\:hidden {
+    display: inline;
+  }
+
+  .xs\:inline {
+    display: inline;
+  }
 }
 </style>
 
