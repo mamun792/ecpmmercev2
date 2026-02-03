@@ -308,44 +308,51 @@ const activeTab = ref("all");
     <Head title="Dashboard" />
     <AdminLayout>
         <div class="mx-auto">
-            <div class="flex flex-col space-y-6">
-                <!-- Header -->
-                <div
-                    class="flex flex-col md:flex-row md:items-center md:justify-between"
-                >
-                    <div>
-                        <h1
-                            class="text-2xl font-bold text-gray-900 dark:text-gray-100"
-                        >
-                            Dashboard Overview
-                        </h1>
-                        <div class="w-32 h-1 rounded-full bg-gradient-to-r from-indigo-500 via-pink-500 to-yellow-400 mt-3 mb-2"></div>
-                        <p
-                            class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                        >
-                            Monitor your store performance and key metrics
-                        </p>
+            <div class="flex flex-col space-y-8">
+                <!-- Enhanced Header with Modern Gradient -->
+                <div class="relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-10 rounded-3xl"></div>
+                    <div class="relative bg-white dark:bg-gray-800 rounded-3xl shadow-xl border-2 border-gray-100 dark:border-gray-700 p-8 md:p-10">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="bg-gradient-to-br from-blue-500 via-purple-600 to-pink-600 p-4 rounded-2xl shadow-lg">
+                                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h1 class="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 dark:from-white dark:via-blue-100 dark:to-purple-100 bg-clip-text text-transparent">
+                                            📊 Dashboard
+                                        </h1>
+                                        <div class="w-40 h-1.5 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 mt-3 shadow-lg"></div>
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-lg text-gray-600 dark:text-gray-300 font-medium flex items-center gap-2">
+                                    <span class="text-2xl">🎯</span>
+                                    Monitor your store performance and key metrics in real-time
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Summary Cards -->
-                <div
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-                >
+                <!-- Enhanced Summary Cards with Modern Design -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div
                         v-for="(card, index) in data.summaryCards"
                         :key="index"
                         :class="{
-                            'rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-md overflow-hidden bg-gradient-to-r from-indigo-500 to-indigo-400 text-white': index === 0,
-                            'rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-md overflow-hidden bg-gradient-to-r from-green-500 to-emerald-400 text-white': index === 1,
-                            'rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-md overflow-hidden bg-gradient-to-r from-purple-600 to-violet-500 text-white': index === 2,
-                            'rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-md overflow-hidden bg-gradient-to-r from-amber-400 to-amber-300 text-gray-900': index === 3,
+                            'rounded-2xl shadow-xl hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white border-2 border-blue-400': index === 0,
+                            'rounded-2xl shadow-xl hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600 text-white border-2 border-emerald-400': index === 1,
+                            'rounded-2xl shadow-xl hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden bg-gradient-to-br from-purple-500 via-purple-600 to-violet-600 text-white border-2 border-purple-400': index === 2,
+                            'rounded-2xl shadow-xl hover:shadow-2xl p-8 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 text-gray-900 border-2 border-amber-300': index === 3,
                         }"
                     >
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-lg bg-white/10">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-4 rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
                                 <svg
-                                    class="w-6 h-6"
+                                    class="w-8 h-8"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -408,21 +415,21 @@ const activeTab = ref("all");
                     </div>
                 </div>
 
-                <!-- Delivery Status Row -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Enhanced Delivery Status Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div
                         v-for="(d, i) in deliveryStatusList"
                         :key="i"
-                        :class="['rounded-xl p-4 shadow-sm overflow-hidden', `bg-gradient-to-r ${statusColor[d.key] || 'from-gray-100 to-gray-50 text-gray-900'}`]"
+                        :class="['rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden border-2', `bg-gradient-to-br ${statusColor[d.key] || 'from-gray-100 to-gray-50 text-gray-900 border-gray-200'}`]"
                     >
                         <div class="flex items-center justify-between">
                             <div :class="statusColor[d.key] && statusColor[d.key].includes('text-gray-900') ? 'text-gray-900' : 'text-white'">
-                                <div class="text-xs opacity-90 mb-1">{{ d.name }}</div>
-                                <div class="text-lg font-semibold">{{ d.orders }} orders</div>
-                                <div class="text-sm opacity-80">৳{{ Number(d.sales).toFixed(2) }} sales</div>
+                                <div class="text-sm font-bold uppercase tracking-wide opacity-90 mb-2">{{ d.name }}</div>
+                                <div class="text-3xl font-extrabold mb-2">{{ d.orders }}</div>
+                                <div class="text-sm font-semibold opacity-80">৳{{ Number(d.sales).toFixed(2) }}</div>
                             </div>
                             <div>
-                                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-sm" :class="statusColor[d.key] && statusColor[d.key].includes('text-gray-900') ? 'text-gray-900' : 'text-white'">
+                                <span class="inline-block px-4 py-2 rounded-xl text-xs font-extrabold bg-white/30 backdrop-blur-sm shadow-lg border border-white/20" :class="statusColor[d.key] && statusColor[d.key].includes('text-gray-900') ? 'text-gray-900' : 'text-white'">
                                     {{ d.key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) }}
                                 </span>
                             </div>
@@ -430,72 +437,77 @@ const activeTab = ref("all");
                     </div>
                 </div>
 
-                <!-- Charts Row 1 -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Sales Performance Chart -->
-                    <div
-                        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 lg:col-span-2"
-                    >
+                <!-- Enhanced Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Sales Performance Chart with Modern Design -->
+                    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl hover:shadow-2xl transition-all border-2 border-gray-100 dark:border-gray-700 p-8 lg:col-span-2">
                         <!-- Header -->
-                        <div class="mb-6">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">
-                                    Sales Performance
-                                </h3>
+                        <div class="mb-8">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 rounded-2xl shadow-lg">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">
+                                        📈 Sales Performance
+                                    </h3>
+                                </div>
                                 <div class="flex space-x-2">
                                     <button
                                         @click="salesPeriod = 'week'"
                                         :class="salesPeriod === 'week'
-                                            ? 'bg-blue-600 text-white'
+                                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                                             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'"
-                                        class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
+                                        class="px-5 py-2 text-sm font-bold rounded-xl transition-all transform hover:scale-105"
                                     >
-                                        Week
+                                        📅 Week
                                     </button>
                                     <button
                                         @click="salesPeriod = 'month'"
                                         :class="salesPeriod === 'month'
-                                            ? 'bg-blue-600 text-white'
+                                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
                                             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'"
-                                        class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
+                                        class="px-5 py-2 text-sm font-bold rounded-xl transition-all transform hover:scale-105"
                                     >
-                                        Month
+                                        🗓️ Month
                                     </button>
                                     <button
-                                        class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 px-4 py-1.5 text-sm font-medium rounded-lg transition-colors"
+                                        class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 px-5 py-2 text-sm font-bold rounded-xl transition-all transform hover:scale-105"
                                     >
-                                        Year
+                                        📆 Year
                                     </button>
                                 </div>
                             </div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                            <p class="text-sm text-gray-600 dark:text-gray-400 font-medium ml-12">
                                 Revenue and order trends analysis
                             </p>
                         </div>
 
-                        <!-- Metrics Cards -->
-                        <div class="grid grid-cols-3 gap-6 mb-8">
-                            <div>
-                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                                    Total Sales
+                        <!-- Enhanced Metrics Cards -->
+                        <div class="grid grid-cols-3 gap-6 mb-10">
+                            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-2xl border-2 border-blue-100 dark:border-blue-800">
+                                <p class="text-xs font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-2">
+                                    💰 Total Sales
                                 </p>
-                                <p class="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                                <p class="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                                     {{ salesMetrics.totalSales.toLocaleString() }}
                                 </p>
                             </div>
-                            <div>
-                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                                    Revenue
+                            <div class="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 p-5 rounded-2xl border-2 border-emerald-100 dark:border-emerald-800">
+                                <p class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">
+                                    🎯 Revenue
                                 </p>
-                                <p class="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                                <p class="text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
                                     {{ formatCurrency(salesMetrics.revenue) }}
                                 </p>
                             </div>
-                            <div>
-                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                                    Avg Conversion
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-5 rounded-2xl border-2 border-purple-100 dark:border-purple-800">
+                                <p class="text-xs font-extrabold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-2">
+                                    📊 Avg Conversion
                                 </p>
-                                <p class="text-4xl font-bold text-gray-900 dark:text-gray-100">
+                                <p class="text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                                     {{ salesMetrics.avgConversion }}%
                                 </p>
                             </div>
@@ -509,43 +521,46 @@ const activeTab = ref("all");
                         />
                     </div>
 
-                    <!-- Top Products -->
-                    <div
-                        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6"
-                    >
-                        <div class="flex items-center justify-between mb-6">
-                            <h3
-                                class="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100"
-                            >
-                                Top Products
-                            </h3>
+                    <!-- Enhanced Top Products Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl hover:shadow-2xl transition-all border-2 border-gray-100 dark:border-gray-700 p-6 sm:p-8">
+                        <div class="flex items-center justify-between mb-8">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-gradient-to-br from-emerald-500 to-teal-600 p-3 rounded-2xl shadow-lg">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-xl font-extrabold text-gray-900 dark:text-gray-100">
+                                    🏆 Top Products
+                                </h3>
+                            </div>
                             <a
                                 href="/admin/products"
-                                class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                                class="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 rounded-xl shadow-lg transition-all transform hover:scale-105"
                             >
-                                View All
+                                View All →
                             </a>
                         </div>
                         <div class="space-y-4">
                             <div
                                 v-for="(product, index) in data.topProducts"
                                 :key="product.id"
-                                class="flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors cursor-pointer"
+                                class="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-900/20 dark:hover:to-teal-900/20 transition-all cursor-pointer border-2 border-transparent hover:border-emerald-200 dark:hover:border-emerald-800 transform hover:scale-[1.02]"
                             >
-                                <div class="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-base sm:text-lg">
+                                <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center font-extrabold text-xl sm:text-2xl shadow-lg">
                                     {{ index + 1 }}
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ product.name }}</h4>
-                                    <div class="flex items-center gap-2 mt-1">
+                                    <h4 class="text-sm font-extrabold text-gray-900 dark:text-gray-100 truncate">{{ product.name }}</h4>
+                                    <div class="flex items-center gap-2 mt-2">
                                         <div class="flex items-center text-yellow-400">
-                                            <svg v-for="star in 5" :key="star" class="w-3 h-3" :class="star <= Math.floor(product.rating) ? 'fill-current' : 'fill-gray-300'" viewBox="0 0 20 20">
+                                            <svg v-for="star in 5" :key="star" class="w-4 h-4" :class="star <= Math.floor(product.rating) ? 'fill-current' : 'fill-gray-300'" viewBox="0 0 20 20">
                                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                                             </svg>
-                                            <span class="text-xs text-gray-600 dark:text-gray-400 ml-1">{{ product.rating }}</span>
+                                            <span class="text-sm text-gray-600 dark:text-gray-400 ml-2 font-bold">{{ product.rating }}</span>
                                         </div>
                                     </div>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ product.total_sold }} sales</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-semibold">📦 {{ product.total_sold }} sales</p>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-bold text-gray-900 dark:text-gray-100">৳{{ product.price.toLocaleString() }}</p>

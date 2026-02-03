@@ -74,33 +74,22 @@
                   </div>
                </div>
 
-               <div class="flex items-center gap-3">
-                  <div v-if="selectedProductIds.length > 0" class="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl animate-in fade-in slide-in-from-right-4 duration-300">
-                      <span class="text-xs font-bold text-red-600 uppercase tracking-tight">{{ selectedProductIds.length }} Selected</span>
-                      <div class="h-4 w-px bg-red-200 dark:bg-red-800 mx-1"></div>
-                      <input
-                        v-model="confirmationInput"
-                        type="text"
-                        placeholder="Type 'confirm'"
-                        class="w-24 px-2 py-0.5 text-[10px] bg-white dark:bg-gray-900 border-red-200 dark:border-red-800 rounded-lg focus:ring-red-500/20"
-                      >
-                      <button
-                        @click="deleteSelectedProducts"
-                        :disabled="confirmationInput !== 'confirm' || isDeleting"
-                        class="text-[10px] font-black uppercase text-red-600 hover:text-red-700 disabled:opacity-30 transition-all"
-                      >
-                        {{ isDeleting ? '...' : 'Delete' }}
-                      </button>
-                  </div>
-
-                  <Link
-                    :href="route('admin.products.create')"
-                    class="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-300 active:scale-95"
-                    title="Click to add a new product to your store"
+               <div v-if="selectedProductIds.length > 0" class="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl animate-in fade-in slide-in-from-right-4 duration-300">
+                  <span class="text-xs font-bold text-red-600 uppercase tracking-tight">{{ selectedProductIds.length }} Selected</span>
+                  <div class="h-4 w-px bg-red-200 dark:bg-red-800 mx-1"></div>
+                  <input
+                    v-model="confirmationInput"
+                    type="text"
+                    placeholder="Type 'confirm'"
+                    class="w-24 px-2 py-0.5 text-[10px] bg-white dark:bg-gray-900 border-red-200 dark:border-red-800 rounded-lg focus:ring-red-500/20"
                   >
-                    <Plus class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                    ➤ Add New Product
-                  </Link>
+                  <button
+                    @click="deleteSelectedProducts"
+                    :disabled="confirmationInput !== 'confirm' || isDeleting"
+                    class="text-[10px] font-black uppercase text-red-600 hover:text-red-700 disabled:opacity-30 transition-all"
+                  >
+                    {{ isDeleting ? '...' : 'Delete' }}
+                  </button>
                </div>
             </div>
 
