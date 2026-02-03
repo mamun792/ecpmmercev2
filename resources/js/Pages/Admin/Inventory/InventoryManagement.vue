@@ -244,16 +244,31 @@ watch(locationFilter, () => currentPage.value = 1);
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Box class="w-8 h-8 text-blue-600" />
-            Inventory Management
+            📦 Inventory Management - Made Simple!
           </h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-1">{{ stats.productsCount }} products in catalog</p>
+          <p class="text-gray-500 dark:text-gray-400 mt-1">💡 <strong>Quick Guide:</strong> {{ stats.productsCount }} products • Green=Good • Orange=Low • Red=Empty</p>
+          <div class="flex items-center gap-4 mt-2 text-xs">
+            <span class="flex items-center gap-1 text-green-600">
+              <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+              ✅ Good Stock
+            </span>
+            <span class="flex items-center gap-1 text-amber-600">
+              <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+              ⚠️ Need Soon
+            </span>
+            <span class="flex items-center gap-1 text-red-600">
+              <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+              🚨 Restock Now
+            </span>
+          </div>
         </div>
         <button
           @click="router.visit(route('admin.products.create'))"
           class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+          title="Click to add a new product to your store"
         >
           <Plus class="w-4 h-4 mr-2" />
-          Add Product
+          ➕ Add New Product
         </button>
       </div>
 
@@ -263,9 +278,9 @@ watch(locationFilter, () => currentPage.value = 1);
         <div class="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-2xl border-2 border-blue-200 dark:border-blue-800 shadow-lg hover:shadow-xl transition-shadow">
           <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16"></div>
           <div class="relative">
-            <div class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Total Value</div>
+            <div class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">💰 Stock Value</div>
             <div class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">{{ formatCurrency(stats.totalValue) }}</div>
-            <div class="text-xs text-blue-600 dark:text-blue-400 mt-2">Inventory worth</div>
+            <div class="text-xs text-blue-600 dark:text-blue-400 mt-2">💡 What your inventory is worth</div>
           </div>
         </div>
 
@@ -273,12 +288,12 @@ watch(locationFilter, () => currentPage.value = 1);
         <div class="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-2xl border-2 border-green-200 dark:border-green-800 shadow-lg hover:shadow-xl transition-shadow">
           <div class="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -mr-16 -mt-16"></div>
           <div class="relative">
-            <div class="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-2">Units in Stock</div>
+            <div class="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-2">📦 Available Now</div>
             <div class="text-3xl font-extrabold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               {{ stats.totalStock }}
               <TrendingUp class="w-5 h-5 text-green-500" />
             </div>
-            <div class="text-xs text-green-600 dark:text-green-400 mt-2">Available inventory</div>
+            <div class="text-xs text-green-600 dark:text-green-400 mt-2">💡 Ready to sell to customers</div>
           </div>
         </div>
 
@@ -286,9 +301,9 @@ watch(locationFilter, () => currentPage.value = 1);
         <div class="relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 p-6 rounded-2xl border-2 border-purple-200 dark:border-purple-800 shadow-lg hover:shadow-xl transition-shadow">
           <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full -mr-16 -mt-16"></div>
           <div class="relative">
-            <div class="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2">Units Sold</div>
+            <div class="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2">🛒 Already Sold</div>
             <div class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">{{ stats.totalSold }}</div>
-            <div class="text-xs text-purple-600 dark:text-purple-400 mt-2">Total orders</div>
+            <div class="text-xs text-purple-600 dark:text-purple-400 mt-2">💡 Units sold to customers</div>
           </div>
         </div>
 
@@ -296,14 +311,44 @@ watch(locationFilter, () => currentPage.value = 1);
         <div class="relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-2xl border-2 dark:border-amber-800 shadow-lg hover:shadow-xl transition-shadow" :class="stats.lowStockCount > 0 ? 'border-amber-400' : 'border-amber-200'">
           <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full -mr-16 -mt-16"></div>
           <div class="relative">
-            <div class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Low Stock Alerts</div>
+            <div class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">⚠️ Need Restocking</div>
             <div class="text-3xl font-extrabold flex items-center gap-2" :class="stats.lowStockCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'">
               {{ stats.lowStockCount }}
               <AlertTriangle class="w-5 h-5" :class="stats.lowStockCount > 0 ? 'animate-pulse' : ''" />
             </div>
             <p class="text-xs mt-2" :class="stats.lowStockCount > 0 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-gray-500 dark:text-gray-400'">
-              {{ stats.lowStockCount > 0 ? 'Items need restocking' : 'All stocks healthy' }}
+              {{ stats.lowStockCount > 0 ? '🚨 Click "Low Stock" tab below!' : '✅ All products have enough stock!' }}
             </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Help Panel -->
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-4 mb-6">
+        <div class="flex items-start gap-3">
+          <div class="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+            <span class="text-xl">💡</span>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-sm font-bold text-blue-900 dark:text-blue-100 mb-2">How to Use This Page:</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-blue-800 dark:text-blue-200">
+              <div class="flex items-center gap-2">
+                <span class="text-green-500">✅</span>
+                <span><strong>Green products</strong> have enough stock</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-amber-500 animate-pulse">⚠️</span>
+                <span><strong>Orange products</strong> need restocking soon</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-red-500">🚨</span>
+                <span><strong>Red products</strong> are completely out - restock now!</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-blue-500">➕</span>
+                <span>Click <strong>"Add Stock"</strong> button to restock items</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -323,7 +368,7 @@ watch(locationFilter, () => currentPage.value = 1);
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600'
               ]"
             >
-              All Products
+              📋 All Products
               <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold" :class="stockStatusFilter === 'all' ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'">
                 {{ filterCounts.all }}
               </span>
@@ -338,7 +383,7 @@ watch(locationFilter, () => currentPage.value = 1);
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600'
               ]"
             >
-              In Stock
+              ✅ Good Stock
               <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold" :class="stockStatusFilter === 'in_stock' ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'">
                 {{ filterCounts.in_stock }}
               </span>
@@ -354,7 +399,7 @@ watch(locationFilter, () => currentPage.value = 1);
               ]"
             >
               <AlertTriangle class="w-4 h-4 inline mr-1" />
-              Low Stock
+              ⚠️ Need Soon
               <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold" :class="stockStatusFilter === 'low_stock' ? 'bg-amber-500' : 'bg-gray-200 dark:bg-gray-700'">
                 {{ filterCounts.low_stock }}
               </span>
@@ -370,7 +415,7 @@ watch(locationFilter, () => currentPage.value = 1);
               ]"
             >
               <AlertTriangle class="w-4 h-4 inline mr-1" />
-              Out of Stock
+              🚨 Restock Now
               <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold" :class="stockStatusFilter === 'out_of_stock' ? 'bg-red-500' : 'bg-gray-200 dark:bg-gray-700'">
                 {{ filterCounts.out_of_stock }}
               </span>
@@ -388,7 +433,8 @@ watch(locationFilter, () => currentPage.value = 1);
                 v-model="searchQuery"
                 type="text"
                 class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition shadow-sm"
-                placeholder="Search products by name or ID..."
+                placeholder="🔍 Type product name or ID (e.g., 'Test' or '7')..."
+                title="💡 Tip: You can search by product name or product ID number"
               >
               <div v-if="isSearching" class="absolute right-4 top-3.5">
                 <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -450,12 +496,12 @@ watch(locationFilter, () => currentPage.value = 1);
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-900 dark:to-gray-800 sticky top-0 z-10">
               <tr class="border-b-2 border-gray-300 dark:border-gray-600">
-                <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Product</th>
-                <th class="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Total Value</th>
-                <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Units</th>
-                <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Sold</th>
-                <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                <th class="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">📦 Product Name</th>
+                <th class="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">💰 Stock Value</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">📊 Available</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">🛒 Sold</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">🚦 Status</th>
+                <th class="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">⚡ Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
@@ -481,8 +527,9 @@ watch(locationFilter, () => currentPage.value = 1);
                           <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md font-medium">
                             ID: {{ product.product_id }}
                           </span>
-                          <span v-if="product.variations.length > 0" class="text-blue-600 dark:text-blue-400">
-                            {{ product.variations.length }} variations
+                          <span v-if="product.variations.length > 0" class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md font-medium border border-blue-200 dark:border-blue-800">
+                            🔄 {{ product.variations.length }} {{ product.variations.length === 1 ? 'variation' : 'variations' }}
+                            <span class="text-xs text-blue-500 dark:text-blue-400">• Click ▼ to see all</span>
                           </span>
                         </div>
                       </div>
@@ -514,27 +561,29 @@ watch(locationFilter, () => currentPage.value = 1);
                       <span
                         v-if="product.stock_status === 'low_stock'"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 text-amber-900 dark:text-amber-200 border-2 border-amber-400 dark:border-amber-600 shadow-sm animate-pulse"
-                        :title="`Low Stock Alert: ${product.total_stock} units remaining (Minimum: ${product.minimum_threshold})`"
+                        :title="`⚠️ Only ${product.total_stock} left! You should restock when it goes below ${product.minimum_threshold}`"
                       >
                         <AlertTriangle class="w-4 h-4" />
-                        <span>LOW STOCK</span>
+                        <span>⚠️ RESTOCK SOON</span>
                       </span>
 
                       <!-- Out of Stock Badge -->
                       <span
                         v-else-if="product.stock_status === 'out_of_stock'"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-red-100 to-rose-100 dark:from-red-900/30 dark:to-rose-900/30 text-red-900 dark:text-red-200 border-2 border-red-400 dark:border-red-600 shadow-sm"
+                        title="🚨 This product is completely out of stock! Customers cannot buy it."
                       >
                         <AlertTriangle class="w-4 h-4" />
-                        <span>OUT OF STOCK</span>
+                        <span>🚨 RESTOCK NOW!</span>
                       </span>
 
                       <!-- In Stock Badge -->
                       <span
                         v-else
                         class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700"
+                        :title="`✅ Good! You have ${product.total_stock} units available for sale`"
                       >
-                        <span>✓ In Stock</span>
+                        <span>✅ GOOD STOCK</span>
                       </span>
                     </div>
                   </td>
@@ -543,17 +592,26 @@ watch(locationFilter, () => currentPage.value = 1);
                       v-if="product.variations.length === 0"
                       @click="openRestockModal(null, product)"
                       class="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition shadow-sm"
+                      title="Click to add more stock for this product"
                     >
                       <Plus class="w-3 h-3 mr-1" />
-                      Restock
+                      ➕ Add Stock
                     </button>
+                    <!-- User-friendly Variations Toggle Button -->
                     <button
                       v-if="product.variations.length > 0"
                       @click="toggleExpand(product.product_id)"
-                      class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      class="inline-flex items-center px-3 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 border border-purple-200 dark:border-purple-700 rounded-lg text-xs font-semibold text-purple-700 dark:text-purple-300 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-800/50 dark:hover:to-indigo-800/50 transition-all shadow-sm"
+                      :title="expandedProducts[product.product_id] ? 'Click to hide variations' : `Click to see all ${product.variations.length} variations`"
                     >
-                      <ChevronDown v-if="expandedProducts[product.product_id]" class="w-5 h-5" />
-                      <ChevronRight v-else class="w-5 h-5" />
+                      <span v-if="!expandedProducts[product.product_id]" class="flex items-center gap-2">
+                        <ChevronRight class="w-4 h-4" />
+                        👁️ Show {{ product.variations.length }} Options
+                      </span>
+                      <span v-else class="flex items-center gap-2">
+                        <ChevronDown class="w-4 h-4" />
+                        🙈 Hide Options
+                      </span>
                     </button>
                   </td>
                 </tr>
@@ -562,19 +620,38 @@ watch(locationFilter, () => currentPage.value = 1);
                 <tr v-if="expandedProducts[product.product_id]" class="bg-gray-50 dark:bg-gray-900/50">
                   <td colspan="6" class="px-6 py-4">
                     <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
-                      <div class="px-4 py-3 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                        <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Variations</span>
+                      <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-b border-blue-200 dark:border-blue-700">
+                        <div class="flex justify-between items-center">
+                          <div>
+                            <span class="text-sm font-bold text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                              🔄 Product Options & Variations
+                              <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 rounded-full text-xs font-semibold">
+                                {{ product.variations.length }} total
+                              </span>
+                            </span>
+                            <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                              💡 Each variation can have different colors, sizes, and prices
+                            </p>
+                          </div>
+                          <button
+                            @click="toggleExpand(product.product_id)"
+                            class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                            title="Click to collapse this section"
+                          >
+                            <ChevronDown class="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
                       <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-900">
                           <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variant</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Attributes</th>
-                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
-                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Current</th>
-                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Sold</th>
-                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" title="Variation ID number">🔢 Variant #</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" title="Color, size, and other options">🎨 Options</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase" title="Selling price for this variation">💰 Price</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase" title="Stock available right now">📊 In Stock</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase" title="Units already sold">🛒 Sold</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase" title="Enable or disable this variation">🔘 On/Off</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase" title="Add more stock">⚡ Action</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -639,24 +716,43 @@ watch(locationFilter, () => currentPage.value = 1);
                               {{ variation.sold_stock }}
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-center">
-                              <button
-                                @click="toggleVariationStatus(variation)"
-                                class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold transition-colors"
-                                :class="{
-                                  'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-200': variation.status === 'active',
-                                  'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-800 hover:bg-gray-200': variation.status === 'inactive'
-                                }"
-                              >
-                                {{ variation.status === 'active' ? 'Active' : 'Inactive' }}
-                              </button>
+                              <!-- Modern Toggle Switch -->
+                              <div class="flex items-center justify-center">
+                                <button
+                                  @click="toggleVariationStatus(variation)"
+                                  class="relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                  :class="{
+                                    'bg-green-500': variation.status === 'active',
+                                    'bg-gray-300 dark:bg-gray-600': variation.status === 'inactive'
+                                  }"
+                                  :title="variation.status === 'active' ? '✅ Click to disable this variation' : '❌ Click to enable this variation'"
+                                >
+                                  <!-- Toggle Circle -->
+                                  <span
+                                    class="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out"
+                                    :class="{
+                                      'translate-x-5': variation.status === 'active',
+                                      'translate-x-0': variation.status === 'inactive'
+                                    }"
+                                  ></span>
+                                </button>
+                                <!-- Status Label -->
+                                <span class="ml-2 text-xs font-medium" :class="{
+                                  'text-green-600 dark:text-green-400': variation.status === 'active',
+                                  'text-gray-500 dark:text-gray-400': variation.status === 'inactive'
+                                }">
+                                  {{ variation.status === 'active' ? '✅ On' : '❌ Off' }}
+                                </span>
+                              </div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-right">
                               <button
                                 @click="openRestockModal(variation, product)"
                                 class="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition shadow-sm"
+                                title="Click to add more stock for this variation"
                               >
                                 <Plus class="w-3 h-3 mr-1" />
-                                Restock
+                                ➕ Add Stock
                               </button>
                             </td>
                           </tr>

@@ -869,6 +869,7 @@ class ProductService
       if ($request->type === 'variable') {
         \Illuminate\Support\Facades\Log::info('ProductService: Updating variations');
         $this->updateProductVariations($product, $request);
+      } else {
         // Update Simple Product Inventory
         if ($request->has('stock_data')) {
              $stockData = $request->input('stock_data');
