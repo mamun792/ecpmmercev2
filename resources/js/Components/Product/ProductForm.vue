@@ -1800,7 +1800,7 @@ const submit = () => {
     <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
         <!-- Floating Header -->
         <div class="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-gray-200/50 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="w-full px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16 sm:h-20">
                     <!-- Left: Back & Title -->
                     <div class="flex items-center gap-4">
@@ -1955,7 +1955,7 @@ const submit = () => {
         </div>
 
         <!-- Flash Messages -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div class="w-full px-4 sm:px-6 lg:px-8 pt-6">
             <transition enter-active-class="transform ease-out duration-300 transition" enter-from-class="translate-y-2 opacity-0" enter-to-class="translate-y-0 opacity-100">
                 <div v-if="$page.props.flash?.success" class="mb-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0">
@@ -1975,7 +1975,7 @@ const submit = () => {
         </div>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div class="w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
                 <!-- Sidebar Navigation -->
                 <div class="w-full lg:w-72 flex-shrink-0">
