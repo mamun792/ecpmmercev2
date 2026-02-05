@@ -28,6 +28,7 @@
                     <div class="bg-gray-100 rounded-xl overflow-hidden mb-6" style="height: 400px;">
                         <div class="relative w-full h-full flex items-center justify-center">
                             <img
+                                v-if="imageSrc"
                                 ref="imageEl"
                                 :src="imageSrc"
                                 :style="{
@@ -37,6 +38,10 @@
                                 class="max-w-full max-h-full object-contain"
                                 alt="Edit preview"
                             />
+                            <div v-else class="text-gray-400 text-center">
+                                <Crop class="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                <p>No image selected</p>
+                            </div>
                         </div>
                     </div>
 
@@ -158,7 +163,7 @@ const props = defineProps({
     },
     imageSrc: {
         type: String,
-        required: true
+        default: null
     }
 });
 

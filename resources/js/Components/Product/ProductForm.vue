@@ -148,6 +148,7 @@ const isLoadingAI = ref(false);
 const showImageEditor = ref(false);
 const imageToEdit = ref(null);
 const imageEditType = ref(''); // 'feature', 'gallery', 'variation'
+const imageEditIndex = ref(null); // Index for gallery images
 
 // Bulk Import/Export
 const showBulkModal = ref(false);
@@ -1225,16 +1226,85 @@ const applySuggestion = (suggestion) => {
 };
 
 // Image editor handlers
-const openImageEditor = (imageSrc, type) => {
+const openImageEditor = (imageSrc, type, index = null) => {
+    if (!imageSrc) {
+        toast.error('No image to edit');
+        return;
+    }
     imageToEdit.value = imageSrc;
     imageEditType.value = type;
+    imageEditIndex.value = index;
     showImageEditor.value = true;
 };
 
-const applyImageEdits = (editData) => {
-    // In production, apply transformations to the actual image
-    toast.success('Image edits applied! 🎨');
-    console.log('Applied edits:', editData);
+const applyImageEdits = async (editData) => {
+    try {
+        // Create canvas to apply transformations
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = imageToEdit.value;
+
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+        });
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Calculate dimensions with zoom
+        const width = img.width * editData.zoom;
+        const height = img.height * editData.zoom;
+
+        // Set canvas size
+        canvas.width = width;
+        canvas.height = height;
+
+        // Apply transformations
+        ctx.save();
+        
+        // Move to center for rotation
+        ctx.translate(width / 2, height / 2);
+        
+        // Apply rotation
+        ctx.rotate((editData.rotation * Math.PI) / 180);
+        
+        // Apply flip
+        ctx.scale(
+            editData.flipHorizontal ? -1 : 1,
+            editData.flipVertical ? -1 : 1
+        );
+        
+        // Draw image
+        ctx.drawImage(img, -width / 2, -height / 2, width, height);
+        ctx.restore();
+
+        // Convert to blob and update the image
+        canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            
+            // Update the appropriate image based on type
+            if (imageEditType.value === 'feature') {
+                form.feature_image_preview = url;
+                // Also update the actual file if needed
+                const file = new File([blob], 'edited-feature.jpg', { type: 'image/jpeg' });
+                form.feature_image = file;
+            } else if (imageEditType.value === 'gallery' && imageEditIndex.value !== null) {
+                gallery_previews.value[imageEditIndex.value] = url;
+                // Update the actual file
+                const file = new File([blob], `edited-gallery-${imageEditIndex.value}.jpg`, { type: 'image/jpeg' });
+                if (form.gallery_images[imageEditIndex.value]) {
+                    form.gallery_images[imageEditIndex.value] = file;
+                }
+            }
+            
+            toast.success('Image edits applied! 🎨');
+        }, 'image/jpeg', 0.95);
+
+    } catch (error) {
+        console.error('Error applying image edits:', error);
+        toast.error('Failed to apply image edits');
+    }
 };
 
 // Bulk import/export handlers
@@ -2405,7 +2475,7 @@ const submit = () => {
                                             <!-- Edit Button -->
                                             <button
                                                 type="button"
-                                                @click="openImageEditor(preview, 'gallery')"
+                                                @click="openImageEditor(preview, 'gallery', index)"
                                                 class="absolute top-2 left-2 p-2 bg-blue-500 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-blue-600 hover:scale-110"
                                                 title="Edit Image"
                                             >
