@@ -1523,61 +1523,61 @@ const clearAllFilters = () => {
                     </h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Track your order performance in real-time</p>
                 </div>
-                
+
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
                     <!-- Enhanced All Orders Card -->
                     <button
                         @click="selectStatus('')"
                         class="group relative p-6 rounded-2xl transition-all duration-300 transform hover:scale-105 overflow-hidden"
                         :class="filters.status === ''
-                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl ring-4 ring-blue-500/20' 
+                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl ring-4 ring-blue-500/20'
                             : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-700'"
                     >
                         <!-- Background Pattern -->
                         <div class="absolute inset-0 opacity-10">
                             <div class="absolute inset-0 bg-gradient-to-br from-transparent via-white/20 to-transparent transform rotate-12"></div>
                         </div>
-                        
+
                         <div class="relative z-10 space-y-3">
                             <!-- Icon and Title -->
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center space-x-3">
-                                    <div :class="filters.status === '' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30'" 
+                                    <div :class="filters.status === '' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30'"
                                          class="p-2 rounded-xl transition-all duration-200">
                                         <ShoppingCart class="w-5 h-5" />
                                     </div>
                                     <div class="text-left">
-                                        <div :class="filters.status === '' ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'" 
+                                        <div :class="filters.status === '' ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'"
                                              class="text-sm font-medium">All Orders</div>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <TrendingUp :class="filters.status === '' ? 'text-white/70' : 'text-green-500'" 
+                                    <TrendingUp :class="filters.status === '' ? 'text-white/70' : 'text-green-500'"
                                                 class="w-4 h-4 animate-pulse" />
                                 </div>
                             </div>
-                            
+
                             <!-- Main Stats -->
                             <div class="space-y-2">
-                                <div :class="filters.status === '' ? 'text-white' : 'text-gray-900 dark:text-white'" 
+                                <div :class="filters.status === '' ? 'text-white' : 'text-gray-900 dark:text-white'"
                                      class="text-3xl font-bold transition-all duration-300 group-hover:scale-110">
                                     {{ props.statusCounts.find(s => s.status === 'total')?.count || 0 }}
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <div :class="filters.status === '' ? 'text-white/90' : 'text-green-600 dark:text-green-400'" 
+                                    <div :class="filters.status === '' ? 'text-white/90' : 'text-green-600 dark:text-green-400'"
                                          class="text-sm font-semibold flex items-center space-x-1">
                                         <DollarSign class="w-4 h-4" />
                                         <span>৳{{ Number(props.statusCounts.find(s => s.status === 'total')?.sales || 0).toLocaleString() }}</span>
                                     </div>
                                 </div>
-                                <div :class="filters.status === '' ? 'text-white/80' : 'text-blue-600 dark:text-blue-400'" 
+                                <div :class="filters.status === '' ? 'text-white/80' : 'text-blue-600 dark:text-blue-400'"
                                      class="text-xs font-medium flex items-center space-x-1">
                                     <Target class="w-3 h-3" />
                                     <span>Avg: ৳{{ performanceMetrics.averageOrderValue.toLocaleString() }}</span>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Animated shine effect -->
                         <div class="absolute inset-0 -top-10 -left-10 bg-gradient-to-r from-transparent via-white/20 to-transparent w-6 h-full rotate-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000 ease-in-out"></div>
                     </button>
@@ -1606,14 +1606,14 @@ const clearAllFilters = () => {
                         <div class="absolute inset-0 opacity-10" v-if="filters.status === status">
                             <div class="absolute inset-0 bg-gradient-to-br from-transparent via-white/30 to-transparent transform rotate-12"></div>
                         </div>
-                        
+
                         <div class="relative z-10 space-y-3">
                             <!-- Icon and Status -->
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center space-x-2">
                                     <div :class="{
                                         'bg-white/20 text-white': filters.status === status && status === 'pending',
-                                        'bg-white/20 text-white': filters.status === status && status === 'processing', 
+                                        'bg-white/20 text-white': filters.status === status && status === 'processing',
                                         'bg-white/20 text-white': filters.status === status && status === 'cancelled',
                                         'bg-white/20 text-white': filters.status === status && status === 'shipped',
                                         'bg-white/20 text-white': filters.status === status && status === 'delivered',
@@ -1640,17 +1640,17 @@ const clearAllFilters = () => {
                                         <CheckSquare v-else-if="status === 'confirmed'" class="w-4 h-4" />
                                         <Package v-else class="w-4 h-4" />
                                     </div>
-                                    <div :class="filters.status === status ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'" 
+                                    <div :class="filters.status === status ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'"
                                          class="text-sm font-medium capitalize">{{ status.replace('_', ' ') }}</div>
                                 </div>
                             </div>
-                            
+
                             <!-- Count with animation -->
-                            <div :class="filters.status === status ? 'text-white' : 'text-gray-900 dark:text-white'" 
+                            <div :class="filters.status === status ? 'text-white' : 'text-gray-900 dark:text-white'"
                                  class="text-2xl font-bold transition-all duration-300 group-hover:scale-110">
                                 {{ props.statusCounts.find(s => s.status === status)?.count || 0 }}
                             </div>
-                            
+
                             <!-- Revenue with icon -->
                             <div class="flex items-center space-x-1" :class="{
                                 'text-white/90': filters.status === status,
@@ -1669,13 +1669,13 @@ const clearAllFilters = () => {
                                 </span>
                             </div>
                         </div>
-                        
+
                         <!-- Animated shine effect for active cards -->
-                        <div v-if="filters.status === status" 
+                        <div v-if="filters.status === status"
                              class="absolute inset-0 -top-10 -left-10 bg-gradient-to-r from-transparent via-white/20 to-transparent w-6 h-full rotate-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000 ease-in-out"></div>
-                        
+
                         <!-- Pulse effect for cards with orders -->
-                        <div v-if="(props.statusCounts.find(s => s.status === status)?.count || 0) > 0" 
+                        <div v-if="(props.statusCounts.find(s => s.status === status)?.count || 0) > 0"
                              class="absolute top-2 right-2">
                             <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                         </div>
