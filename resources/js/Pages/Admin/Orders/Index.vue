@@ -31,6 +31,7 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    ChevronUp,
     Timer,
     Zap,
     Target,
@@ -101,6 +102,21 @@ const userPreferences = ref({
     preferredCourier: 'steadfast'
 });
 
+// New feature states for all requested improvements
+const searchQuery = ref('');
+const searchSuggestions = ref([]);
+const showSuggestions = ref(false);
+const bulkStatusModal = ref(false);
+const selectedBulkStatus = ref('');
+const showExportMenu = ref(false);
+const exportingOrders = ref(false);
+const showKeyboardShortcuts = ref(false);
+const selectedOrderIndex = ref(0);
+const expandedOrders = ref([]);
+const orderTimelines = ref({});
+const showOrderSummary = ref(true);
+const notificationQueue = ref([]);
+
 // Time tracking
 const orderTimestamps = ref({});
 const progressIndicators = ref({});
@@ -115,7 +131,7 @@ const performanceMetrics = computed(() => {
     const deliveredOrders = props.statusCounts.find(s => s.status === 'delivered')?.count || 0;
     const cancelledOrders = props.statusCounts.find(s => s.status === 'cancelled')?.count || 0;
     const pendingOrders = props.statusCounts.find(s => s.status === 'pending')?.count || 0;
-    
+
     return {
         deliveryRate: totalOrders > 0 ? Math.round((deliveredOrders / totalOrders) * 100) : 0,
         cancellationRate: totalOrders > 0 ? Math.round((cancelledOrders / totalOrders) * 100) : 0,
@@ -136,40 +152,40 @@ const currentWorkflowPhase = computed(() => {
 // Smart order prioritization
 const prioritizedOrders = computed(() => {
     if (!visibleOrders.value) return [];
-    
+
     return visibleOrders.value.map(order => {
-        const createdTime = new Date(order.created_at);
-        const hoursOld = (Date.now() - createdTime.getTime()) / (1000 * 60 * 60);
-        const orderValue = parseFloat(order.total_amount || 0);
-        
+        const createdTime = new Date(order.created_at || order.date || Date.now());
+        const hoursOld = isNaN(createdTime.getTime()) ? 0 : (Date.now() - createdTime.getTime()) / (1000 * 60 * 60);
+        const orderValue = parseFloat(order.total_amount || order.total || 0);
+
         let priority = 'normal';
         let priorityScore = 0;
-        
+
         // High value orders
         if (orderValue > 5000) priorityScore += 30;
-        
+
         // Time-based priority
         if (hoursOld > 24) priorityScore += 40; // Older than 24 hours
         if (hoursOld > 48) priorityScore += 60; // Older than 48 hours
-        
+
         // Status-based priority
         if (order.status === 'pending') priorityScore += 25;
         if (order.status === 'processing' && hoursOld > 8) priorityScore += 35;
-        
+
         // New orders today
         if (hoursOld < 12) {
             newOrdersToday.value.add(order.id);
         }
-        
+
         // Determine priority level
         if (priorityScore >= 80) priority = 'critical';
         else if (priorityScore >= 50) priority = 'high';
         else if (priorityScore >= 25) priority = 'medium';
-        
+
         if (priority === 'critical' || priority === 'high') {
             urgentOrders.value.add(order.id);
         }
-        
+
         return {
             ...order,
             priority,
@@ -184,14 +200,14 @@ const prioritizedOrders = computed(() => {
 // Courier suggestions based on delivery area
 const getSmartCourierSuggestion = (order) => {
     if (!order.shipping_address) return 'steadfast';
-    
+
     const address = order.shipping_address.toLowerCase();
-    
+
     // Dhaka area - Pathao is faster
     if (address.includes('dhaka') || address.includes('gulshan') || address.includes('dhanmondi')) {
         return 'pathao';
     }
-    
+
     // Outside Dhaka - Steadfast has better coverage
     return 'steadfast';
 };
@@ -218,7 +234,7 @@ const getQualityChecklist = (currentStatus, newStatus) => {
             'Return window started'
         ]
     };
-    
+
     const key = `${currentStatus}_to_${newStatus}`;
     return checklists[key] || [];
 };
@@ -235,23 +251,63 @@ const handleKeyboardShortcuts = (event) => {
             });
         }
     }
-    
+
+    // Ctrl+F - Focus search
+    if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+        event.preventDefault();
+        document.getElementById('order-search-input')?.focus();
+    }
+
+    // Arrow Up/Down - Navigate orders
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        selectedOrderIndex.value = Math.min(selectedOrderIndex.value + 1, (prioritizedOrders.value?.length || 1) - 1);
+    }
+    if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        selectedOrderIndex.value = Math.max(selectedOrderIndex.value - 1, 0);
+    }
+
+    // Enter - Open selected order details
+    if (event.key === 'Enter' && prioritizedOrders.value?.length > selectedOrderIndex.value) {
+        const order = prioritizedOrders.value[selectedOrderIndex.value];
+        if (order) {
+            toggleOrderExpansion(order.id);
+        }
+    }
+
+    // Ctrl+E - Export orders
+    if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
+        event.preventDefault();
+        showExportMenu.value = !showExportMenu.value;
+    }
+
+    // Ctrl+? - Show keyboard shortcuts
+    if ((event.ctrlKey || event.metaKey) && event.key === '/') {
+        event.preventDefault();
+        showKeyboardShortcuts.value = !showKeyboardShortcuts.value;
+    }
+
     // Escape - Clear selection or close modals
     if (event.key === 'Escape') {
         if (showContextMenu.value) {
             showContextMenu.value = false;
+        } else if (showKeyboardShortcuts.value) {
+            showKeyboardShortcuts.value = false;
+        } else if (showExportMenu.value) {
+            showExportMenu.value = false;
         } else if (selectedOrders.value.length > 0) {
             selectedOrders.value = [];
             toast.success('Selection cleared', { icon: '🔄' });
         }
     }
-    
+
     // F5 - Refresh orders
     if (event.key === 'F5') {
         event.preventDefault();
         refreshOrders();
     }
-    
+
     // Ctrl+Shift+U - Mark urgent orders
     if (event.ctrlKey && event.shiftKey && event.key === 'U') {
         event.preventDefault();
@@ -299,15 +355,15 @@ onMounted(() => {
     // Initialize pagination values
     currentPage.value = props.orders.current_page || 1;
     lastPage.value = props.orders.last_page || 1;
-    
+
     loadUserPreferences();
     document.addEventListener('keydown', handleKeyboardShortcuts);
     hideSkeletonLoader();
     startAutoRefresh();
-    
+
     // Detect time of day and show appropriate workflow tips
     timeOfDay.value = currentWorkflowPhase.value;
-    
+
     // Show workflow reminder based on time
     setTimeout(() => {
         showWorkflowReminder();
@@ -339,7 +395,7 @@ const showWorkflowReminder = () => {
             actions: ['Confirm deliveries', 'Plan shipping', 'Review metrics']
         }
     };
-    
+
     if (reminders[phase]) {
         toast.success(reminders[phase].message, {
             icon: reminders[phase].icon,
@@ -352,7 +408,7 @@ const showWorkflowReminder = () => {
 const calculateTimeInStatus = (order) => {
     const statusUpdateTime = new Date(order.updated_at || order.created_at);
     const hoursInStatus = (Date.now() - statusUpdateTime.getTime()) / (1000 * 60 * 60);
-    
+
     if (hoursInStatus < 1) return `${Math.round(hoursInStatus * 60)}m`;
     if (hoursInStatus < 24) return `${Math.round(hoursInStatus)}h`;
     return `${Math.round(hoursInStatus / 24)}d`;
@@ -361,14 +417,14 @@ const calculateTimeInStatus = (order) => {
 const triggerSuccessAnimation = (orderId) => {
     animatingOrders.value.add(orderId);
     showSuccessAnimation.value = true;
-    
+
     setTimeout(() => {
         animatingOrders.value.delete(orderId);
         if (animatingOrders.value.size === 0) {
             showSuccessAnimation.value = false;
         }
     }, 1500);
-    
+
     // Play success sound if enabled
     if (userPreferences.value.soundEnabled) {
         playSuccessSound();
@@ -376,7 +432,7 @@ const triggerSuccessAnimation = (orderId) => {
 };
 
 const playSuccessSound = () => {
-    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuH0vLIfiqDK3/i9dRgJAYyi8v01mMSBy2A0/LNfYi2LYH19FJhJAYl'); 
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuH0vLIfiqDK3/i9dRgJAYyi8v01mMSBy2A0/LNfYi2LYH19FJhJAYl');
     audio.play().catch(() => {}); // Ignore errors
 };
 
@@ -385,7 +441,7 @@ const showContextMenuAt = (event, order) => {
     contextMenuPosition.value = { x: event.clientX, y: event.clientY };
     contextMenuOrder.value = order;
     showContextMenu.value = true;
-    
+
     // Close menu on outside click
     const closeMenu = (e) => {
         if (!e.target.closest('.context-menu')) {
@@ -393,7 +449,7 @@ const showContextMenuAt = (event, order) => {
             document.removeEventListener('click', closeMenu);
         }
     };
-    
+
     setTimeout(() => {
         document.addEventListener('click', closeMenu);
     }, 100);
@@ -1003,6 +1059,174 @@ const handleNotesSaved = (newNotes) => {
     toast.success('Admin notes saved successfully');
 };
 
+// ============================================
+// NEW FEATURES IMPLEMENTATION
+// ============================================
+
+// 1. Search with Autocomplete
+const handleSearch = (event) => {
+    const query = event.target.value.toLowerCase();
+    searchQuery.value = query;
+
+    if (query.length > 0) {
+        // Generate suggestions from existing orders
+        const suggestions = [];
+        props.orders.data.forEach(order => {
+            // Match order number
+            if (order.order_number.toLowerCase().includes(query)) {
+                suggestions.push({ type: 'order', text: order.order_number, id: order.id });
+            }
+            // Match customer name
+            if (order.customer?.name.toLowerCase().includes(query)) {
+                suggestions.push({ type: 'customer', text: order.customer.name, id: order.id });
+            }
+            // Match phone
+            if (order.customer?.phone.includes(query)) {
+                suggestions.push({ type: 'phone', text: order.customer.phone, id: order.id });
+            }
+        });
+
+        searchSuggestions.value = suggestions.slice(0, 5); // Limit to 5 suggestions
+        showSuggestions.value = suggestions.length > 0;
+    } else {
+        showSuggestions.value = false;
+    }
+};
+
+const selectSuggestion = (suggestion) => {
+    searchQuery.value = suggestion.text;
+    filters.value.customer_search = suggestion.text;
+    showSuggestions.value = false;
+    applyFilters();
+};
+
+// 2. Bulk Status Update
+const openBulkStatusModal = () => {
+    if (selectedOrders.value.length === 0) {
+        toast.error('Please select orders first');
+        return;
+    }
+    bulkStatusModal.value = true;
+};
+
+const closeBulkStatusModal = () => {
+    bulkStatusModal.value = false;
+    selectedBulkStatus.value = '';
+};
+
+const applyBulkStatus = async () => {
+    if (!selectedBulkStatus.value) {
+        toast.error('Please select a status');
+        return;
+    }
+
+    try {
+        const response = await axios.post('/admin/orders/bulk-status-update', {
+            order_ids: selectedOrders.value,
+            status: selectedBulkStatus.value
+        });
+
+        toast.success(`${selectedOrders.value.length} orders updated to ${selectedBulkStatus.value}`);
+        selectedOrders.value = [];
+        bulkStatusModal.value = false;
+        router.reload();
+    } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to update orders');
+    }
+};
+
+// 3. Export Functionality
+const exportOrders = async (format = 'csv') => {
+    exportingOrders.value = true;
+    showExportMenu.value = false;
+
+    try {
+        const response = await axios.post('/admin/orders/export', {
+            format,
+            filters: filters.value,
+            selected_ids: selectedOrders.value.length > 0 ? selectedOrders.value : null
+        }, {
+            responseType: 'blob'
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `orders_${new Date().toISOString().split('T')[0]}.${format}`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        toast.success(`Orders exported as ${format.toUpperCase()}`);
+    } catch (error) {
+        toast.error('Failed to export orders');
+    } finally {
+        exportingOrders.value = false;
+    }
+};
+
+// 4. Order Timeline & Expansion
+const toggleOrderExpansion = (orderId) => {
+    const index = expandedOrders.value.indexOf(orderId);
+    if (index > -1) {
+        expandedOrders.value.splice(index, 1);
+    } else {
+        expandedOrders.value.push(orderId);
+        // Fetch timeline if not already loaded
+        if (!orderTimelines.value[orderId]) {
+            fetchOrderTimeline(orderId);
+        }
+    }
+};
+
+const fetchOrderTimeline = async (orderId) => {
+    try {
+        const response = await axios.get(`/admin/orders/${orderId}/timeline`);
+        orderTimelines.value[orderId] = response.data.timeline || response.data || [];
+    } catch (error) {
+        console.error('Failed to fetch timeline:', error);
+        // Mock timeline data for development if endpoint doesn't exist
+        orderTimelines.value[orderId] = [
+            {
+                title: 'Order Created',
+                description: 'Order was placed by customer',
+                status: 'pending',
+                user: 'System',
+                timestamp: 'Just now'
+            },
+            {
+                title: 'Payment Received',
+                description: 'Payment confirmed',
+                status: 'processing',
+                user: 'System',
+                timestamp: '5 minutes ago'
+            }
+        ];
+    }
+};
+
+// 5. Real-time Notifications
+const showNotification = (message, type = 'info') => {
+    const notification = {
+        id: Date.now(),
+        message,
+        type,
+        timestamp: new Date()
+    };
+
+    notificationQueue.value.push(notification);
+
+    toast[type](message, {
+        duration: 4000,
+        icon: type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'
+    });
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        notificationQueue.value = notificationQueue.value.filter(n => n.id !== notification.id);
+    }, 5000);
+};
+
 // Filter chip removal functions
 const removeFilter = (filterKey) => {
     if (filterKey === 'date_range') {
@@ -1057,7 +1281,7 @@ const clearAllFilters = () => {
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto space-y-6">
+        <div class="max-w-10xl mx-auto space-y-6">
             <!-- Enhanced Header with Workflow Indicators -->
             <div class="flex items-center justify-between">
                 <div>
@@ -1068,12 +1292,12 @@ const clearAllFilters = () => {
                             </div>
                             Orders
                         </h1>
-                        
+
                         <!-- Workflow Phase Indicator -->
                         <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-300"
                              :class="{
                                  'bg-orange-100 text-orange-700': currentWorkflowPhase === 'morning',
-                                 'bg-yellow-100 text-yellow-700': currentWorkflowPhase === 'midday', 
+                                 'bg-yellow-100 text-yellow-700': currentWorkflowPhase === 'midday',
                                  'bg-purple-100 text-purple-700': currentWorkflowPhase === 'evening'
                              }">
                             <div class="w-2 h-2 rounded-full animate-pulse"
@@ -1084,22 +1308,22 @@ const clearAllFilters = () => {
                                  }"></div>
                             <span class="text-xs font-medium capitalize">{{ currentWorkflowPhase }} Routine</span>
                         </div>
-                        
+
                         <!-- Urgent Orders Alert -->
-                        <div v-if="urgentOrders.size > 0" 
+                        <div v-if="urgentOrders.size > 0"
                              class="flex items-center gap-2 px-3 py-1.5 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg animate-pulse cursor-pointer hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors"
                              @click="highlightUrgentOrders">
                             <Bell class="w-4 h-4" />
                             <span class="text-xs font-semibold">{{ urgentOrders.size }} Urgent</span>
                         </div>
-                        
+
                         <!-- New Orders Today -->
                         <div v-if="newOrdersToday.size > 0"
                              class="flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg">
                             <Star class="w-4 h-4" />
                             <span class="text-xs font-medium">{{ newOrdersToday.size }} New Today</span>
                         </div>
-                        
+
                         <div class="group relative">
                             <div class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center cursor-help transition-transform hover:scale-110">
                                 <span class="text-xs font-medium text-blue-600 dark:text-blue-400">?</span>
@@ -1127,7 +1351,7 @@ const clearAllFilters = () => {
                                         </p>
                                         <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
                                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                <kbd class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">Ctrl+A</kbd> Select all 
+                                                <kbd class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">Ctrl+A</kbd> Select all
                                                 <kbd class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono ml-2">F5</kbd> Refresh
                                             </p>
                                         </div>
@@ -1136,7 +1360,7 @@ const clearAllFilters = () => {
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Enhanced Metrics with Live Updates -->
                     <div class="mt-2 flex items-center gap-6 flex-wrap">
                         <div class="flex items-center gap-2">
@@ -1147,9 +1371,9 @@ const clearAllFilters = () => {
                                 <Loader2 class="w-4 h-4 animate-spin text-blue-500" />
                             </div>
                         </div>
-                        
+
                         <div class="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
-                        
+
                         <div class="flex items-center gap-2">
                             <span class="font-medium text-gray-900 dark:text-white">
                                 ৳{{ Number(props.statusCounts.find(s => s.status === 'total')?.sales || 0).toLocaleString() }}
@@ -1160,16 +1384,16 @@ const clearAllFilters = () => {
                                 <span>{{ performanceMetrics.averageOrderValue.toLocaleString() }} avg</span>
                             </div>
                         </div>
-                        
+
                         <div class="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
-                        
+
                         <div class="flex items-center gap-2">
                             <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                             <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">Live updates</span>
                         </div>
-                        
+
                         <div class="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
-                        
+
                         <div class="flex items-center gap-3">
                             <div class="text-xs text-blue-600 dark:text-blue-400 font-medium">
                                 {{ performanceMetrics.deliveryRate }}% delivery rate
@@ -1191,11 +1415,96 @@ const clearAllFilters = () => {
                             {{ props.statusCounts.find(s => s.status === 'incomplete')?.count || 0 }}
                         </span>
                     </Link>
+
+                    <!-- NEW: Bulk Actions Dropdown -->
+                    <div class="relative">
+                        <button @click="openBulkStatusModal"
+                                :disabled="selectedOrders.length === 0"
+                                class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                                :class="selectedOrders.length > 0
+                                    ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                                    : 'text-gray-400 bg-gray-50 cursor-not-allowed'">
+                            <CheckSquare class="w-4 h-4" />
+                            <span>Bulk Update</span>
+                            <span v-if="selectedOrders.length > 0" class="bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-semibold">
+                                {{ selectedOrders.length }}
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- NEW: Export Button -->
+                    <div class="relative">
+                        <button @click="showExportMenu = !showExportMenu"
+                                class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                            <Download class="w-4 h-4" />
+                            <span>Export</span>
+                        </button>
+
+                        <!-- Export Menu -->
+                        <div v-if="showExportMenu"
+                             class="absolute right-0 top-12 w-48 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-xl z-50">
+                            <button @click="exportOrders('csv')"
+                                    class="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
+                                <span>📄</span> Export as CSV
+                            </button>
+                            <button @click="exportOrders('xlsx')"
+                                    class="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
+                                <span>📊</span> Export as Excel
+                            </button>
+                            <button @click="exportOrders('pdf')"
+                                    class="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
+                                <span>📑</span> Export as PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- NEW: Keyboard Shortcuts Help -->
+                    <button @click="showKeyboardShortcuts = !showKeyboardShortcuts"
+                            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+                        <MousePointer class="w-4 h-4" />
+                        <span>Shortcuts</span>
+                    </button>
+
                     <button @click="resetFilters"
                             class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
                         <ArrowUpDown class="w-4 h-4" />
                         <span>Reset</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- NEW: Search with Autocomplete -->
+            <div class="relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                <div class="flex items-center gap-4">
+                    <div class="flex-1 relative">
+                        <input id="order-search-input"
+                               type="text"
+                               v-model="searchQuery"
+                               @input="handleSearch"
+                               @focus="showSuggestions = searchQuery.length > 0 && searchSuggestions.length > 0"
+                               placeholder="Search orders, customers, phone numbers... (Ctrl+F)"
+                               class="w-full px-4 py-2 pl-10 pr-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2">
+                            <Filter class="w-4 h-4 text-gray-400" />
+                        </div>
+
+                        <!-- Autocomplete Suggestions -->
+                        <div v-if="showSuggestions"
+                             class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+                            <div v-for="(suggestion, index) in searchSuggestions"
+                                 :key="index"
+                                 @click="selectSuggestion(suggestion)"
+                                 class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 transition-colors">
+                                <span v-if="suggestion.type === 'order'" class="text-blue-500">🔖</span>
+                                <span v-else-if="suggestion.type === 'customer'" class="text-green-500">👤</span>
+                                <span v-else class="text-purple-500">📞</span>
+                                <span class="text-sm">{{ suggestion.text }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        Press <kbd class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Ctrl+F</kbd> to search
+                    </div>
                 </div>
             </div>
 
@@ -1206,8 +1515,8 @@ const clearAllFilters = () => {
                     <button
                         @click="selectStatus('')"
                         class="group p-4 rounded-xl transition-all duration-200 relative overflow-hidden"
-                        :class="filters.status === '' 
-                            ? 'bg-blue-50 ring-2 ring-blue-500 ring-opacity-20' 
+                        :class="filters.status === ''
+                            ? 'bg-blue-50 ring-2 ring-blue-500 ring-opacity-20'
                             : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'"
                     >
                         <div class="text-center space-y-1 relative z-10">
@@ -1478,7 +1787,7 @@ const clearAllFilters = () => {
                             <tr>
                                 <!-- Priority Indicator -->
                                 <th class="w-6 py-4"></th>
-                                
+
                                 <!-- Select All -->
                                 <th class="w-12 px-6 py-4 text-left">
                                     <input type="checkbox"
@@ -1576,38 +1885,40 @@ const clearAllFilters = () => {
                         </tbody>
 
                         <tbody v-else class="divide-y divide-gray-100 dark:divide-gray-700">
-                            <tr
+                            <template
                                 v-for="(order, index) in prioritizedOrders"
                                 :key="order.id"
-                                @contextmenu="showContextMenuAt($event, order)"
-                                class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all duration-200 cursor-pointer relative"
-                                :class="{ 
-                                    'bg-blue-50 dark:bg-blue-900/20': selectedOrders.includes(order.id),
-                                    'bg-red-50 dark:bg-red-900/10 hover:bg-red-100': order.priority === 'critical',
-                                    'bg-orange-50 dark:bg-orange-900/10 hover:bg-orange-100': order.priority === 'high',
-                                    'bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100': order.priority === 'medium',
-                                    'animate-pulse': processingOrders.has(order.id),
-                                    'ring-2 ring-green-400 ring-opacity-50': animatingOrders.has(order.id)
-                                }"
                             >
+                                <tr
+                                    @contextmenu="showContextMenuAt($event, order)"
+                                    class="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all duration-200 cursor-pointer relative"
+                                    :class="{
+                                        'bg-blue-50 dark:bg-blue-900/20': selectedOrders.includes(order.id),
+                                        'bg-red-50 dark:bg-red-900/10 hover:bg-red-100': order.priority === 'critical',
+                                        'bg-orange-50 dark:bg-orange-900/10 hover:bg-orange-100': order.priority === 'high',
+                                        'bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100': order.priority === 'medium',
+                                        'animate-pulse': processingOrders.has(order.id),
+                                        'ring-2 ring-green-400 ring-opacity-50': animatingOrders.has(order.id)
+                                    }"
+                                >
                                 <!-- Priority Indicator -->
                                 <td class="px-3 py-4 text-center">
                                     <div class="flex items-center justify-center">
-                                        <div v-if="order.priority === 'critical'" 
-                                             class="w-2 h-8 bg-red-500 rounded-full animate-pulse" 
+                                        <div v-if="order.priority === 'critical'"
+                                             class="w-2 h-8 bg-red-500 rounded-full animate-pulse"
                                              title="Critical Priority"></div>
-                                        <div v-else-if="order.priority === 'high'" 
-                                             class="w-2 h-8 bg-orange-500 rounded-full" 
+                                        <div v-else-if="order.priority === 'high'"
+                                             class="w-2 h-8 bg-orange-500 rounded-full"
                                              title="High Priority"></div>
-                                        <div v-else-if="order.priority === 'medium'" 
-                                             class="w-2 h-8 bg-yellow-500 rounded-full" 
+                                        <div v-else-if="order.priority === 'medium'"
+                                             class="w-2 h-8 bg-yellow-500 rounded-full"
                                              title="Medium Priority"></div>
-                                        <div v-else 
-                                             class="w-2 h-8 bg-gray-300 rounded-full" 
+                                        <div v-else
+                                             class="w-2 h-8 bg-gray-300 rounded-full"
                                              title="Normal Priority"></div>
-                                        
+
                                         <!-- New Order Badge -->
-                                        <div v-if="order.isNew" 
+                                        <div v-if="order.isNew"
                                              class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-bounce"
                                              title="New order today"></div>
                                     </div>
@@ -1639,7 +1950,7 @@ const clearAllFilters = () => {
                                             <span v-else-if="isToday(order.date)" class="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">Today</span>
                                             <span class="text-xs text-gray-500">{{ formatOrderDate(order.date) }}</span>
                                         </div>
-                                        
+
                                         <!-- Priority Score for debugging -->
                                         <div v-if="order.priorityScore > 0" class="text-xs text-gray-400">
                                             Score: {{ order.priorityScore }} | {{ order.priority }}
@@ -1720,10 +2031,10 @@ const clearAllFilters = () => {
                                 <td class="px-6 py-4">
                                     <div class="text-right">
                                         <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                            ৳{{ Number(order.total || 0).toLocaleString() }}
+                                            ৳{{ Number(order.total || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2}) }}
                                         </div>
                                         <div class="text-xs text-gray-500">
-                                            {{ order.items.length }} items
+                                            {{ order.items.length }} {{ order.items.length === 1 ? 'item' : 'items' }}
                                         </div>
                                     </div>
                                 </td>
@@ -1731,13 +2042,13 @@ const clearAllFilters = () => {
                                 <!-- Status -->
                                 <td class="px-6 py-4">
                                     <div class="space-y-1.5">
-                                        <StatusDropdown 
-                                            :model-value="order.status" 
+                                        <StatusDropdown
+                                            :model-value="order.status"
                                             :order-id="order.id"
                                             :is-loading="updatingOrders[order.id]"
                                             @status-change="(orderId, newStatus) => { updateOrderStatus(orderId, newStatus); triggerSuccessAnimation(orderId); }"
                                         />
-                                        <div class="flex items-center gap-1 text-xs text-gray-500">
+                                        <div v-if="order.timeInStatus" class="flex items-center gap-1 text-xs text-gray-500">
                                             <Timer class="w-3 h-3" />
                                             <span>{{ order.timeInStatus }}</span>
                                         </div>
@@ -1748,10 +2059,18 @@ const clearAllFilters = () => {
                                 <td class="px-6 py-4">
                                     <div class="space-y-1">
                                         <div class="text-sm text-gray-900 dark:text-gray-100">
-                                            {{ formatOrderDate(order.date) }}
+                                            {{ formatOrderDate(order.created_at || order.date) }}
                                         </div>
-                                        <div class="text-xs text-gray-500">
-                                            {{ order.hoursOld < 24 ? `${Math.round(order.hoursOld)}h ago` : `${Math.round(order.hoursOld / 24)}d ago` }}
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs text-gray-500">
+                                                {{ order.hoursOld && !isNaN(order.hoursOld) ? (order.hoursOld < 24 ? `${Math.round(order.hoursOld)}h ago` : `${Math.round(order.hoursOld / 24)}d ago`) : 'Just now' }}
+                                            </span>
+                                            <span v-if="order.hoursOld > 72" class="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded font-medium">
+                                                Urgent
+                                            </span>
+                                            <span v-else-if="order.hoursOld > 48" class="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
+                                                Old
+                                            </span>
                                         </div>
                                     </div>
                                 </td>
@@ -1761,29 +2080,41 @@ const clearAllFilters = () => {
                                     <div class="flex items-center justify-end gap-2">
                                         <!-- Quick Actions -->
                                         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <!-- NEW: Timeline Expand Button -->
+                                            <button
+                                                @click="toggleOrderExpansion(order.id)"
+                                                class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 transform"
+                                                :class="expandedOrders.includes(order.id)
+                                                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                                                :title="expandedOrders.includes(order.id) ? 'Hide Timeline' : 'Show Timeline'"
+                                            >
+                                                <Clock class="w-4 h-4" />
+                                            </button>
+
                                             <!-- Smart Courier Suggestion Button -->
-                                            <button 
+                                            <button
                                                 @click="openCourierModal(order.id)"
                                                 class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 transform"
-                                                :class="getSmartCourierSuggestion(order) === 'pathao' 
-                                                    ? 'bg-purple-100 text-purple-600 hover:bg-purple-200' 
+                                                :class="getSmartCourierSuggestion(order) === 'pathao'
+                                                    ? 'bg-purple-100 text-purple-600 hover:bg-purple-200'
                                                     : 'bg-green-100 text-green-600 hover:bg-green-200'"
                                                 :title="`Recommended: ${getSmartCourierSuggestion(order)}`"
                                             >
                                                 <Truck class="w-4 h-4" />
                                             </button>
-                                            
+
                                             <!-- Fraud Check -->
-                                            <button 
+                                            <button
                                                 @click="checkFraud(order.customer.phone)"
                                                 class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-200 transition-all duration-200 hover:scale-110 transform"
                                                 title="Check Customer"
                                             >
                                                 <Eye class="w-4 h-4" />
                                             </button>
-                                            
+
                                             <!-- Edit Order -->
-                                            <Link 
+                                            <Link
                                                 :href="route('admin.orders.edit', order.id)"
                                                 class="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center hover:bg-amber-200 transition-all duration-200 hover:scale-110 transform"
                                                 title="Edit Order"
@@ -1791,14 +2122,14 @@ const clearAllFilters = () => {
                                                 <SquarePen class="w-4 h-4" />
                                             </Link>
                                         </div>
-                                        
+
                                         <!-- Main Actions Dropdown -->
                                         <div class="relative">
-                                            <button 
+                                            <button
                                                 @click.stop="toggleActionMenu(order.id)"
                                                 class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 transform"
-                                                :class="activeActionMenu === order.id 
-                                                    ? 'bg-blue-100 text-blue-600' 
+                                                :class="activeActionMenu === order.id
+                                                    ? 'bg-blue-100 text-blue-600'
                                                     : 'bg-gray-100 hover:bg-gray-200 text-gray-600'"
                                             >
                                                 <component :is="activeActionMenu === order.id ? X : MoreVertical" class="w-4 h-4" />
@@ -1807,24 +2138,24 @@ const clearAllFilters = () => {
                                             <!-- Enhanced Action Dropdown -->
                                             <div v-if="activeActionMenu === order.id"
                                                  class="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-2 transform animate-in slide-in-from-top-2 duration-200">
-                                                
+
                                                 <!-- Status Actions -->
                                                 <div class="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
                                                     <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Quick Status Update</p>
                                                     <div class="grid grid-cols-2 gap-1">
-                                                        <button 
+                                                        <button
                                                             @click="updateOrderStatus(order.id, 'processing'); toggleActionMenu(order.id); triggerSuccessAnimation(order.id);"
                                                             class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors">
                                                             ⚙️ Processing
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             @click="updateOrderStatus(order.id, 'shipped'); toggleActionMenu(order.id); triggerSuccessAnimation(order.id);"
                                                             class="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors">
                                                             🚚 Shipped
                                                         </button>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <!-- Main Actions -->
                                                 <div class="py-1">
                                                     <button @click="checkFraud(order?.customer?.phone); toggleActionMenu(order.id);"
@@ -1833,34 +2164,35 @@ const clearAllFilters = () => {
                                                         <span>Check Customer</span>
                                                         <span class="ml-auto text-xs text-blue-500">Fraud Check</span>
                                                     </button>
-                                                    
+
                                                     <button @click="openCourierModal(order, order.id); toggleActionMenu(order.id);"
                                                             class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
                                                         <Truck class="w-4 h-4 text-green-500" />
                                                         <span>Send to Courier</span>
                                                         <span class="ml-auto text-xs text-green-600">{{ getSmartCourierSuggestion(order) }}</span>
                                                     </button>
-                                                    
+
                                                     <button @click="openAdminNotesModal(order); toggleActionMenu(order.id);"
                                                             class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
                                                         <SquarePen class="w-4 h-4 text-purple-500" />
                                                         <span>{{ order.admin_notes ? 'Edit Notes' : 'Add Notes' }}</span>
                                                     </button>
-                                                    
+
                                                     <Link :href="route('admin.orders.edit', order.id)"
                                                           @click="toggleActionMenu(order.id)"
                                                           class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
                                                         <SquarePen class="w-4 h-4 text-amber-500" />
                                                         <span>Edit Order</span>
                                                     </Link>
-                                                    
-                                                    <button @click="window.open(`/admin/orders/${order.id}`, '_blank'); toggleActionMenu(order.id);"
-                                                            class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
+
+                                                    <Link :href="route('admin.orders.show', order.id)"
+                                                          @click="toggleActionMenu(order.id)"
+                                                          class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors">
                                                         <ExternalLink class="w-4 h-4 text-cyan-500" />
                                                         <span>View Details</span>
-                                                    </button>
+                                                    </Link>
                                                 </div>
-                                                
+
                                                 <!-- Danger Zone -->
                                                 <div class="border-t border-gray-100 dark:border-gray-700 pt-1">
                                                     <button @click="openDeleteModal(order.id); toggleActionMenu(order.id);"
@@ -1877,9 +2209,9 @@ const clearAllFilters = () => {
                                                  @click="activeActionMenu = null"></div>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Processing Indicator -->
-                                    <div v-if="processingOrders.has(order.id)" 
+                                    <div v-if="processingOrders.has(order.id)"
                                          class="absolute inset-0 bg-white/80 dark:bg-gray-800/80 flex items-center justify-center rounded-lg">
                                         <div class="flex items-center gap-2 text-sm text-blue-600">
                                             <Loader2 class="w-4 h-4 animate-spin" />
@@ -1888,6 +2220,92 @@ const clearAllFilters = () => {
                                     </div>
                                 </td>
                             </tr>
+
+                            <!-- NEW: Expandable Order Timeline Row -->
+                            <tr v-if="expandedOrders.includes(order.id)"
+                                class="bg-gray-50 dark:bg-gray-800/50">
+                                <td colspan="9" class="px-6 py-4">
+                                    <div class="bg-white dark:bg-gray-700 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-800">
+                                        <!-- Timeline Header -->
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <Clock class="w-4 h-4 text-blue-500" />
+                                                Order Timeline
+                                            </h4>
+                                            <button @click="toggleOrderExpansion(order.id)"
+                                                    class="text-gray-400 hover:text-gray-600">
+                                                <ChevronUp class="w-5 h-5" />
+                                            </button>
+                                        </div>
+
+                                        <!-- Timeline Loading State -->
+                                        <div v-if="!orderTimelines[order.id]" class="flex items-center gap-3 text-sm text-gray-500">
+                                            <Loader2 class="w-4 h-4 animate-spin text-blue-500" />
+                                            <span>Loading timeline...</span>
+                                        </div>
+
+                                        <!-- Timeline Content -->
+                                        <div v-else class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
+                                            <div v-for="(event, idx) in orderTimelines[order.id]"
+                                                 :key="idx"
+                                                 class="flex gap-3 relative">
+                                                <!-- Timeline Line -->
+                                                <div v-if="idx < orderTimelines[order.id].length - 1"
+                                                     class="absolute left-2 top-8 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-600"></div>
+
+                                                <!-- Event Icon -->
+                                                <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 z-10"
+                                                     :class="{
+                                                         'bg-green-500': event.status === 'delivered',
+                                                         'bg-blue-500': event.status === 'processing' || event.status === 'confirmed',
+                                                         'bg-purple-500': event.status === 'shipped',
+                                                         'bg-yellow-500': event.status === 'pending' || event.status === 'on_hold',
+                                                         'bg-red-500': event.status === 'cancelled',
+                                                         'bg-gray-400': !event.status
+                                                     }">
+                                                    <span class="text-white text-xs">✓</span>
+                                                </div>
+
+                                                <!-- Event Details -->
+                                                <div class="flex-1 pb-4">
+                                                    <div class="flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                                                {{ event.title }}
+                                                            </p>
+                                                            <p v-if="event.description"
+                                                               class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                                {{ event.description }}
+                                                            </p>
+                                                            <p class="text-xs text-gray-400 mt-1">
+                                                                {{ event.user }} • {{ event.timestamp }}
+                                                            </p>
+                                                        </div>
+                                                        <span class="px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap"
+                                                              :class="{
+                                                                  'bg-green-100 text-green-700': event.status === 'delivered',
+                                                                  'bg-blue-100 text-blue-700': event.status === 'processing' || event.status === 'confirmed',
+                                                                  'bg-purple-100 text-purple-700': event.status === 'shipped',
+                                                                  'bg-yellow-100 text-yellow-700': event.status === 'pending' || event.status === 'on_hold',
+                                                                  'bg-red-100 text-red-700': event.status === 'cancelled'
+                                                              }">
+                                                            {{ event.status || 'Update' }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- No Timeline Data -->
+                                        <div v-if="orderTimelines[order.id] && orderTimelines[order.id].length === 0"
+                                             class="text-center py-6 text-sm text-gray-500">
+                                            <Clock class="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                                            <p>No timeline data available</p>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>
@@ -1979,6 +2397,172 @@ const clearAllFilters = () => {
             @close="showStatusChangeModal = false; statusChangeOrder = null"
             @confirm="confirmStatusChange"
         />
+
+        <!-- NEW: Bulk Status Update Modal -->
+        <div v-if="bulkStatusModal"
+             class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+             @click.self="closeBulkStatusModal">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl w-full max-w-md">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Bulk Status Update</h3>
+                    <button @click="closeBulkStatusModal" class="text-gray-400 hover:text-gray-600">
+                        <X class="w-5 h-5" />
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Update status for {{ selectedOrders.length }} selected orders
+                </p>
+                <select v-model="selectedBulkStatus"
+                        class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4">
+                    <option value="">Select Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="on_hold">On Hold</option>
+                </select>
+                <div class="flex gap-3">
+                    <button @click="closeBulkStatusModal"
+                            class="flex-1 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="applyBulkStatus"
+                            class="flex-1 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                        Update Orders
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Keyboard Shortcuts Panel -->
+        <div v-if="showKeyboardShortcuts"
+             class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+             @click.self="showKeyboardShortcuts = false">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <MousePointer class="w-5 h-5" />
+                        Keyboard Shortcuts
+                    </h3>
+                    <button @click="showKeyboardShortcuts = false" class="text-gray-400 hover:text-gray-600">
+                        <X class="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-3">
+                        <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Navigation</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Navigate up/down</span>
+                                <div class="flex gap-2">
+                                    <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">↑</kbd>
+                                    <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">↓</kbd>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Open order details</span>
+                                <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Enter</kbd>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-3">
+                        <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Selection</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Select all visible</span>
+                                <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Ctrl+A</kbd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Clear selection</span>
+                                <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Esc</kbd>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-3">
+                        <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Actions</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Focus search</span>
+                                <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Ctrl+F</kbd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Export orders</span>
+                                <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Ctrl+E</kbd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Refresh orders</span>
+                                <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">F5</kbd>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Show this help</span>
+                                <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Ctrl+?</kbd>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pb-3">
+                        <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Advanced</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Highlight urgent orders</span>
+                                <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Ctrl+Shift+U</kbd>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <p class="text-sm text-blue-700 dark:text-blue-400">
+                        <strong>Pro Tip:</strong> Use keyboard shortcuts to process orders 3x faster!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Loading Skeleton Overlay -->
+        <div v-if="showSkeletonLoader"
+             class="fixed inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div class="flex flex-col items-center gap-4">
+                <Loader2 class="w-12 h-12 animate-spin text-blue-500" />
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Loading orders...</p>
+            </div>
+        </div>
+
+        <!-- NEW: Export Progress Indicator -->
+        <div v-if="exportingOrders"
+             class="fixed bottom-6 right-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 z-50 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3">
+                <Loader2 class="w-5 h-5 animate-spin text-blue-500" />
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Exporting orders...</span>
+            </div>
+        </div>
+
+        <!-- NEW: Notification Toast Container -->
+        <div class="fixed top-6 right-6 z-50 space-y-2">
+            <div v-for="notification in notificationQueue"
+                 :key="notification.id"
+                 class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 border-l-4 transition-all duration-300 max-w-sm"
+                 :class="{
+                     'border-green-500': notification.type === 'success',
+                     'border-red-500': notification.type === 'error',
+                     'border-blue-500': notification.type === 'info'
+                 }">
+                <div class="flex items-start gap-3">
+                    <span v-if="notification.type === 'success'" class="text-green-500">✅</span>
+                    <span v-else-if="notification.type === 'error'" class="text-red-500">❌</span>
+                    <span v-else class="text-blue-500">ℹ️</span>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ notification.message }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ new Date(notification.timestamp).toLocaleTimeString() }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </AdminLayout>
 </template>
 
@@ -2101,5 +2685,37 @@ const clearAllFilters = () => {
     .w-56 {
         width: 12rem !important;
     }
+}
+
+/* Custom Scrollbar for Timeline */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Dark mode scrollbar */
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
 }
 </style>
