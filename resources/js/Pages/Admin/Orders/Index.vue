@@ -41,7 +41,13 @@ import {
     Star,
     CheckSquare,
     Loader2,
-    MousePointer
+    MousePointer,
+    ShoppingCart,
+    DollarSign,
+    RotateCcw,
+    Pause,
+    PlayCircle,
+    XOctagon
 } from "lucide-vue-next";
 import CourierSelectionModal from "@/Components/Couriers/CourierSelectionModal.vue";
 import DeleteModal from "@/Components/Modal/DeleteModal.vue";
@@ -1508,71 +1514,170 @@ const clearAllFilters = () => {
                 </div>
             </div>
 
-<!-- Minimal Status Overview -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-<!-- Total Orders with performance indicator -->
+<!-- Enhanced Status Overview with Modern Design -->
+            <div class="bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-8 shadow-lg">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center space-x-2">
+                        <TrendingUp class="w-5 h-5 text-blue-500" />
+                        <span>Order Overview</span>
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Track your order performance in real-time</p>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
+                    <!-- Enhanced All Orders Card -->
                     <button
                         @click="selectStatus('')"
-                        class="group p-4 rounded-xl transition-all duration-200 relative overflow-hidden"
+                        class="group relative p-6 rounded-2xl transition-all duration-300 transform hover:scale-105 overflow-hidden"
                         :class="filters.status === ''
-                            ? 'bg-blue-50 ring-2 ring-blue-500 ring-opacity-20'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl ring-4 ring-blue-500/20' 
+                            : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-700'"
                     >
-                        <div class="text-center space-y-1 relative z-10">
-                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
-                                {{ props.statusCounts.find(s => s.status === 'total')?.count || 0 }}
+                        <!-- Background Pattern -->
+                        <div class="absolute inset-0 opacity-10">
+                            <div class="absolute inset-0 bg-gradient-to-br from-transparent via-white/20 to-transparent transform rotate-12"></div>
+                        </div>
+                        
+                        <div class="relative z-10 space-y-3">
+                            <!-- Icon and Title -->
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div :class="filters.status === '' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30'" 
+                                         class="p-2 rounded-xl transition-all duration-200">
+                                        <ShoppingCart class="w-5 h-5" />
+                                    </div>
+                                    <div class="text-left">
+                                        <div :class="filters.status === '' ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'" 
+                                             class="text-sm font-medium">All Orders</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <TrendingUp :class="filters.status === '' ? 'text-white/70' : 'text-green-500'" 
+                                                class="w-4 h-4 animate-pulse" />
+                                </div>
                             </div>
-                            <div class="text-xs font-medium text-gray-500 dark:text-gray-400">All Orders</div>
-                            <div class="text-xs font-semibold text-green-600">
-                                ৳{{ Number(props.statusCounts.find(s => s.status === 'total')?.sales || 0).toLocaleString() }}
-                            </div>
-                            <div class="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                Avg: ৳{{ performanceMetrics.averageOrderValue.toLocaleString() }}
+                            
+                            <!-- Main Stats -->
+                            <div class="space-y-2">
+                                <div :class="filters.status === '' ? 'text-white' : 'text-gray-900 dark:text-white'" 
+                                     class="text-3xl font-bold transition-all duration-300 group-hover:scale-110">
+                                    {{ props.statusCounts.find(s => s.status === 'total')?.count || 0 }}
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div :class="filters.status === '' ? 'text-white/90' : 'text-green-600 dark:text-green-400'" 
+                                         class="text-sm font-semibold flex items-center space-x-1">
+                                        <DollarSign class="w-4 h-4" />
+                                        <span>৳{{ Number(props.statusCounts.find(s => s.status === 'total')?.sales || 0).toLocaleString() }}</span>
+                                    </div>
+                                </div>
+                                <div :class="filters.status === '' ? 'text-white/80' : 'text-blue-600 dark:text-blue-400'" 
+                                     class="text-xs font-medium flex items-center space-x-1">
+                                    <Target class="w-3 h-3" />
+                                    <span>Avg: ৳{{ performanceMetrics.averageOrderValue.toLocaleString() }}</span>
+                                </div>
                             </div>
                         </div>
-                        <!-- Gradient background -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        
+                        <!-- Animated shine effect -->
+                        <div class="absolute inset-0 -top-10 -left-10 bg-gradient-to-r from-transparent via-white/20 to-transparent w-6 h-full rotate-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000 ease-in-out"></div>
                     </button>
 
 
 
-                    <!-- Individual Status Cards -->
+                    <!-- Enhanced Individual Status Cards -->
                     <button
                         v-for="status in availableStatuses.filter(s => s !== 'incomplete')"
                         :key="status"
                         @click="selectStatus(status)"
-                        class="group p-4 rounded-xl transition-all duration-200"
+                        class="group relative p-5 rounded-2xl transition-all duration-300 transform hover:scale-105 overflow-hidden border"
                         :class="{
-                            'bg-amber-50 ring-2 ring-amber-500 ring-opacity-20': filters.status === status && status === 'pending',
-                            'bg-blue-50 ring-2 ring-blue-500 ring-opacity-20': filters.status === status && status === 'processing',
-                            'bg-red-50 ring-2 ring-red-500 ring-opacity-20': filters.status === status && status === 'cancelled',
-                            'bg-purple-50 ring-2 ring-purple-500 ring-opacity-20': filters.status === status && status === 'shipped',
-                            'bg-green-50 ring-2 ring-green-500 ring-opacity-20': filters.status === status && status === 'delivered',
-                            'bg-pink-50 ring-2 ring-pink-500 ring-opacity-20': filters.status === status && status === 'returned',
-                            'bg-gray-50 ring-2 ring-gray-500 ring-opacity-20': filters.status === status && status === 'on_hold',
-                            'bg-indigo-50 ring-2 ring-indigo-500 ring-opacity-20': filters.status === status && status === 'confirmed',
-                            'hover:bg-gray-50 dark:hover:bg-gray-700/50': filters.status !== status
+                            'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-xl ring-4 ring-amber-500/20 border-amber-300': filters.status === status && status === 'pending',
+                            'bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-xl ring-4 ring-blue-500/20 border-blue-300': filters.status === status && status === 'processing',
+                            'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-xl ring-4 ring-red-500/20 border-red-300': filters.status === status && status === 'cancelled',
+                            'bg-gradient-to-br from-purple-400 to-purple-600 text-white shadow-xl ring-4 ring-purple-500/20 border-purple-300': filters.status === status && status === 'shipped',
+                            'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-xl ring-4 ring-green-500/20 border-green-300': filters.status === status && status === 'delivered',
+                            'bg-gradient-to-br from-pink-400 to-pink-600 text-white shadow-xl ring-4 ring-pink-500/20 border-pink-300': filters.status === status && status === 'returned',
+                            'bg-gradient-to-br from-gray-400 to-gray-600 text-white shadow-xl ring-4 ring-gray-500/20 border-gray-300': filters.status === status && status === 'on_hold',
+                            'bg-gradient-to-br from-indigo-400 to-indigo-600 text-white shadow-xl ring-4 ring-indigo-500/20 border-indigo-300': filters.status === status && status === 'confirmed',
+                            'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-lg hover:shadow-xl border-gray-200 dark:border-gray-700': filters.status !== status
                         }"
                     >
-                        <div class="text-center space-y-1">
-                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                        <!-- Background Pattern -->
+                        <div class="absolute inset-0 opacity-10" v-if="filters.status === status">
+                            <div class="absolute inset-0 bg-gradient-to-br from-transparent via-white/30 to-transparent transform rotate-12"></div>
+                        </div>
+                        
+                        <div class="relative z-10 space-y-3">
+                            <!-- Icon and Status -->
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <div :class="{
+                                        'bg-white/20 text-white': filters.status === status && status === 'pending',
+                                        'bg-white/20 text-white': filters.status === status && status === 'processing', 
+                                        'bg-white/20 text-white': filters.status === status && status === 'cancelled',
+                                        'bg-white/20 text-white': filters.status === status && status === 'shipped',
+                                        'bg-white/20 text-white': filters.status === status && status === 'delivered',
+                                        'bg-white/20 text-white': filters.status === status && status === 'returned',
+                                        'bg-white/20 text-white': filters.status === status && status === 'on_hold',
+                                        'bg-white/20 text-white': filters.status === status && status === 'confirmed',
+                                        'bg-amber-100 text-amber-600 dark:bg-amber-900/30': filters.status !== status && status === 'pending',
+                                        'bg-blue-100 text-blue-600 dark:bg-blue-900/30': filters.status !== status && status === 'processing',
+                                        'bg-red-100 text-red-600 dark:bg-red-900/30': filters.status !== status && status === 'cancelled',
+                                        'bg-purple-100 text-purple-600 dark:bg-purple-900/30': filters.status !== status && status === 'shipped',
+                                        'bg-green-100 text-green-600 dark:bg-green-900/30': filters.status !== status && status === 'delivered',
+                                        'bg-pink-100 text-pink-600 dark:bg-pink-900/30': filters.status !== status && status === 'returned',
+                                        'bg-gray-100 text-gray-600 dark:bg-gray-900/30': filters.status !== status && status === 'on_hold',
+                                        'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30': filters.status !== status && status === 'confirmed'
+                                    }" class="p-2 rounded-xl transition-all duration-200">
+                                        <!-- Dynamic Icons for each status -->
+                                        <Clock v-if="status === 'pending'" class="w-4 h-4" />
+                                        <PlayCircle v-else-if="status === 'processing'" class="w-4 h-4" />
+                                        <XOctagon v-else-if="status === 'cancelled'" class="w-4 h-4" />
+                                        <Truck v-else-if="status === 'shipped'" class="w-4 h-4" />
+                                        <CheckCircle v-else-if="status === 'delivered'" class="w-4 h-4" />
+                                        <RotateCcw v-else-if="status === 'returned'" class="w-4 h-4" />
+                                        <Pause v-else-if="status === 'on_hold'" class="w-4 h-4" />
+                                        <CheckSquare v-else-if="status === 'confirmed'" class="w-4 h-4" />
+                                        <Package v-else class="w-4 h-4" />
+                                    </div>
+                                    <div :class="filters.status === status ? 'text-white/90' : 'text-gray-500 dark:text-gray-400'" 
+                                         class="text-sm font-medium capitalize">{{ status.replace('_', ' ') }}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Count with animation -->
+                            <div :class="filters.status === status ? 'text-white' : 'text-gray-900 dark:text-white'" 
+                                 class="text-2xl font-bold transition-all duration-300 group-hover:scale-110">
                                 {{ props.statusCounts.find(s => s.status === status)?.count || 0 }}
                             </div>
-                            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 capitalize">{{ status.replace('_', ' ') }}</div>
-                            <div class="text-xs font-semibold"
-                                 :class="{
-                                     'text-amber-600': status === 'pending',
-                                     'text-blue-600': status === 'processing',
-                                     'text-red-600': status === 'cancelled',
-                                     'text-purple-600': status === 'shipped',
-                                     'text-green-600': status === 'delivered',
-                                     'text-pink-600': status === 'returned',
-                                     'text-gray-600': status === 'on_hold',
-                                     'text-indigo-600': status === 'confirmed'
-                                 }">
-                                ৳{{ Number(props.statusCounts.find(s => s.status === status)?.sales || 0).toLocaleString() }}
+                            
+                            <!-- Revenue with icon -->
+                            <div class="flex items-center space-x-1" :class="{
+                                'text-white/90': filters.status === status,
+                                'text-amber-600': filters.status !== status && status === 'pending',
+                                'text-blue-600': filters.status !== status && status === 'processing',
+                                'text-red-600': filters.status !== status && status === 'cancelled',
+                                'text-purple-600': filters.status !== status && status === 'shipped',
+                                'text-green-600': filters.status !== status && status === 'delivered',
+                                'text-pink-600': filters.status !== status && status === 'returned',
+                                'text-gray-600': filters.status !== status && status === 'on_hold',
+                                'text-indigo-600': filters.status !== status && status === 'confirmed'
+                            }">
+                                <DollarSign class="w-3 h-3" />
+                                <span class="text-sm font-semibold">
+                                    ৳{{ Number(props.statusCounts.find(s => s.status === status)?.sales || 0).toLocaleString() }}
+                                </span>
                             </div>
+                        </div>
+                        
+                        <!-- Animated shine effect for active cards -->
+                        <div v-if="filters.status === status" 
+                             class="absolute inset-0 -top-10 -left-10 bg-gradient-to-r from-transparent via-white/20 to-transparent w-6 h-full rotate-12 transform translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000 ease-in-out"></div>
+                        
+                        <!-- Pulse effect for cards with orders -->
+                        <div v-if="(props.statusCounts.find(s => s.status === status)?.count || 0) > 0" 
+                             class="absolute top-2 right-2">
+                            <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                         </div>
                     </button>
                 </div>
