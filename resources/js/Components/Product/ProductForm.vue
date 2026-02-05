@@ -84,6 +84,16 @@ const editorConfigWithProductId = computed(() => {
     };
 });
 
+// ========== UNSAVED CHANGES: Browser navigation warning ==========
+const handleBeforeUnload = (e) => {
+    // Only warn if form has unsaved changes (Inertia tracks this automatically)
+    if (form.isDirty && !form.processing) {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome requires returnValue to be set
+        return ''; // Some browsers show this message
+    }
+};
+
 onMounted(() => {
     isLayoutReady.value = true;
     initializeForm();
@@ -103,6 +113,9 @@ onMounted(() => {
     // Add keyboard shortcuts
     window.addEventListener('keydown', handleKeyboardShortcuts);
 
+    // ========== UNSAVED CHANGES: Add browser navigation warning ==========
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     // ========== AUTOSAVE: Restore from LocalStorage ==========
     restoreFromLocalStorage();
 
@@ -113,6 +126,9 @@ onMounted(() => {
 onUnmounted(() => {
     // Clean up keyboard event listener
     window.removeEventListener('keydown', handleKeyboardShortcuts);
+
+    // ========== UNSAVED CHANGES: Remove browser navigation warning ==========
+    window.removeEventListener('beforeunload', handleBeforeUnload);
 
     // ========== AUTOSAVE: Clear autosave interval ==========
     stopAutosave();
@@ -1190,7 +1206,13 @@ const saveAsDraft = () => {
     const options = {
         forceFormData: true,
         preserveScroll: true,
+        preserveState: true, // Keep the user on the same page
         onSuccess: () => {
+            // ========== RESET DIRTY STATE: Draft is now saved ==========
+            // This prevents "unsaved changes" warning after successful draft save
+            form.clearErrors();
+            form.defaults(); // Set current form state as the new baseline
+
             toast.success('Draft saved successfully! ✅');
             isSavingDraft.value = false;
         },
@@ -1268,69 +1290,133 @@ const applyImageEdits = async (editData) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        // Calculate aspect ratio dimensions
-        let finalWidth = img.width;
-        let finalHeight = img.height;
+        // ========== CUSTOM CROP MODE ==========
+        if (editData.customCrop) {
+            // Free-form custom crop with user-defined area
+            const crop = editData.customCrop;
 
-        if (editData.aspectRatio !== 'free') {
-            const ratios = {
-                '1:1': 1,
-                '4:3': 4 / 3,
-                '16:9': 16 / 9
-            };
-            const targetRatio = ratios[editData.aspectRatio];
-            const currentRatio = img.width / img.height;
+            // Calculate scale factor between display size and actual image size
+            const containerWidth = 400; // Editor container width
+            const containerHeight = 400; // Editor container height
 
-            if (currentRatio > targetRatio) {
-                // Image is wider, crop width
-                finalWidth = img.height * targetRatio;
-                finalHeight = img.height;
-            } else {
-                // Image is taller, crop height
-                finalWidth = img.width;
-                finalHeight = img.width / targetRatio;
+            // Get actual image display size (bounded by container)
+            const displayRatio = Math.min(
+                containerWidth / img.width,
+                containerHeight / img.height
+            );
+
+            const displayWidth = img.width * displayRatio;
+            const displayHeight = img.height * displayRatio;
+
+            // Calculate offset (image is centered in container)
+            const offsetX = (containerWidth - displayWidth) / 2;
+            const offsetY = (containerHeight - displayHeight) / 2;
+
+            // Convert crop coordinates from display to actual image coordinates
+            const scaleX = img.width / displayWidth;
+            const scaleY = img.height / displayHeight;
+
+            const sx = Math.max(0, (crop.x - offsetX) * scaleX);
+            const sy = Math.max(0, (crop.y - offsetY) * scaleY);
+            const sWidth = Math.min(img.width - sx, crop.width * scaleX);
+            const sHeight = Math.min(img.height - sy, crop.height * scaleY);
+
+            // Set canvas to crop size with zoom
+            canvas.width = sWidth * editData.zoom;
+            canvas.height = sHeight * editData.zoom;
+
+            // Apply transformations
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+
+            // Apply rotation
+            if (editData.rotation % 180 === 90) {
+                // Swap dimensions for 90/270 rotation
+                [canvas.width, canvas.height] = [canvas.height, canvas.width];
             }
+            ctx.rotate((editData.rotation * Math.PI) / 180);
+
+            // Apply flip
+            ctx.scale(
+                editData.flipHorizontal ? -1 : 1,
+                editData.flipVertical ? -1 : 1
+            );
+
+            // Draw cropped portion
+            ctx.drawImage(
+                img,
+                sx, sy, sWidth, sHeight,  // Source crop area
+                -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height  // Destination
+            );
+
+            ctx.restore();
         }
+        // ========== PRESET ASPECT RATIO MODE ==========
+        else {
+            // Calculate aspect ratio dimensions
+            let finalWidth = img.width;
+            let finalHeight = img.height;
 
-        // Calculate dimensions with zoom
-        const width = finalWidth * editData.zoom;
-        const height = finalHeight * editData.zoom;
+            if (editData.aspectRatio !== 'free') {
+                const ratios = {
+                    '1:1': 1,
+                    '4:3': 4 / 3,
+                    '16:9': 16 / 9
+                };
+                const targetRatio = ratios[editData.aspectRatio];
+                const currentRatio = img.width / img.height;
 
-        // Set canvas size (accounting for rotation)
-        if (editData.rotation % 180 === 90) {
-            canvas.width = height;
-            canvas.height = width;
-        } else {
-            canvas.width = width;
-            canvas.height = height;
+                if (currentRatio > targetRatio) {
+                    // Image is wider, crop width
+                    finalWidth = img.height * targetRatio;
+                    finalHeight = img.height;
+                } else {
+                    // Image is taller, crop height
+                    finalWidth = img.width;
+                    finalHeight = img.width / targetRatio;
+                }
+            }
+
+            // Calculate dimensions with zoom
+            const width = finalWidth * editData.zoom;
+            const height = finalHeight * editData.zoom;
+
+            // Set canvas size (accounting for rotation)
+            if (editData.rotation % 180 === 90) {
+                canvas.width = height;
+                canvas.height = width;
+            } else {
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            // Apply transformations
+            ctx.save();
+
+            // Move to center for rotation
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+
+            // Apply rotation
+            ctx.rotate((editData.rotation * Math.PI) / 180);
+
+            // Apply flip
+            ctx.scale(
+                editData.flipHorizontal ? -1 : 1,
+                editData.flipVertical ? -1 : 1
+            );
+
+            // Calculate source crop for aspect ratio
+            const sx = (img.width - finalWidth) / 2;
+            const sy = (img.height - finalHeight) / 2;
+
+            // Draw image with cropping
+            ctx.drawImage(
+                img,
+                sx, sy, finalWidth, finalHeight,  // Source crop
+                -width / 2, -height / 2, width, height  // Destination
+            );
+            ctx.restore();
         }
-
-        // Apply transformations
-        ctx.save();
-
-        // Move to center for rotation
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-
-        // Apply rotation
-        ctx.rotate((editData.rotation * Math.PI) / 180);
-
-        // Apply flip
-        ctx.scale(
-            editData.flipHorizontal ? -1 : 1,
-            editData.flipVertical ? -1 : 1
-        );
-
-        // Calculate source crop for aspect ratio
-        const sx = (img.width - finalWidth) / 2;
-        const sy = (img.height - finalHeight) / 2;
-
-        // Draw image with cropping
-        ctx.drawImage(
-            img,
-            sx, sy, finalWidth, finalHeight,  // Source crop
-            -width / 2, -height / 2, width, height  // Destination
-        );
-        ctx.restore();
 
         // Convert to blob and update the image
         canvas.toBlob((blob) => {
@@ -1343,7 +1429,7 @@ const applyImageEdits = async (editData) => {
                 const file = new File([blob], 'edited-feature.jpg', { type: 'image/jpeg' });
                 form.feature_image = file;
             } else if (imageEditType.value === 'gallery' && imageEditIndex.value !== null) {
-                gallery_previews.value[imageEditIndex.value] = url;
+                galleryImagePreviews.value[imageEditIndex.value] = url;
                 // Update the actual file
                 const file = new File([blob], `edited-gallery-${imageEditIndex.value}.jpg`, { type: 'image/jpeg' });
                 if (form.gallery_images[imageEditIndex.value]) {
@@ -1634,6 +1720,11 @@ const submit = () => {
         onSuccess: () => {
             // Clear autosave on successful submit
             clearAutosave();
+
+            // ========== RESET DIRTY STATE: Form is now saved ==========
+            // This prevents "unsaved changes" warning after successful save
+            form.clearErrors();
+            form.defaults(); // Set current form state as the new baseline
 
             toast.success(
                 isEditMode.value
