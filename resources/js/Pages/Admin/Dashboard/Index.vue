@@ -98,6 +98,77 @@ const formatCurrency = (amount) => {
     }).format(amount);
 };
 
+// Group inventory items by product (avoid duplicates, combine variations)
+const groupedInventoryItems = computed(() => {
+    if (!props.data.inventoryItems || props.data.inventoryItems.length === 0) {
+        return [];
+    }
+
+    const productMap = new Map();
+
+    props.data.inventoryItems.forEach(item => {
+        // Extract base product name (remove variation details)
+        const baseProductName = item.name.split(' - ')[0].trim();
+
+        if (!productMap.has(baseProductName)) {
+            // First occurrence of this product
+            productMap.set(baseProductName, {
+                id: item.id,
+                name: baseProductName,
+                current: 0,
+                max: 0,
+                status: item.status,
+                percentage: 0,
+                variations: []
+            });
+        }
+
+        const product = productMap.get(baseProductName);
+
+        // Extract variation name (everything after first dash)
+        const variationName = item.name.includes(' - ')
+            ? item.name.split(' - ').slice(1).join(' - ')
+            : 'Default';
+
+        // Add variation details
+        product.variations.push({
+            name: variationName,
+            quantity: item.current,
+            status: item.status,
+            percentage: item.percentage
+        });
+
+        // Update totals
+        product.current += item.current;
+        product.max += item.max;
+
+        // Update status to worst case (critical > warning > good)
+        if (item.status === 'critical') {
+            product.status = 'critical';
+        } else if (item.status === 'warning' && product.status !== 'critical') {
+            product.status = 'warning';
+        }
+    });
+
+    // Calculate percentage and sort variations
+    const result = Array.from(productMap.values()).map(product => {
+        product.percentage = product.max > 0
+            ? Math.round((product.current / product.max) * 100)
+            : 0;
+
+        // Sort variations by quantity (descending)
+        product.variations.sort((a, b) => b.quantity - a.quantity);
+
+        return product;
+    });
+
+    // Sort by status priority (critical first) and then by name
+    return result.sort((a, b) => {
+        const statusPriority = { critical: 0, warning: 1, good: 2 };
+        const statusDiff = statusPriority[a.status] - statusPriority[b.status];
+        return statusDiff !== 0 ? statusDiff : a.name.localeCompare(b.name);
+    });
+});
 
 // Daily orders chart options
 const dailyOrdersOptions = computed(() => ({
@@ -105,20 +176,10 @@ const dailyOrdersOptions = computed(() => ({
         type: "area",
         height: 350,
         toolbar: {
-            show: true,
-            tools: {
-                download: true,
-                selection: true,
-                zoom: true,
-                zoomin: true,
-                zoomout: true,
-                pan: true,
-            },
+            show: false,
         },
         zoom: {
-            enabled: true,
-            type: 'x',
-            autoScaleYaxis: true,
+            enabled: false,
         },
         events: {
             dataPointSelection: handleChartClick,
@@ -762,8 +823,25 @@ onMounted(() => {
                                 :key="product.id"
                                 class="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-900/20 dark:hover:to-teal-900/20 transition-all cursor-pointer border-2 border-transparent hover:border-emerald-200 dark:hover:border-emerald-800 transform hover:scale-[1.02]"
                             >
-                                <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center font-extrabold text-xl sm:text-2xl shadow-lg">
+                                <!-- Rank Badge -->
+                                <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl flex items-center justify-center font-extrabold text-lg shadow-lg">
                                     {{ index + 1 }}
+                                </div>
+
+                                <!-- Product Image -->
+                                <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-lg border-2 border-white dark:border-gray-700">
+                                    <img
+                                        v-if="product.thumbnail"
+                                        :src="product.thumbnail"
+                                        :alt="product.name"
+                                        class="w-full h-full object-cover"
+                                        @error="$event.target.src = '/uploads/products/default-product.png'"
+                                    />
+                                    <div v-else class="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                                        <svg class="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                        </svg>
+                                    </div>
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <h4 class="text-sm font-extrabold text-gray-900 dark:text-gray-100 truncate">{{ product.name }}</h4>
@@ -896,14 +974,15 @@ onMounted(() => {
                         </div>
                         <div class="p-4 sm:p-6 max-h-[500px] overflow-y-auto">
                             <div class="space-y-3">
+                                <!-- Using grouped inventory items to avoid duplicates -->
                                 <div
-                                    v-for="item in data.inventoryItems"
+                                    v-for="item in groupedInventoryItems"
                                     :key="item.id"
                                     :class="[
-                                        'flex items-center justify-between p-3 rounded-lg border transition-all',
-                                        item.status === 'critical' ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30' : '',
-                                        item.status === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/30' : '',
-                                        item.status === 'good' ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/30' : ''
+                                        'p-4 rounded-xl border-2 transition-all hover:shadow-md cursor-pointer',
+                                        item.status === 'critical' ? 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-900/40 hover:border-red-400' : '',
+                                        item.status === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-300 dark:border-yellow-900/40 hover:border-yellow-400' : '',
+                                        item.status === 'good' ? 'bg-green-50 dark:bg-green-900/10 border-green-300 dark:border-green-900/40 hover:border-green-400' : ''
                                     ]"
                                 >
                                     <div class="flex-1 min-w-0 pr-3">
@@ -922,16 +1001,17 @@ onMounted(() => {
                                             <span
                                                 v-for="(variation, idx) in item.variations.slice(0, 3)"
                                                 :key="idx"
-                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 transition-all hover:bg-blue-200 dark:hover:bg-blue-900/50"
                                             >
-                                                {{ variation.name }}: {{ variation.quantity }}
+                                                <span class="font-semibold">{{ variation.name }}</span>
+                                                <span class="ml-1 text-blue-600 dark:text-blue-400">×{{ variation.quantity }}</span>
                                             </span>
                                             <span
                                                 v-if="item.variations.length > 3"
-                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                                                :title="`${item.variations.length - 3} more variations`"
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 cursor-help transition-all hover:from-purple-200 hover:to-pink-200 dark:hover:from-purple-900/50 dark:hover:to-pink-900/50"
+                                                :title="item.variations.slice(3).map(v => `${v.name}: ${v.quantity}`).join(', ')"
                                             >
-                                                +{{ item.variations.length - 3 }} more...
+                                                +{{ item.variations.length - 3 }} more variations
                                             </span>
                                         </div>
 
