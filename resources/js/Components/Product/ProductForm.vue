@@ -1262,19 +1262,19 @@ const applyImageEdits = async (editData) => {
 
         // Apply transformations
         ctx.save();
-        
+
         // Move to center for rotation
         ctx.translate(width / 2, height / 2);
-        
+
         // Apply rotation
         ctx.rotate((editData.rotation * Math.PI) / 180);
-        
+
         // Apply flip
         ctx.scale(
             editData.flipHorizontal ? -1 : 1,
             editData.flipVertical ? -1 : 1
         );
-        
+
         // Draw image
         ctx.drawImage(img, -width / 2, -height / 2, width, height);
         ctx.restore();
@@ -1282,7 +1282,7 @@ const applyImageEdits = async (editData) => {
         // Convert to blob and update the image
         canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
-            
+
             // Update the appropriate image based on type
             if (imageEditType.value === 'feature') {
                 form.feature_image_preview = url;
@@ -1297,7 +1297,7 @@ const applyImageEdits = async (editData) => {
                     form.gallery_images[imageEditIndex.value] = file;
                 }
             }
-            
+
             toast.success('Image edits applied! 🎨');
         }, 'image/jpeg', 0.95);
 
