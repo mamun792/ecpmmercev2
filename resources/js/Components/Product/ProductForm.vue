@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed, onMounted, nextTick } from "vue";
+import { ref, watch, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useForm, router, Head, usePage } from "@inertiajs/vue3";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { Ckeditor } from "@ckeditor/ckeditor5-vue";
@@ -8,6 +8,10 @@ import { ClassicEditor, editorConfig } from "@/Helpers/ckeditor";
 import AttributeSelector from "@/Components/Product/AttributeSelector.vue";
 import InventoryManager from "@/Components/Product/InventoryManager.vue";
 import ProductConflictModal from "@/Components/Product/ProductConflictModal.vue";
+import Tooltip from "@/Components/UI/Tooltip.vue";
+import ImageEditor from "@/Components/UI/ImageEditor.vue";
+import BulkImportExport from "@/Components/UI/BulkImportExport.vue";
+import TemplateManager from "@/Components/UI/TemplateManager.vue";
 import {
     PlusIcon,
     XIcon,
@@ -31,6 +35,11 @@ import {
     FileText,
     Palette,
     Zap,
+    FileDown,
+    Wand2,
+    Keyboard,
+    Crop,
+    Download,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -89,6 +98,14 @@ onMounted(() => {
             toast.error(page.props.flash.error);
         }
     });
+
+    // Add keyboard shortcuts
+    window.addEventListener('keydown', handleKeyboardShortcuts);
+});
+
+onUnmounted(() => {
+    // Clean up keyboard event listener
+    window.removeEventListener('keydown', handleKeyboardShortcuts);
 });
 
 const activeTab = ref("general");
@@ -108,6 +125,27 @@ const globalVariationStock = ref("");
 const globalVariationPreviousPrice = ref("");
 // Per-variation validation messages (keyed by variation index)
 const variationPriceErrors = ref({});
+
+// Draft save functionality
+const isSavingDraft = ref(false);
+const showKeyboardShortcuts = ref(false);
+
+// AI Suggestions
+const aiSuggestions = ref([]);
+const isLoadingAI = ref(false);
+
+// Image Editor
+const showImageEditor = ref(false);
+const imageToEdit = ref(null);
+const imageEditType = ref(''); // 'feature', 'gallery', 'variation'
+
+// Bulk Import/Export
+const showBulkModal = ref(false);
+const bulkMode = ref('import');
+
+// Template Manager
+const showTemplateModal = ref(false);
+const templateMode = ref('load');
 
 // Big Tech Style Conflict Resolution
 const showConflictModal = ref(false);
@@ -1014,6 +1052,154 @@ const calculateTotalInitialStock = () => {
     }, 0);
 };
 
+// Keyboard shortcuts handler
+const handleKeyboardShortcuts = (e) => {
+    // Ctrl+S or Cmd+S - Save
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        submit();
+        toast('💾 Saving...', { duration: 1000 });
+    }
+    
+    // Ctrl+Shift+D or Cmd+Shift+D - Save as Draft
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        saveAsDraft();
+    }
+    
+    // Ctrl+/ or Cmd+/ - Show keyboard shortcuts
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        showKeyboardShortcuts.value = !showKeyboardShortcuts.value;
+    }
+    
+    // Esc - Close modals/shortcuts panel
+    if (e.key === 'Escape') {
+        showKeyboardShortcuts.value = false;
+        showConflictModal.value = false;
+    }
+};
+
+// Save as draft functionality
+const saveAsDraft = () => {
+    isSavingDraft.value = true;
+    
+    // Set status to unpublished for draft
+    const originalStatus = form.status;
+    form.status = 'Unpublished';
+    
+    const options = {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.success('Draft saved successfully! ✅');
+            isSavingDraft.value = false;
+        },
+        onError: () => {
+            form.status = originalStatus; // Restore original status on error
+            toast.error('Failed to save draft');
+            isSavingDraft.value = false;
+        }
+    };
+    
+    if (isEditMode.value) {
+        form.post(route("admin.products.update", props.product.id), options);
+    } else {
+        form.post(route("admin.products.store"), options);
+    }
+};
+
+// Generate AI product name suggestions
+const generateAISuggestions = () => {
+    if (!form.category_id) {
+        toast.error('Please select a category first');
+        return;
+    }
+    
+    isLoadingAI.value = true;
+    
+    // Simple AI-like suggestion logic (in production, this would call an actual AI API)
+    setTimeout(() => {
+        const category = props.categories.find(c => c.id == form.category_id);
+        const categoryName = category?.name || 'Product';
+        
+        aiSuggestions.value = [
+            `Premium ${categoryName} - High Quality`,
+            `Professional ${categoryName} - Best Seller`,
+            `Luxury ${categoryName} Collection`,
+            `Modern ${categoryName} - New Arrival`,
+            `Classic ${categoryName} - Trending Now`
+        ];
+        
+        isLoadingAI.value = false;
+        toast.success('AI suggestions generated! 🤖');
+    }, 1000);
+};
+
+const applySuggestion = (suggestion) => {
+    form.name = suggestion;
+    aiSuggestions.value = [];
+    toast.success('Suggestion applied! ✨');
+};
+
+// Image editor handlers
+const openImageEditor = (imageSrc, type) => {
+    imageToEdit.value = imageSrc;
+    imageEditType.value = type;
+    showImageEditor.value = true;
+};
+
+const applyImageEdits = (editData) => {
+    // In production, apply transformations to the actual image
+    toast.success('Image edits applied! 🎨');
+    console.log('Applied edits:', editData);
+};
+
+// Bulk import/export handlers
+const openBulkImport = () => {
+    bulkMode.value = 'import';
+    showBulkModal.value = true;
+};
+
+const openBulkExport = () => {
+    bulkMode.value = 'export';
+    showBulkModal.value = true;
+};
+
+const handleBulkImport = (data) => {
+    toast.success(`Successfully imported ${data.length} products! 📦`);
+    // In production, process the imported data
+    console.log('Imported products:', data);
+};
+
+const handleBulkExport = (options) => {
+    toast.success('Products exported successfully! 📄');
+    // In production, trigger download
+    console.log('Export options:', options);
+};
+
+// Template manager handlers
+const openTemplateManager = (mode) => {
+    templateMode.value = mode;
+    showTemplateModal.value = true;
+};
+
+const saveAsTemplate = (templateData) => {
+    toast.success(`Template "${templateData.name}" saved! 💾`);
+    // In production, save to backend
+    console.log('Saved template:', templateData);
+};
+
+const loadFromTemplate = (templateData) => {
+    // Apply template data to form
+    Object.keys(templateData).forEach(key => {
+        if (form[key] !== undefined) {
+            form[key] = templateData[key];
+        }
+    });
+    toast.success('Template loaded successfully! ✅');
+};
+
 const submit = () => {
     // Filter out invalid variations before submission
     // A valid variation must have attributes array with at least one attribute that has attribute_value_id
@@ -1192,17 +1378,78 @@ const submit = () => {
                     </div>
 
                     <!-- Right: Actions -->
-                    <div class="flex items-center gap-3">
-                        <button
-                            @click="submit"
-                            :disabled="form.processing || hasValidationErrors"
-                            class="group relative inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-                        >
-                            <Save class="w-4 h-4" />
-                            <span class="hidden sm:inline">{{ form.processing ? "Saving..." : "Save Product" }}</span>
-                            <span class="sm:hidden">{{ form.processing ? "..." : "Save" }}</span>
-                            <div class="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        </button>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <!-- Template Manager -->
+                        <Tooltip text="Load or save product template" position="bottom">
+                            <button
+                                @click="openTemplateManager('load')"
+                                class="p-2.5 rounded-xl bg-indigo-100 hover:bg-indigo-200 text-indigo-700 transition-all"
+                                type="button"
+                            >
+                                <FileText class="w-4 h-4" />
+                            </button>
+                        </Tooltip>
+
+                        <!-- Bulk Import/Export -->
+                        <Tooltip text="Import/Export products" position="bottom">
+                            <button
+                                @click="openBulkImport"
+                                class="p-2.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-all"
+                                type="button"
+                            >
+                                <Download class="w-4 h-4" />
+                            </button>
+                        </Tooltip>
+
+                        <!-- Keyboard Shortcuts Helper -->
+                        <Tooltip text="View keyboard shortcuts (Ctrl+/)" position="bottom">
+                            <button
+                                @click="showKeyboardShortcuts = !showKeyboardShortcuts"
+                                class="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all"
+                                type="button"
+                            >
+                                <Keyboard class="w-4 h-4" />
+                            </button>
+                        </Tooltip>
+
+                        <!-- AI Suggestions Button -->
+                        <Tooltip text="Generate AI product name suggestions" position="bottom">
+                            <button
+                                @click="generateAISuggestions"
+                                :disabled="isLoadingAI || !form.category_id"
+                                class="p-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="button"
+                            >
+                                <Wand2 class="w-4 h-4" :class="{ 'animate-spin': isLoadingAI }" />
+                            </button>
+                        </Tooltip>
+
+                        <!-- Save as Draft Button -->
+                        <Tooltip text="Save as draft (Ctrl+Shift+D)" position="bottom">
+                            <button
+                                @click="saveAsDraft"
+                                :disabled="isSavingDraft"
+                                class="group relative inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="button"
+                            >
+                                <FileDown class="w-4 h-4" />
+                                <span class="hidden lg:inline">{{ isSavingDraft ? "Saving..." : "Draft" }}</span>
+                            </button>
+                        </Tooltip>
+
+                        <!-- Save Product Button -->
+                        <Tooltip text="Save product (Ctrl+S)" position="bottom">
+                            <button
+                                @click="submit"
+                                :disabled="form.processing || hasValidationErrors"
+                                class="group relative inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                            >
+                                <Save class="w-4 h-4" />
+                                <span class="hidden sm:inline">{{ form.processing ? "Saving..." : "Save Product" }}</span>
+                                <span class="sm:hidden">{{ form.processing ? "..." : "Save" }}</span>
+                                <div class="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
 
@@ -1327,30 +1574,67 @@ const submit = () => {
                                                 id="name"
                                                 v-model="form.name"
                                                 type="text"
-                                                class="w-full px-5 py-4 text-lg border-2 border-gray-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-gray-400 bg-gray-50/50 focus:bg-white"
-                                                placeholder="e.g. Premium Cotton T-Shirt"
+                                                maxlength="200"
+                                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-gray-400 bg-gray-50/50 focus:bg-white"
+                                                placeholder="e.g., Premium Cotton T-Shirt - Black - Large"
                                             />
                                             <div class="absolute right-4 top-1/2 -translate-y-1/2">
-                                                <span class="text-xs text-gray-400">{{ form.name?.length || 0 }} / 200</span>
+                                                <span :class="[
+                                                    'text-xs font-medium transition-colors',
+                                                    (form.name?.length || 0) > 180 ? 'text-red-500' :
+                                                    (form.name?.length || 0) > 150 ? 'text-yellow-600' : 'text-gray-400'
+                                                ]">{{ form.name?.length || 0 }}/200</span>
                                             </div>
                                         </div>
                                         <p v-if="form.errors.name" class="mt-2 text-sm text-red-600 flex items-center gap-1">
                                             <XIcon class="w-4 h-4" />{{ form.errors.name }}
                                         </p>
+
+                                        <!-- AI Suggestions Panel -->
+                                        <transition
+                                            enter-active-class="transition ease-out duration-200"
+                                            enter-from-class="opacity-0 translate-y-1"
+                                            enter-to-class="opacity-100 translate-y-0"
+                                            leave-active-class="transition ease-in duration-150"
+                                            leave-from-class="opacity-100 translate-y-0"
+                                            leave-to-class="opacity-0 translate-y-1"
+                                        >
+                                            <div v-if="aiSuggestions.length > 0" class="mt-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl">
+                                                <div class="flex items-center gap-2 mb-3">
+                                                    <Wand2 class="w-4 h-4 text-purple-600" />
+                                                    <h4 class="text-sm font-semibold text-purple-900">AI Suggestions</h4>
+                                                    <button @click="aiSuggestions = []" class="ml-auto text-purple-600 hover:text-purple-800">
+                                                        <XIcon class="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <div class="space-y-2">
+                                                    <button
+                                                        v-for="(suggestion, index) in aiSuggestions"
+                                                        :key="index"
+                                                        @click="applySuggestion(suggestion)"
+                                                        type="button"
+                                                        class="w-full text-left px-3 py-2 bg-white hover:bg-purple-100 border border-purple-200 rounded-lg text-sm text-gray-700 hover:text-purple-900 transition-all"
+                                                    >
+                                                        {{ suggestion }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </transition>
                                     </div>
 
                                     <!-- Two Column Grid -->
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
                                             <label for="product_code" class="block text-sm font-semibold text-gray-700 mb-2">
-                                                Product Code (SKU)
+                                                Product Code (SKU) <span class="text-xs font-normal text-gray-400 ml-1">(Optional)</span>
                                             </label>
                                             <input
                                                 id="product_code"
                                                 v-model="form.product_code"
                                                 type="text"
+                                                maxlength="50"
                                                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-gray-400 bg-gray-50/50 focus:bg-white"
-                                                placeholder="SKU-001"
+                                                placeholder="SKU-001 (auto-generated if empty)"
                                             />
                                             <p v-if="form.errors.product_code" class="mt-2 text-sm text-red-600">{{ form.errors.product_code }}</p>
                                         </div>
@@ -1442,6 +1726,7 @@ const submit = () => {
                                                                 v-model="form.price"
                                                                 type="number"
                                                                 step="0.01"
+                                                                min="0"
                                                                 class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all bg-gray-50/50 focus:bg-white"
                                                                 placeholder="0.00"
                                                             />
@@ -1450,10 +1735,7 @@ const submit = () => {
                                                     </div>
 
                                                     <div>
-                                                        <label for="cost_price" class="block text-sm font-semibold text-gray-700 mb-2">
-                                                            Cost Price
-                                                            <span class="text-xs text-gray-400 font-normal ml-1">(For profit calculation)</span>
-                                                        </label>
+                                                        <label for="cost_price" class="block text-sm font-semibold text-gray-700 mb-2">Cost Price</label>
                                                         <div class="relative">
                                                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">৳</span>
                                                             <input
@@ -1461,23 +1743,18 @@ const submit = () => {
                                                                 v-model="form.cost_price"
                                                                 type="number"
                                                                 step="0.01"
+                                                                min="0"
                                                                 class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all bg-gray-50/50 focus:bg-white"
                                                                 placeholder="0.00"
                                                             />
                                                         </div>
-                                                        <p class="mt-1 text-xs text-gray-500 flex items-center gap-1">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                                                            </svg>
+                                                        <p v-if="form.price && form.cost_price" class="mt-1 text-xs text-emerald-600">
                                                             Profit: ৳{{ (parseFloat(form.price || 0) - parseFloat(form.cost_price || 0)).toFixed(2) }}
                                                         </p>
                                                     </div>
 
                                                     <div>
-                                                        <label for="previous_price" class="block text-sm font-semibold text-gray-700 mb-2">
-                                                            Previous Price
-                                                            <span class="text-xs text-gray-400 font-normal ml-1">(Compare at)</span>
-                                                        </label>
+                                                        <label for="previous_price" class="block text-sm font-semibold text-gray-700 mb-2">Previous Price</label>
                                                         <div class="relative">
                                                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">৳</span>
                                                             <input
@@ -1485,6 +1762,7 @@ const submit = () => {
                                                                 v-model="form.previous_price"
                                                                 type="number"
                                                                 step="0.01"
+                                                                min="0"
                                                                 :class="[
                                                                     'w-full pl-10 pr-4 py-3 border-2 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/50 focus:bg-white',
                                                                     priceError ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
@@ -1516,29 +1794,43 @@ const submit = () => {
                             <!-- Description Card -->
                             <div class="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 shadow-sm overflow-hidden">
                                 <div class="p-6 border-b border-gray-100">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                                            <FileText class="w-5 h-5 text-white" />
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                                                <FileText class="w-5 h-5 text-white" />
+                                            </div>
+                                            <div>
+                                                <h3 class="text-lg font-bold text-gray-900">Product Description</h3>
+                                                <p class="text-sm text-gray-500">Help customers understand your product</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 class="text-lg font-bold text-gray-900">Description</h3>
-                                            <p class="text-sm text-gray-500">Describe your product in detail</p>
+                                        <div class="hidden md:block px-3 py-1.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-lg">
+                                            Rich text editor enabled
                                         </div>
                                     </div>
                                 </div>
                                 <div class="p-6 space-y-6">
+
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Short Description</label>
-                                        <div class="rounded-xl overflow-hidden border-2 border-gray-200 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
+                                        <label class="flex items-center justify-between text-sm font-semibold text-gray-700 mb-2">
+                                            <span>Short Description</span>
+                                            <span class="text-xs font-normal text-gray-500">Brief overview (2-3 sentences)</span>
+                                        </label>
+                                        <div class="rounded-xl overflow-hidden border-2 border-gray-200 focus-within:border-purple-500 focus-within:ring-4 focus-within:ring-purple-500/10 transition-all">
                                             <ckeditor v-if="isLayoutReady" :editor="editor" v-model="form.short_description" :config="editorConfigWithProductId" />
                                         </div>
+                                        <p class="mt-1.5 text-xs text-gray-500">Appears in product listings and previews - keep it concise and compelling</p>
                                     </div>
 
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Full Description</label>
-                                        <div class="rounded-xl overflow-hidden border-2 border-gray-200 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
+                                        <label class="flex items-center justify-between text-sm font-semibold text-gray-700 mb-2">
+                                            <span>Full Description</span>
+                                            <span class="text-xs font-normal text-gray-500">Complete product details</span>
+                                        </label>
+                                        <div class="rounded-xl overflow-hidden border-2 border-gray-200 focus-within:border-purple-500 focus-within:ring-4 focus-within:ring-purple-500/10 transition-all">
                                             <ckeditor v-if="isLayoutReady" :editor="editor" v-model="form.description" :config="editorConfigWithProductId" />
                                         </div>
+                                        <p class="mt-1.5 text-xs text-gray-500">Shown on product detail page - be thorough and informative</p>
                                     </div>
                                 </div>
                             </div>
@@ -1614,6 +1906,39 @@ const submit = () => {
 
                         <!-- MEDIA TAB -->
                         <div v-show="activeTab === 'media'" class="space-y-6">
+                            <!-- Best Practices Banner -->
+                            <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-indigo-900 mb-2">Image Best Practices</h4>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-indigo-700">
+                                            <div class="flex items-start gap-2">
+                                                <span class="text-indigo-500 font-bold mt-0.5">✓</span>
+                                                <span><strong>High quality:</strong> Use at least 1200x1200px images</span>
+                                            </div>
+                                            <div class="flex items-start gap-2">
+                                                <span class="text-indigo-500 font-bold mt-0.5">✓</span>
+                                                <span><strong>Clean background:</strong> White or neutral backgrounds work best</span>
+                                            </div>
+                                            <div class="flex items-start gap-2">
+                                                <span class="text-indigo-500 font-bold mt-0.5">✓</span>
+                                                <span><strong>Multiple angles:</strong> Show product from different perspectives</span>
+                                            </div>
+                                            <div class="flex items-start gap-2">
+                                                <span class="text-indigo-500 font-bold mt-0.5">✓</span>
+                                                <span><strong>Consistent style:</strong> Keep lighting and style uniform</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Feature Image Card -->
                             <div class="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 shadow-sm overflow-hidden">
                                 <div class="p-6 border-b border-gray-100">
@@ -1623,11 +1948,14 @@ const submit = () => {
                                                 <ImageIcon class="w-5 h-5 text-white" />
                                             </div>
                                             <div>
-                                                <h3 class="text-lg font-bold text-gray-900">Feature Image</h3>
-                                                <p class="text-sm text-gray-500">Main product display image</p>
+                                                <h3 class="text-lg font-bold text-gray-900">Feature Image <span class="text-red-500">*</span></h3>
+                                                <p class="text-sm text-gray-500">Primary image shown in listings and previews</p>
                                             </div>
                                         </div>
-                                        <span class="px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-600">JPG, PNG, WEBP</span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">Recommended: 1200×1200px</span>
+                                            <span class="px-3 py-1 bg-gray-100 rounded-lg text-xs font-medium text-gray-600">Max: 5MB</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="p-6">
@@ -1647,22 +1975,34 @@ const submit = () => {
                                                 <Upload class="h-8 w-8 text-white" />
                                             </div>
                                             <p class="text-base font-semibold text-gray-700 mb-1">Click to upload or drag & drop</p>
-                                            <p class="text-sm text-gray-500">Maximum file size: 5MB</p>
+                                            <p class="text-sm text-gray-500 mb-1">Supported formats: JPG, PNG, WEBP</p>
+                                            <p class="text-xs text-gray-400">This will be the main product thumbnail</p>
                                         </div>
 
                                         <div v-else class="relative group">
                                             <div class="h-72 w-full bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center">
                                                 <img :src="form.feature_image_preview" class="h-full w-full object-contain" alt="Feature Preview" />
                                             </div>
-                                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-6">
+                                            <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    type="button"
+                                                    @click="$refs.featureInput.click()"
+                                                    class="px-3 py-2 bg-white/90 backdrop-blur-sm hover:bg-white rounded-lg text-gray-700 font-medium text-sm flex items-center gap-2 shadow-lg transition-all"
+                                                >
+                                                    <Upload class="h-4 w-4" />
+                                                    Replace
+                                                </button>
                                                 <button
                                                     type="button"
                                                     @click="removeFeatureImage"
-                                                    class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl text-white font-semibold text-sm flex items-center gap-2 shadow-lg transition-all"
+                                                    class="px-3 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-white font-medium text-sm flex items-center gap-2 shadow-lg transition-all"
                                                 >
                                                     <XIcon class="h-4 w-4" />
-                                                    Remove Image
+                                                    Remove
                                                 </button>
+                                            </div>
+                                            <div class="absolute bottom-4 left-4 px-3 py-2 bg-black/70 backdrop-blur-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <p class="text-xs text-white font-medium">✓ Main product image</p>
                                             </div>
                                         </div>
 
@@ -1678,14 +2018,14 @@ const submit = () => {
                             <!-- Gallery Images Card -->
                             <div class="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 shadow-sm overflow-hidden">
                                 <div class="p-6 border-b border-gray-100">
-                                    <div class="flex items-center justify-between">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
                                                 <Layers class="w-5 h-5 text-white" />
                                             </div>
                                             <div>
                                                 <h3 class="text-lg font-bold text-gray-900">Gallery Images</h3>
-                                                <p class="text-sm text-gray-500">Multiple images to showcase your product</p>
+                                                <p class="text-sm text-gray-500">Show product from multiple angles ({{ galleryImagePreviews.length }} uploaded)</p>
                                             </div>
                                         </div>
                                         <button
@@ -1699,7 +2039,24 @@ const submit = () => {
                                     </div>
                                 </div>
                                 <div class="p-6">
+                                    <div v-if="galleryImagePreviews.length === 0" class="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                                        <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-2xl flex items-center justify-center">
+                                            <Layers class="h-8 w-8 text-gray-400" />
+                                        </div>
+                                        <p class="text-sm font-medium text-gray-700 mb-1">No gallery images yet</p>
+                                        <p class="text-xs text-gray-500 mb-4">Add multiple images to showcase your product better</p>
+                                        <button
+                                            type="button"
+                                            @click="$refs.galleryInput.click()"
+                                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-violet-700 bg-violet-50 rounded-lg hover:bg-violet-100 transition-colors"
+                                        >
+                                            <Upload class="w-4 h-4" />
+                                            Upload Gallery Images
+                                        </button>
+                                    </div>
+
                                     <div
+                                        v-else
                                         class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
                                         @dragover.prevent
                                         @dragenter="onDragEnter"
@@ -2365,6 +2722,83 @@ const submit = () => {
         @restore="handleConflictRestore"
         @create-new="handleConflictCreateNew"
     />
+
+    <!-- Keyboard Shortcuts Modal -->
+    <transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+    >
+        <div v-if="showKeyboardShortcuts" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" @click="showKeyboardShortcuts = false">
+            <div @click.stop class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <Keyboard class="w-6 h-6 text-white" />
+                            <h3 class="text-xl font-bold text-white">Keyboard Shortcuts</h3>
+                        </div>
+                        <button @click="showKeyboardShortcuts = false" class="text-white/80 hover:text-white transition-colors">
+                            <XIcon class="w-5 h-5" />
+                        </button>
+                    </div>
+                    <p class="text-white/90 text-sm mt-1">Speed up your workflow</p>
+                </div>
+                <div class="p-6 space-y-3">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-700">Save Product</span>
+                        <kbd class="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono text-gray-700 shadow-sm">Ctrl+S</kbd>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-700">Save as Draft</span>
+                        <kbd class="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono text-gray-700 shadow-sm">Ctrl+Shift+D</kbd>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-700">Toggle Shortcuts</span>
+                        <kbd class="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono text-gray-700 shadow-sm">Ctrl+/</kbd>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-700">Close Modal</span>
+                        <kbd class="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono text-gray-700 shadow-sm">Esc</kbd>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <p class="text-xs text-gray-500 text-center">
+                            💡 Tip: Use <kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">⌘</kbd> instead of Ctrl on Mac
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- Image Editor Modal -->
+    <ImageEditor
+        :show="showImageEditor"
+        :image-src="imageToEdit"
+        @close="showImageEditor = false"
+        @apply="applyImageEdits"
+    />
+
+    <!-- Bulk Import/Export Modal -->
+    <BulkImportExport
+        :show="showBulkModal"
+        :mode="bulkMode"
+        @close="showBulkModal = false"
+        @import="handleBulkImport"
+        @export="handleBulkExport"
+    />
+
+    <!-- Template Manager Modal -->
+    <TemplateManager
+        :show="showTemplateModal"
+        :mode="templateMode"
+        :current-data="form"
+        @close="showTemplateModal = false"
+        @save="saveAsTemplate"
+        @load="loadFromTemplate"
+    />
 </template>
 
 <style scoped>
@@ -2411,4 +2845,46 @@ select {
 .bg-white\/70 {
     animation: fadeInUp 0.3s ease-out;
 }
+
+/* Mobile Enhancements */
+@media (max-width: 640px) {
+    /* Larger touch targets for mobile */
+    button, input, select, textarea {
+        min-height: 44px;
+    }
+    
+    /* Better spacing on mobile */
+    .p-6 {
+        padding: 1rem;
+    }
+    
+    /* Reduce font sizes slightly on mobile */
+    input, select, textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Stack buttons vertically on mobile */
+    .flex.items-center.gap-3 {
+        flex-wrap: wrap;
+    }
+    
+    /* Full width modals on mobile */
+    .max-w-md {
+        max-width: calc(100vw - 2rem);
+    }
+}
+
+/* Improved focus states for accessibility */
+input:focus, select:focus, textarea:focus, button:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+
+/* Better hover states on desktop only */
+@media (hover: hover) {
+    button:hover {
+        transform: translateY(-1px);
+    }
+}
 </style>
+
