@@ -98,6 +98,21 @@ const formatCurrency = (amount) => {
     }).format(amount);
 };
 
+// Get product image URL with proper path handling
+const getProductImage = (product) => {
+    if (!product || !product.image) {
+        return null;
+    }
+
+    // If image already has full path, return as is
+    if (product.image.startsWith('http') || product.image.startsWith('/storage/')) {
+        return product.image;
+    }
+
+    // Otherwise prepend /storage/
+    return `/storage/${product.image}`;
+};
+
 // Group inventory items by product (avoid duplicates, combine variations)
 const groupedInventoryItems = computed(() => {
     if (!props.data.inventoryItems || props.data.inventoryItems.length === 0) {
@@ -829,17 +844,17 @@ onMounted(() => {
                                 </div>
 
                                 <!-- Product Image -->
-                                <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-lg border-2 border-white dark:border-gray-700">
+                                <div class="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-lg border-2 border-white dark:border-gray-700 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
                                     <img
-                                        v-if="product.thumbnail"
-                                        :src="product.thumbnail"
+                                        v-if="getProductImage(product)"
+                                        :src="getProductImage(product)"
                                         :alt="product.name"
-                                        class="w-full h-full object-cover"
-                                        @error="$event.target.src = '/uploads/products/default-product.png'"
+                                        class="w-full h-full object-cover bg-white dark:bg-gray-800"
+                                        @error="(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }"
                                     />
-                                    <div v-else class="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                                    <div class="w-full h-full flex items-center justify-center" :class="{ 'hidden': getProductImage(product) }">
                                         <svg class="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                         </svg>
                                     </div>
                                 </div>
