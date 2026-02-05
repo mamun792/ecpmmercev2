@@ -1,5 +1,5 @@
 <script setup>
-import { defineProps, ref, computed, watch } from 'vue';
+import { defineProps, ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import {
@@ -11,7 +11,14 @@ import {
   ArrowUpRight,
   AlertTriangle,
   TrendingUp,
-  Box
+  Box,
+  Download,
+  Printer,
+  Edit,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Minus
 } from 'lucide-vue-next';
 import { toast } from "@steveyuowo/vue-hot-toast";
 
@@ -36,6 +43,125 @@ const sortBy = ref('name');
 const stockStatusFilter = ref('all'); // all, in_stock, low_stock, out_of_stock
 const locationFilter = ref('all'); // all, MAIN, STORE, etc.
 const isSearching = ref(false);
+
+// New state for enhancements
+const selectedProducts = ref([]);
+const showBulkUpdateModal = ref(false);
+const bulkUpdateQuantity = ref(0);
+const showShortcutsModal = ref(false);
+
+// Keyboard shortcuts handler
+const handleKeyboardShortcut = (e) => {
+  // Don't trigger shortcuts when typing in input fields
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    return;
+  }
+
+  // Ctrl/Cmd + K - Toggle shortcuts modal
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    showShortcutsModal.value = !showShortcutsModal.value;
+    return;
+  }
+
+  // Ctrl/Cmd + E - Export CSV
+  if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+    e.preventDefault();
+    exportToCSV();
+    return;
+  }
+
+  // Ctrl/Cmd + P - Print
+  if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+    e.preventDefault();
+    printInventory();
+    return;
+  }
+
+  // Ctrl/Cmd + F - Focus search
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    document.querySelector('input[type="text"]')?.focus();
+    return;
+  }
+
+  // Number keys 1-4 for filter tabs
+  if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+    if (e.key === '1') stockStatusFilter.value = 'all';
+    else if (e.key === '2') stockStatusFilter.value = 'in_stock';
+    else if (e.key === '3') stockStatusFilter.value = 'low_stock';
+    else if (e.key === '4') stockStatusFilter.value = 'out_of_stock';
+  }
+};
+
+// Lifecycle hooks for keyboard shortcuts
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyboardShortcut);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyboardShortcut);
+});
+
+// Export to CSV function
+const exportToCSV = () => {
+  const headers = ['Product ID', 'Product Name', 'Stock Value', 'Available', 'Sold', 'Status'];
+  const rows = filteredProducts.value.map(p => [
+    p.product_id,
+    p.product_name,
+    formatCurrency(p.total_stock * p.product_price),
+    p.total_stock,
+    p.total_sold,
+    p.stock_status
+  ]);
+  
+  const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `inventory_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  toast.success('Inventory exported successfully!');
+};
+
+// Print inventory
+const printInventory = () => {
+  window.print();
+  toast.success('Print dialog opened!');
+};
+
+// Quick stock adjustment
+const quickAdjustStock = (product, variation, amount) => {
+  router.post(route('admin.inventory.adjust'), {
+    product_id: product.product_id,
+    variation_id: variation?.variation_id || null,
+    quantity: amount,
+    location: 'MAIN',
+    type: amount > 0 ? 'add' : 'remove',
+    reason: amount > 0 ? 'quick_add' : 'quick_remove',
+    note: `Quick adjustment: ${amount > 0 ? '+' : ''}${amount}`
+  }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast.success(`Stock ${amount > 0 ? 'added' : 'removed'} successfully!`);
+    },
+    onError: () => {
+      toast.error('Failed to adjust stock');
+    }
+  });
+};
+
+// Get product image helper
+const getProductImage = (product) => {
+  if (!product || !product.product_image) {
+    return null;
+  }
+  if (product.product_image.startsWith('http') || product.product_image.startsWith('/storage/')) {
+    return product.product_image;
+  }
+  return `/storage/${product.product_image}`;
+};
 
 // Computed Stats
 const stats = computed(() => {
@@ -240,7 +366,7 @@ watch(locationFilter, () => currentPage.value = 1);
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
 
       <!-- Header -->
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Box class="w-8 h-8 text-blue-600" />
@@ -270,6 +396,69 @@ watch(locationFilter, () => currentPage.value = 1);
           <Plus class="w-4 h-4 mr-2" />
           ➕ Add New Product
         </button>
+      </div>
+
+      <!-- Quick Actions Panel -->
+      <div class="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-800 rounded-2xl p-4 mb-6 shadow-lg border border-purple-100 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white">⚡ Quick Actions</h3>
+          </div>
+          <button
+            @click="showShortcutsModal = true"
+            class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all shadow-sm"
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span class="hidden sm:inline">Shortcuts</span>
+            <kbd class="hidden md:inline px-1 bg-white/20 rounded text-xs">Ctrl+K</kbd>
+          </button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+          <button
+            @click="exportToCSV"
+            class="group flex flex-col items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-1 border border-gray-100 dark:border-gray-600"
+          >
+            <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Download class="w-5 h-5 text-white" />
+            </div>
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Export CSV</span>
+          </button>
+
+          <button
+            @click="printInventory"
+            class="group flex flex-col items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-1 border border-gray-100 dark:border-gray-600"
+          >
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Printer class="w-5 h-5 text-white" />
+            </div>
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Print</span>
+          </button>
+
+          <button
+            @click="router.visit(route('admin.products.index'))"
+            class="group flex flex-col items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-1 border border-gray-100 dark:border-gray-600"
+          >
+            <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Edit class="w-5 h-5 text-white" />
+            </div>
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Edit Products</span>
+          </button>
+
+          <button
+            @click="router.visit(route('admin.dashboard'))"
+            class="group flex flex-col items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-1 border border-gray-100 dark:border-gray-600"
+          >
+            <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Package class="w-5 h-5 text-white" />
+            </div>
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Dashboard</span>
+          </button>
+        </div>
       </div>
 
       <!-- Stats Cards with enhanced gradients -->
@@ -511,17 +700,26 @@ watch(locationFilter, () => currentPage.value = 1);
                 <tr class="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 group border-l-4" :class="product.stock_status === 'low_stock' ? 'border-l-amber-400' : product.stock_status === 'out_of_stock' ? 'border-l-red-400' : 'border-l-transparent'">
                   <td class="px-6 py-5 whitespace-nowrap">
                     <div class="flex items-center gap-4">
-                      <div class="h-12 w-12 flex-shrink-0 relative">
+                      <!-- Product Image -->
+                      <div class="h-14 w-14 flex-shrink-0 relative rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
                         <img
-                          :src="product.product_image"
-                          class="h-12 w-12 rounded-xl object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm group-hover:border-blue-400 transition-colors"
-                          alt=""
-                        >
+                          v-if="getProductImage(product)"
+                          :src="getProductImage(product)"
+                          :alt="product.product_name"
+                          class="h-full w-full object-cover group-hover:scale-110 transition-transform duration-200"
+                          @error="(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }"
+                        />
+                        <div class="absolute inset-0 flex items-center justify-center" :class="{ 'hidden': getProductImage(product) }">
+                          <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                          </svg>
+                        </div>
                         <!-- Stock Badge Overlay -->
-                        <span v-if="product.stock_status === 'low_stock'" class="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></span>
-                        <span v-else-if="product.stock_status === 'out_of_stock'" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
+                        <span v-if="product.stock_status === 'low_stock'" class="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse" title="Low Stock"></span>
+                        <span v-else-if="product.stock_status === 'out_of_stock'" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white dark:border-gray-800 rounded-full" title="Out of Stock"></span>
+                        <span v-else class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" title="Good Stock"></span>
                       </div>
-                      <div>
+                      <div class="flex-1">
                         <div class="text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{{ product.product_name }}</div>
                         <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
                           <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md font-medium">
@@ -529,7 +727,6 @@ watch(locationFilter, () => currentPage.value = 1);
                           </span>
                           <span v-if="product.variations.length > 0" class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md font-medium border border-blue-200 dark:border-blue-800">
                             🔄 {{ product.variations.length }} {{ product.variations.length === 1 ? 'variation' : 'variations' }}
-                            <span class="text-xs text-blue-500 dark:text-blue-400">• Click ▼ to see all</span>
                           </span>
                         </div>
                       </div>
@@ -546,14 +743,62 @@ watch(locationFilter, () => currentPage.value = 1);
                       {{ formatCurrency(product.product_price) }} / unit
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold text-gray-900 dark:text-gray-100">
-                    {{ product.total_stock }}
-                    <span v-if="product.stock_ratio > 0" class="block text-xs font-normal text-green-600">
-                      +{{ (product.total_stock - product.initial_stock) > 0 ? (product.total_stock - product.initial_stock) : 0 }} added
-                    </span>
+                  <td class="px-6 py-4">
+                    <div class="space-y-2">
+                      <!-- Stock Number with Quick Actions -->
+                      <div class="flex items-center justify-center gap-2">
+                        <button
+                          v-if="product.variations.length === 0 && product.total_stock > 0"
+                          @click="quickAdjustStock(product, null, -1)"
+                          class="p-1 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                          title="Remove 1 unit"
+                        >
+                          <Minus class="w-3 h-3" />
+                        </button>
+                        <span class="text-lg font-bold px-3" :class="{
+                          'text-green-600 dark:text-green-400': product.stock_status === 'in_stock',
+                          'text-amber-600 dark:text-amber-400': product.stock_status === 'low_stock',
+                          'text-red-600 dark:text-red-400': product.stock_status === 'out_of_stock'
+                        }">
+                          {{ product.total_stock }}
+                        </span>
+                        <button
+                          v-if="product.variations.length === 0"
+                          @click="quickAdjustStock(product, null, 1)"
+                          class="p-1 rounded-md bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                          title="Add 1 unit"
+                        >
+                          <Plus class="w-3 h-3" />
+                        </button>
+                      </div>
+                      
+                      <!-- Visual Progress Bar -->
+                      <div class="w-32 mx-auto">
+                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            class="h-full rounded-full transition-all duration-300"
+                            :class="{
+                              'bg-gradient-to-r from-green-400 to-green-600': product.stock_status === 'in_stock',
+                              'bg-gradient-to-r from-amber-400 to-orange-600': product.stock_status === 'low_stock',
+                              'bg-gradient-to-r from-red-400 to-red-600': product.stock_status === 'out_of_stock'
+                            }"
+                            :style="{ width: Math.min((product.total_stock / Math.max(product.total_stock + product.total_sold, 100)) * 100, 100) + '%' }"
+                          ></div>
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
+                          {{ Math.round((product.total_stock / Math.max(product.total_stock + product.total_sold, 100)) * 100) }}% available
+                        </div>
+                      </div>
+                    </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-400">
-                    {{ product.total_sold }}
+                  <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <div class="flex flex-col items-center gap-1">
+                      <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ product.total_sold }}</span>
+                      <span v-if="product.total_sold > product.total_stock" class="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
+                        <ArrowUp class="w-3 h-3" />
+                        Popular
+                      </span>
+                    </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-center">
                     <div class="flex items-center justify-center gap-2">
@@ -942,5 +1187,150 @@ watch(locationFilter, () => currentPage.value = 1);
       </div>
     </div>
 
+    <!-- Keyboard Shortcuts Modal -->
+    <div
+      v-if="showShortcutsModal"
+      @click="showShortcutsModal = false"
+      class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
+    >
+      <div
+        @click.stop
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp"
+      >
+        <!-- Modal Header -->
+        <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-2xl">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+              ⚡ Keyboard Shortcuts
+            </h3>
+            <button
+              @click="showShortcutsModal = false"
+              class="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Shortcuts List -->
+        <div class="p-6 space-y-6">
+          <!-- General Actions -->
+          <div>
+            <h4 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">General Actions</h4>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Export to CSV</span>
+                <div class="flex items-center gap-1">
+                  <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">Ctrl</kbd>
+                  <span class="text-gray-400">+</span>
+                  <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">E</kbd>
+                </div>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Print Inventory</span>
+                <div class="flex items-center gap-1">
+                  <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">Ctrl</kbd>
+                  <span class="text-gray-400">+</span>
+                  <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">P</kbd>
+                </div>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Focus Search</span>
+                <div class="flex items-center gap-1">
+                  <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">Ctrl</kbd>
+                  <span class="text-gray-400">+</span>
+                  <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">F</kbd>
+                </div>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Toggle This Menu</span>
+                <div class="flex items-center gap-1">
+                  <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">Ctrl</kbd>
+                  <span class="text-gray-400">+</span>
+                  <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">K</kbd>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter Shortcuts -->
+          <div>
+            <h4 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Quick Filters</h4>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Show All Products</span>
+                <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">1</kbd>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Good Stock Only</span>
+                <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">2</kbd>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Low Stock Only</span>
+                <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">3</kbd>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Out of Stock Only</span>
+                <kbd class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-xs font-semibold">4</kbd>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pro Tip -->
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <span class="text-2xl">💡</span>
+              <div>
+                <h5 class="font-semibold text-blue-900 dark:text-blue-100 mb-1">Pro Tip</h5>
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                  On Mac, use <kbd class="px-1 py-0.5 bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-700 rounded text-xs">⌘ Cmd</kbd> instead of <kbd class="px-1 py-0.5 bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-700 rounded text-xs">Ctrl</kbd>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </AdminLayout>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-full-width {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+</style>
