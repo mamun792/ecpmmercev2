@@ -48,6 +48,14 @@
 
                     <!-- Preview Content -->
                     <div class="p-6 bg-gray-50 max-h-[70vh] overflow-y-auto">
+                        <!-- Info Banner -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                            <Eye class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div class="text-sm text-blue-900">
+                                <p class="font-semibold mb-1">Preview Mode</p>
+                                <p class="text-blue-700">This is how your product will appear to customers. Switch views to see different layouts.</p>
+                            </div>
+                        </div>
                         <!-- Mobile View -->
                         <div v-if="currentView === 'mobile'" class="max-w-sm mx-auto">
                             <div class="bg-white rounded-2xl shadow-xl overflow-hidden border-8 border-gray-800">
@@ -159,15 +167,28 @@
                                         {{ productData.short_description }}
                                     </p>
 
-                                    <div class="space-y-4 mb-6">
+                                    <div class="space-y-3 mb-6 p-4 bg-gray-50 rounded-xl">
                                         <div v-if="productData.product_code" class="flex items-center gap-2 text-sm">
-                                            <span class="text-gray-500">SKU:</span>
+                                            <span class="text-gray-500 font-medium">SKU:</span>
                                             <span class="font-mono font-semibold text-gray-900">{{ productData.product_code }}</span>
                                         </div>
+                                        <div v-if="productData.brand_name" class="flex items-center gap-2 text-sm">
+                                            <span class="text-gray-500 font-medium">Brand:</span>
+                                            <span class="font-semibold text-gray-900">{{ productData.brand_name }}</span>
+                                        </div>
+                                        <div v-if="productData.category_name" class="flex items-center gap-2 text-sm">
+                                            <span class="text-gray-500 font-medium">Category:</span>
+                                            <span class="font-semibold text-gray-900">{{ productData.category_name }}</span>
+                                        </div>
                                         <div class="flex items-center gap-2 text-sm">
-                                            <span class="text-gray-500">Stock:</span>
-                                            <span :class="productData.stock > 0 ? 'text-green-600' : 'text-red-600'" class="font-semibold">
-                                                {{ productData.stock > 0 ? 'In Stock' : 'Out of Stock' }}
+                                            <span class="text-gray-500 font-medium">Availability:</span>
+                                            <span v-if="productData.stock > 0" class="flex items-center gap-1.5">
+                                                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                                <span class="text-green-600 font-semibold">{{ productData.stock }} in stock</span>
+                                            </span>
+                                            <span v-else class="flex items-center gap-1.5">
+                                                <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                                                <span class="text-red-600 font-semibold">Out of Stock</span>
                                             </span>
                                         </div>
                                     </div>

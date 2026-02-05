@@ -25,7 +25,7 @@
 
                 <!-- Editor Area -->
                 <div class="p-6">
-                    <div class="bg-gray-100 rounded-xl overflow-hidden mb-6" style="height: 400px;">
+                    <div class="bg-gray-100 rounded-xl overflow-hidden mb-6 relative" style="height: 400px;">
                         <div class="relative w-full h-full flex items-center justify-center">
                             <img
                                 v-if="imageSrc"
@@ -42,6 +42,22 @@
                                 <Crop class="w-12 h-12 mx-auto mb-2 opacity-50" />
                                 <p>No image selected</p>
                             </div>
+
+                            <!-- Aspect Ratio Crop Overlay -->
+                            <div v-if="imageSrc && aspectRatio !== 'free'"
+                                 class="absolute inset-0 pointer-events-none">
+                                <div class="absolute inset-0 bg-black/40"></div>
+                                <div :style="cropOverlayStyle"
+                                     class="absolute border-2 border-white shadow-lg">
+                                    <div class="absolute inset-0 border-2 border-dashed border-white/50"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aspect Ratio Label -->
+                        <div v-if="aspectRatio !== 'free'"
+                             class="absolute top-4 right-4 bg-purple-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-lg">
+                            {{ aspectRatio }} Crop Active
                         </div>
                     </div>
 
@@ -153,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { XIcon, Crop, RotateCw, ZoomIn, FlipHorizontal, Check } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -175,6 +191,44 @@ const zoom = ref(1);
 const flipHorizontal = ref(false);
 const flipVertical = ref(false);
 const aspectRatio = ref('free');
+
+// Calculate crop overlay position and size based on aspect ratio
+const cropOverlayStyle = computed(() => {
+    if (aspectRatio.value === 'free') return {};
+
+    const ratios = {
+        '1:1': 1,
+        '4:3': 4 / 3,
+        '16:9': 16 / 9
+    };
+
+    const targetRatio = ratios[aspectRatio.value];
+    const containerWidth = 400; // Match preview container
+    const containerHeight = 400;
+    const containerRatio = containerWidth / containerHeight;
+
+    let width, height, top, left;
+
+    if (containerRatio > targetRatio) {
+        // Container is wider, limit by height
+        height = containerHeight * 0.8;
+        width = height * targetRatio;
+    } else {
+        // Container is taller, limit by width
+        width = containerWidth * 0.8;
+        height = width / targetRatio;
+    }
+
+    top = (containerHeight - height) / 2;
+    left = (containerWidth - width) / 2;
+
+    return {
+        width: `${width}px`,
+        height: `${height}px`,
+        top: `${top}px`,
+        left: `${left}px`
+    };
+});
 
 const close = () => {
     emit('close');

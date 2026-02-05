@@ -233,6 +233,22 @@ const selectedCategoryName = computed(() => {
     return category?.name || null;
 });
 
+// Get selected brand name
+const selectedBrandName = computed(() => {
+    if (!form.brand_id) return null;
+    const brand = props.brands.find(b => b.id == form.brand_id);
+    return brand?.name || null;
+});
+
+// Product preview data with actual names instead of IDs
+const productPreviewData = computed(() => {
+    return {
+        ...form,
+        brand_name: selectedBrandName.value,
+        category_name: selectedCategoryName.value
+    };
+});
+
 const removedVariations = ref(new Set());
 const selectedAttributesMap = ref({});
 
@@ -3256,7 +3272,7 @@ const submit = () => {
     <!-- Product Preview Modal -->
     <ProductPreview
         :show="showProductPreview"
-        :product-data="form"
+        :product-data="productPreviewData"
         @close="showProductPreview = false"
     />
 </template>
