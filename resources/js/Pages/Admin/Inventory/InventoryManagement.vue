@@ -114,7 +114,7 @@ const exportToCSV = () => {
     p.total_sold,
     p.stock_status
   ]);
-  
+
   const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
@@ -771,7 +771,7 @@ watch(locationFilter, () => currentPage.value = 1);
                           <Plus class="w-3 h-3" />
                         </button>
                       </div>
-                      
+
                       <!-- Visual Progress Bar -->
                       <div class="w-32 mx-auto">
                         <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -1327,7 +1327,7 @@ watch(locationFilter, () => currentPage.value = 1);
   .no-print {
     display: none !important;
   }
-  
+
   .print-full-width {
     width: 100% !important;
     max-width: none !important;
