@@ -32,7 +32,7 @@
                                 ref="imageEl"
                                 :src="imageSrc"
                                 :style="{
-                                    transform: `rotate(${rotation}deg) scale(${zoom})`,
+                                    transform: `rotate(${rotation}deg) scale(${zoom * (flipHorizontal ? -1 : 1)}, ${zoom * (flipVertical ? -1 : 1)})`,
                                     transition: 'transform 0.3s ease'
                                 }"
                                 class="max-w-full max-h-full object-contain"

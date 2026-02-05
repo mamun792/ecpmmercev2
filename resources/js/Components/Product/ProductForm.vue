@@ -1252,19 +1252,48 @@ const applyImageEdits = async (editData) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        // Calculate dimensions with zoom
-        const width = img.width * editData.zoom;
-        const height = img.height * editData.zoom;
+        // Calculate aspect ratio dimensions
+        let finalWidth = img.width;
+        let finalHeight = img.height;
 
-        // Set canvas size
-        canvas.width = width;
-        canvas.height = height;
+        if (editData.aspectRatio !== 'free') {
+            const ratios = {
+                '1:1': 1,
+                '4:3': 4 / 3,
+                '16:9': 16 / 9
+            };
+            const targetRatio = ratios[editData.aspectRatio];
+            const currentRatio = img.width / img.height;
+
+            if (currentRatio > targetRatio) {
+                // Image is wider, crop width
+                finalWidth = img.height * targetRatio;
+                finalHeight = img.height;
+            } else {
+                // Image is taller, crop height
+                finalWidth = img.width;
+                finalHeight = img.width / targetRatio;
+            }
+        }
+
+        // Calculate dimensions with zoom
+        const width = finalWidth * editData.zoom;
+        const height = finalHeight * editData.zoom;
+
+        // Set canvas size (accounting for rotation)
+        if (editData.rotation % 180 === 90) {
+            canvas.width = height;
+            canvas.height = width;
+        } else {
+            canvas.width = width;
+            canvas.height = height;
+        }
 
         // Apply transformations
         ctx.save();
 
         // Move to center for rotation
-        ctx.translate(width / 2, height / 2);
+        ctx.translate(canvas.width / 2, canvas.height / 2);
 
         // Apply rotation
         ctx.rotate((editData.rotation * Math.PI) / 180);
@@ -1275,8 +1304,16 @@ const applyImageEdits = async (editData) => {
             editData.flipVertical ? -1 : 1
         );
 
-        // Draw image
-        ctx.drawImage(img, -width / 2, -height / 2, width, height);
+        // Calculate source crop for aspect ratio
+        const sx = (img.width - finalWidth) / 2;
+        const sy = (img.height - finalHeight) / 2;
+
+        // Draw image with cropping
+        ctx.drawImage(
+            img,
+            sx, sy, finalWidth, finalHeight,  // Source crop
+            -width / 2, -height / 2, width, height  // Destination
+        );
         ctx.restore();
 
         // Convert to blob and update the image
