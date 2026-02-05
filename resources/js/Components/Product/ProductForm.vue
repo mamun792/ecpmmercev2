@@ -1060,19 +1060,19 @@ const handleKeyboardShortcuts = (e) => {
         submit();
         toast('💾 Saving...', { duration: 1000 });
     }
-    
+
     // Ctrl+Shift+D or Cmd+Shift+D - Save as Draft
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         saveAsDraft();
     }
-    
+
     // Ctrl+/ or Cmd+/ - Show keyboard shortcuts
     if ((e.ctrlKey || e.metaKey) && e.key === '/') {
         e.preventDefault();
         showKeyboardShortcuts.value = !showKeyboardShortcuts.value;
     }
-    
+
     // Esc - Close modals/shortcuts panel
     if (e.key === 'Escape') {
         showKeyboardShortcuts.value = false;
@@ -1083,11 +1083,11 @@ const handleKeyboardShortcuts = (e) => {
 // Save as draft functionality
 const saveAsDraft = () => {
     isSavingDraft.value = true;
-    
+
     // Set status to unpublished for draft
     const originalStatus = form.status;
     form.status = 'Unpublished';
-    
+
     const options = {
         forceFormData: true,
         preserveScroll: true,
@@ -1101,7 +1101,7 @@ const saveAsDraft = () => {
             isSavingDraft.value = false;
         }
     };
-    
+
     if (isEditMode.value) {
         form.post(route("admin.products.update", props.product.id), options);
     } else {
@@ -1115,14 +1115,14 @@ const generateAISuggestions = () => {
         toast.error('Please select a category first');
         return;
     }
-    
+
     isLoadingAI.value = true;
-    
+
     // Simple AI-like suggestion logic (in production, this would call an actual AI API)
     setTimeout(() => {
         const category = props.categories.find(c => c.id == form.category_id);
         const categoryName = category?.name || 'Product';
-        
+
         aiSuggestions.value = [
             `Premium ${categoryName} - High Quality`,
             `Professional ${categoryName} - Best Seller`,
@@ -1130,7 +1130,7 @@ const generateAISuggestions = () => {
             `Modern ${categoryName} - New Arrival`,
             `Classic ${categoryName} - Trending Now`
         ];
-        
+
         isLoadingAI.value = false;
         toast.success('AI suggestions generated! 🤖');
     }, 1000);
@@ -2852,22 +2852,22 @@ select {
     button, input, select, textarea {
         min-height: 44px;
     }
-    
+
     /* Better spacing on mobile */
     .p-6 {
         padding: 1rem;
     }
-    
+
     /* Reduce font sizes slightly on mobile */
     input, select, textarea {
         font-size: 16px; /* Prevents zoom on iOS */
     }
-    
+
     /* Stack buttons vertically on mobile */
     .flex.items-center.gap-3 {
         flex-wrap: wrap;
     }
-    
+
     /* Full width modals on mobile */
     .max-w-md {
         max-width: calc(100vw - 2rem);

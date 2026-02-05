@@ -1,7 +1,7 @@
 <template>
     <div class="relative inline-block" @mouseenter="showTooltip" @mouseleave="hideTooltip">
         <slot></slot>
-        
+
         <transition
             enter-active-class="transition ease-out duration-200"
             enter-from-class="opacity-0 translate-y-1"

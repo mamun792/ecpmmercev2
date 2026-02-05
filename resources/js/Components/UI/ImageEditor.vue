@@ -188,7 +188,7 @@ const applyChanges = () => {
     // 1. Use canvas to apply transformations
     // 2. Export as blob/base64
     // 3. Send edited image back to parent
-    
+
     const editData = {
         rotation: rotation.value,
         zoom: zoom.value,
@@ -196,7 +196,7 @@ const applyChanges = () => {
         flipVertical: flipVertical.value,
         aspectRatio: aspectRatio.value
     };
-    
+
     emit('apply', editData);
     close();
 };

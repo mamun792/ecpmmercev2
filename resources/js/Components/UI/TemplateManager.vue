@@ -249,7 +249,7 @@ const templates = ref([
 
 const filteredTemplates = computed(() => {
     if (!searchQuery.value) return templates.value;
-    
+
     const query = searchQuery.value.toLowerCase();
     return templates.value.filter(t =>
         t.name.toLowerCase().includes(query) ||
@@ -277,14 +277,14 @@ const saveTemplate = () => {
         fields: selectedFields.value,
         data: {}
     };
-    
+
     // Extract selected field values from current form data
     selectedFields.value.forEach(field => {
         if (props.currentData[field]) {
             templateData.data[field] = props.currentData[field];
         }
     });
-    
+
     emit('save', templateData);
     close();
 };

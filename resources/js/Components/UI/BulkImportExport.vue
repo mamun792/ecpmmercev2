@@ -267,7 +267,7 @@ const parseCSV = (file) => {
     reader.onload = (e) => {
         const text = e.target.result;
         const lines = text.split('\n').filter(line => line.trim());
-        
+
         if (lines.length > 0) {
             headers.value = lines[0].split(',').map(h => h.trim());
             parsedData.value = lines.slice(1).map(line => {
@@ -286,7 +286,7 @@ const parseCSV = (file) => {
 const downloadTemplate = () => {
     const template = 'name,product_code,category_id,brand_id,price,cost_price,stock,description,status\n' +
                      'Sample Product,SKU-001,1,1,999.99,499.99,100,Product description here,Published\n';
-    
+
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -299,7 +299,7 @@ const downloadTemplate = () => {
 const startImport = () => {
     importing.value = true;
     importProgress.value = 0;
-    
+
     // Simulate import progress
     const interval = setInterval(() => {
         importProgress.value += 10;
@@ -314,7 +314,7 @@ const startImport = () => {
 
 const startExport = () => {
     exporting.value = true;
-    
+
     // In production, this would call the backend API
     setTimeout(() => {
         emit('export', exportOptions.value);
