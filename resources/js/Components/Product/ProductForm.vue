@@ -12,6 +12,7 @@ import Tooltip from "@/Components/UI/Tooltip.vue";
 import ImageEditor from "@/Components/UI/ImageEditor.vue";
 import BulkImportExport from "@/Components/UI/BulkImportExport.vue";
 import TemplateManager from "@/Components/UI/TemplateManager.vue";
+import ProductPreview from "@/Components/UI/ProductPreview.vue";
 import {
     PlusIcon,
     XIcon,
@@ -101,11 +102,20 @@ onMounted(() => {
 
     // Add keyboard shortcuts
     window.addEventListener('keydown', handleKeyboardShortcuts);
+
+    // ========== AUTOSAVE: Restore from LocalStorage ==========
+    restoreFromLocalStorage();
+
+    // ========== AUTOSAVE: Start periodic autosave (every 30s) ==========
+    startAutosave();
 });
 
 onUnmounted(() => {
     // Clean up keyboard event listener
     window.removeEventListener('keydown', handleKeyboardShortcuts);
+
+    // ========== AUTOSAVE: Clear autosave interval ==========
+    stopAutosave();
 });
 
 const activeTab = ref("general");
@@ -147,10 +157,42 @@ const bulkMode = ref('import');
 const showTemplateModal = ref(false);
 const templateMode = ref('load');
 
+// Product Preview
+const showProductPreview = ref(false);
+
 // Big Tech Style Conflict Resolution
 const showConflictModal = ref(false);
 const conflictData = ref(null);
 const pendingSubmission = ref(false);
+
+// ========== NEW FEATURES ==========
+
+// 1. AUTOSAVE Feature
+const lastSaved = ref(null);
+const isSavingAuto = ref(false);
+const autosaveInterval = ref(null);
+const AUTOSAVE_DELAY = 30000; // 30 seconds
+const LOCALSTORAGE_KEY = 'product_form_autosave';
+
+// 2. SMART VALIDATION Feature
+const fieldValidation = ref({
+    name: { valid: false, message: '' },
+    category_id: { valid: false, message: '' },
+    price: { valid: false, message: '' },
+    feature_image: { valid: false, message: '' }
+});
+const completedFields = computed(() => {
+    return Object.values(fieldValidation.value).filter(f => f.valid).length;
+});
+const totalRequiredFields = computed(() => {
+    return Object.keys(fieldValidation.value).length;
+});
+const progressPercentage = computed(() => {
+    return Math.round((completedFields.value / totalRequiredFields.value) * 100);
+});
+
+// 3. DUPLICATE PRODUCT Feature
+const isDuplicating = ref(false);
 
 // --- Form Initialization & Helpers ---
 
@@ -274,6 +316,50 @@ watch(
         }
     }
 );
+
+// ========== SMART VALIDATION: Real-time Field Validators ==========
+
+// Watch product name
+watch(() => form.name, (value) => {
+    if (!value || value.trim().length === 0) {
+        fieldValidation.value.name = { valid: false, message: 'Product name is required' };
+    } else if (value.length < 10) {
+        fieldValidation.value.name = { valid: false, message: 'Name should be at least 10 characters' };
+    } else if (value.length > 200) {
+        fieldValidation.value.name = { valid: false, message: 'Name is too long (max 200)' };
+    } else {
+        fieldValidation.value.name = { valid: true, message: 'Perfect! ✓' };
+    }
+});
+
+// Watch category
+watch(() => form.category_id, (value) => {
+    if (!value) {
+        fieldValidation.value.category_id = { valid: false, message: 'Please select a category' };
+    } else {
+        fieldValidation.value.category_id = { valid: true, message: 'Category selected ✓' };
+    }
+});
+
+// Watch price
+watch(() => form.price, (value) => {
+    if (!value || value === '') {
+        fieldValidation.value.price = { valid: false, message: 'Price is required' };
+    } else if (parseFloat(value) <= 0) {
+        fieldValidation.value.price = { valid: false, message: 'Price must be greater than 0' };
+    } else {
+        fieldValidation.value.price = { valid: true, message: 'Valid price ✓' };
+    }
+});
+
+// Watch feature image
+watch(() => form.feature_image_preview, (value) => {
+    if (!value) {
+        fieldValidation.value.feature_image = { valid: false, message: 'Feature image is required' };
+    } else {
+        fieldValidation.value.feature_image = { valid: true, message: 'Image uploaded ✓' };
+    }
+});
 
 const initializeForm = () => {
     if (isEditMode.value) {
@@ -459,10 +545,6 @@ const getTabIcon = (iconName) => {
 
 const currentTabIndex = computed(() => {
     return getTabs.value.findIndex(tab => tab.id === activeTab.value);
-});
-
-const progressPercentage = computed(() => {
-    return ((currentTabIndex.value + 1) / getTabs.value.length) * 100;
 });
 
 // True when any front-end validation errors exist (main price or per-variation)
@@ -1200,6 +1282,155 @@ const loadFromTemplate = (templateData) => {
     toast.success('Template loaded successfully! ✅');
 };
 
+// ========== FEATURE 1: AUTOSAVE FUNCTIONS ==========
+
+const saveToLocalStorage = () => {
+    try {
+        const formData = {
+            name: form.name,
+            product_code: form.product_code,
+            category_id: form.category_id,
+            brand_id: form.brand_id,
+            short_description: form.short_description,
+            description: form.description,
+            status: form.status,
+            type: form.type,
+            price: form.price,
+            cost_price: form.cost_price,
+            previous_price: form.previous_price,
+            product_tags: form.product_tags,
+            stock: form.stock,
+            timestamp: new Date().toISOString()
+        };
+        localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(formData));
+        lastSaved.value = new Date();
+    } catch (error) {
+        console.error('Failed to save to localStorage:', error);
+    }
+};
+
+const restoreFromLocalStorage = () => {
+    if (isEditMode.value) return; // Don't restore for edit mode
+
+    try {
+        const saved = localStorage.getItem(LOCALSTORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            const savedTime = new Date(data.timestamp);
+            const now = new Date();
+            const hoursSinceLastSave = (now - savedTime) / (1000 * 60 * 60);
+
+            // Only restore if saved within last 24 hours
+            if (hoursSinceLastSave < 24) {
+                const shouldRestore = confirm(
+                    `Found unsaved work from ${savedTime.toLocaleString()}. Restore it?`
+                );
+
+                if (shouldRestore) {
+                    Object.keys(data).forEach(key => {
+                        if (form[key] !== undefined && key !== 'timestamp') {
+                            form[key] = data[key];
+                        }
+                    });
+                    toast.success('Previous work restored! 💾');
+                    lastSaved.value = savedTime;
+                } else {
+                    localStorage.removeItem(LOCALSTORAGE_KEY);
+                }
+            } else {
+                // Remove old data
+                localStorage.removeItem(LOCALSTORAGE_KEY);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to restore from localStorage:', error);
+    }
+};
+
+const performAutosave = async () => {
+    // Don't autosave if form is empty or already saving
+    if (!form.name && !form.description && !form.price) return;
+    if (isSavingAuto.value || form.processing) return;
+
+    isSavingAuto.value = true;
+    saveToLocalStorage();
+
+    // Visual feedback
+    setTimeout(() => {
+        isSavingAuto.value = false;
+    }, 1000);
+};
+
+const startAutosave = () => {
+    // Autosave every 30 seconds
+    autosaveInterval.value = setInterval(performAutosave, AUTOSAVE_DELAY);
+};
+
+const stopAutosave = () => {
+    if (autosaveInterval.value) {
+        clearInterval(autosaveInterval.value);
+        autosaveInterval.value = null;
+    }
+};
+
+const clearAutosave = () => {
+    localStorage.removeItem(LOCALSTORAGE_KEY);
+    lastSaved.value = null;
+};
+
+// ========== FEATURE 3: DUPLICATE PRODUCT FUNCTION ==========
+
+const duplicateProduct = () => {
+    if (!isEditMode.value) {
+        toast.error('Can only duplicate existing products');
+        return;
+    }
+
+    const confirmed = confirm(
+        `Create a duplicate of "${form.name}"? This will create a new unpublished product with all the same data.`
+    );
+
+    if (!confirmed) return;
+
+    isDuplicating.value = true;
+
+    // Create a copy of form data
+    const duplicateData = {
+        ...form.data(),
+        name: `${form.name} (Copy)`,
+        product_code: '', // Clear SKU for duplicate
+        status: 'Unpublished', // Set as unpublished
+        _method: 'POST' // Force POST for new product
+    };
+
+    // Submit as new product
+    router.post(route('admin.products.store'), duplicateData, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.success('Product duplicated successfully! 🎉');
+            isDuplicating.value = false;
+        },
+        onError: (errors) => {
+            console.error('Duplicate errors:', errors);
+            toast.error('Failed to duplicate product');
+            isDuplicating.value = false;
+        },
+    });
+};
+
+// ========== HELPER FUNCTIONS ==========
+
+const formatTimeAgo = (date) => {
+    const seconds = Math.floor((new Date() - date) / 1000);
+
+    if (seconds < 60) return 'just now';
+    if (seconds < 120) return '1 min ago';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} mins ago`;
+    if (seconds < 7200) return '1 hour ago';
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    return date.toLocaleDateString();
+};
+
 const submit = () => {
     // Filter out invalid variations before submission
     // A valid variation must have attributes array with at least one attribute that has attribute_value_id
@@ -1278,6 +1509,9 @@ const submit = () => {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
+            // Clear autosave on successful submit
+            clearAutosave();
+
             toast.success(
                 isEditMode.value
                     ? "Product updated successfully!"
@@ -1424,6 +1658,29 @@ const submit = () => {
                             </button>
                         </Tooltip>
 
+                        <!-- Product Preview Button -->
+                        <Tooltip text="Preview how product will look" position="bottom">
+                            <button
+                                @click="showProductPreview = true"
+                                class="p-2.5 rounded-xl bg-cyan-100 hover:bg-cyan-200 text-cyan-700 transition-all"
+                                type="button"
+                            >
+                                <Eye class="w-4 h-4" />
+                            </button>
+                        </Tooltip>
+
+                        <!-- Duplicate Product Button (Edit Mode Only) -->
+                        <Tooltip v-if="isEditMode" text="Duplicate this product" position="bottom">
+                            <button
+                                @click="duplicateProduct"
+                                :disabled="isDuplicating"
+                                class="p-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="button"
+                            >
+                                <Layers class="w-4 h-4" :class="{ 'animate-pulse': isDuplicating }" />
+                            </button>
+                        </Tooltip>
+
                         <!-- Save as Draft Button -->
                         <Tooltip text="Save as draft (Ctrl+Shift+D)" position="bottom">
                             <button
@@ -1453,9 +1710,32 @@ const submit = () => {
                     </div>
                 </div>
 
-                <!-- Progress Bar -->
-                <div class="h-1 -mb-px">
-                    <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500 ease-out" :style="{ width: progressPercentage + '%' }"></div>
+                <!-- Progress Bar & Autosave Indicator -->
+                <div class="flex items-center justify-between h-8 -mb-px border-t border-gray-100/50">
+                    <!-- Validation Progress -->
+                    <div class="flex items-center gap-2 px-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-1.5 h-1.5 rounded-full" :class="progressPercentage === 100 ? 'bg-emerald-500' : 'bg-amber-500'"></div>
+                            <span class="text-gray-600 font-medium">{{ completedFields }}/{{ totalRequiredFields }} required fields</span>
+                        </div>
+                        <div class="h-1 w-24 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500" :style="{ width: progressPercentage + '%' }"></div>
+                        </div>
+                    </div>
+
+                    <!-- Autosave Indicator -->
+                    <div class="flex items-center gap-2 px-2">
+                        <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+                            <div v-if="isSavingAuto" class="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
+                                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                                <span>Saving...</span>
+                            </div>
+                            <div v-else-if="lastSaved" class="flex items-center gap-1.5 text-xs text-gray-500">
+                                <Check class="w-3 h-3 text-emerald-500" />
+                                <span>Saved {{ formatTimeAgo(lastSaved) }}</span>
+                            </div>
+                        </transition>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1566,8 +1846,12 @@ const submit = () => {
                                 <div class="p-6 space-y-6">
                                     <!-- Product Name -->
                                     <div class="group">
-                                        <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
-                                            Product Name <span class="text-red-500">*</span>
+                                        <label for="name" class="flex items-center justify-between text-sm font-semibold text-gray-700 mb-2">
+                                            <span>Product Name <span class="text-red-500">*</span></span>
+                                            <!-- Validation Status -->
+                                            <span v-if="fieldValidation.name.valid" class="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                                                <Check class="w-3.5 h-3.5" /> {{ fieldValidation.name.message }}
+                                            </span>
                                         </label>
                                         <div class="relative">
                                             <input
@@ -1575,10 +1859,17 @@ const submit = () => {
                                                 v-model="form.name"
                                                 type="text"
                                                 maxlength="200"
-                                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-gray-400 bg-gray-50/50 focus:bg-white"
+                                                :class="[
+                                                    'w-full px-4 py-3 rounded-xl text-gray-900 focus:ring-4 transition-all placeholder:text-gray-400 bg-gray-50/50 focus:bg-white',
+                                                    fieldValidation.name.valid ? 'border-2 border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500/10' :
+                                                    form.name && !fieldValidation.name.valid ? 'border-2 border-amber-500 focus:border-amber-500 focus:ring-amber-500/10' :
+                                                    'border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/10'
+                                                ]"
                                                 placeholder="e.g., Premium Cotton T-Shirt - Black - Large"
                                             />
-                                            <div class="absolute right-4 top-1/2 -translate-y-1/2">
+                                            <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                <!-- Validation Icon -->
+                                                <Check v-if="fieldValidation.name.valid" class="w-4 h-4 text-emerald-500" />
                                                 <span :class="[
                                                     'text-xs font-medium transition-colors',
                                                     (form.name?.length || 0) > 180 ? 'text-red-500' :
@@ -1586,6 +1877,10 @@ const submit = () => {
                                                 ]">{{ form.name?.length || 0 }}/200</span>
                                             </div>
                                         </div>
+                                        <!-- Validation Message -->
+                                        <p v-if="!fieldValidation.name.valid && form.name" class="mt-1.5 text-xs text-amber-600 flex items-center gap-1">
+                                            <XIcon class="w-3 h-3" /> {{ fieldValidation.name.message }}
+                                        </p>
                                         <p v-if="form.errors.name" class="mt-2 text-sm text-red-600 flex items-center gap-1">
                                             <XIcon class="w-4 h-4" />{{ form.errors.name }}
                                         </p>
@@ -1640,19 +1935,29 @@ const submit = () => {
                                         </div>
 
                                         <div>
-                                            <label for="category_id" class="block text-sm font-semibold text-gray-700 mb-2">
-                                                Category <span class="text-red-500">*</span>
+                                            <label for="category_id" class="flex items-center justify-between text-sm font-semibold text-gray-700 mb-2">
+                                                <span>Category <span class="text-red-500">*</span></span>
+                                                <span v-if="fieldValidation.category_id.valid" class="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                                                    <Check class="w-3.5 h-3.5" /> {{ fieldValidation.category_id.message }}
+                                                </span>
                                             </label>
-                                            <select
-                                                id="category_id"
-                                                v-model="form.category_id"
-                                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all bg-gray-50/50 focus:bg-white appearance-none cursor-pointer"
-                                            >
-                                                <option value="">Select Category</option>
-                                                <option v-for="category in formattedCategories" :key="category.id" :value="category.id">
-                                                    {{ category.name }}
-                                                </option>
-                                            </select>
+                                            <div class="relative">
+                                                <select
+                                                    id="category_id"
+                                                    v-model="form.category_id"
+                                                    :class="[
+                                                        'w-full px-4 py-3 rounded-xl text-gray-900 focus:ring-4 transition-all bg-gray-50/50 focus:bg-white appearance-none cursor-pointer',
+                                                        fieldValidation.category_id.valid ? 'border-2 border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500/10' :
+                                                        'border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/10'
+                                                    ]"
+                                                >
+                                                    <option value="">Select Category</option>
+                                                    <option v-for="category in formattedCategories" :key="category.id" :value="category.id">
+                                                        {{ category.name }}
+                                                    </option>
+                                                </select>
+                                                <Check v-if="fieldValidation.category_id.valid" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
+                                            </div>
                                             <p v-if="form.errors.category_id" class="mt-2 text-sm text-red-600">{{ form.errors.category_id }}</p>
                                         </div>
 
@@ -1716,8 +2021,11 @@ const submit = () => {
                                             <div class="md:col-span-2">
                                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     <div>
-                                                        <label for="price" class="block text-sm font-semibold text-gray-700 mb-2">
-                                                            Regular Price <span class="text-red-500">*</span>
+                                                        <label for="price" class="flex items-center justify-between text-sm font-semibold text-gray-700 mb-2">
+                                                            <span>Regular Price <span class="text-red-500">*</span></span>
+                                                            <span v-if="fieldValidation.price.valid" class="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                                                                <Check class="w-3.5 h-3.5" /> {{ fieldValidation.price.message }}
+                                                            </span>
                                                         </label>
                                                         <div class="relative">
                                                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">৳</span>
@@ -1727,10 +2035,19 @@ const submit = () => {
                                                                 type="number"
                                                                 step="0.01"
                                                                 min="0"
-                                                                class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all bg-gray-50/50 focus:bg-white"
+                                                                :class="[
+                                                                    'w-full pl-10 pr-4 py-3 rounded-xl text-gray-900 focus:ring-4 transition-all bg-gray-50/50 focus:bg-white',
+                                                                    fieldValidation.price.valid ? 'border-2 border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500/10' :
+                                                                    form.price && !fieldValidation.price.valid ? 'border-2 border-amber-500 focus:border-amber-500 focus:ring-amber-500/10' :
+                                                                    'border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/10'
+                                                                ]"
                                                                 placeholder="0.00"
                                                             />
+                                                            <Check v-if="fieldValidation.price.valid" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
                                                         </div>
+                                                        <p v-if="!fieldValidation.price.valid && form.price" class="mt-1.5 text-xs text-amber-600 flex items-center gap-1">
+                                                            <XIcon class="w-3 h-3" /> {{ fieldValidation.price.message }}
+                                                        </p>
                                                         <p v-if="form.errors.price" class="mt-2 text-sm text-red-600">{{ form.errors.price }}</p>
                                                     </div>
 
@@ -1984,6 +2301,18 @@ const submit = () => {
                                                 <img :src="form.feature_image_preview" class="h-full w-full object-contain" alt="Feature Preview" />
                                             </div>
                                             <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <!-- Edit Image Button -->
+                                                <button
+                                                    type="button"
+                                                    @click="openImageEditor(form.feature_image_preview, 'feature')"
+                                                    class="px-3 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-medium text-sm flex items-center gap-2 shadow-lg transition-all"
+                                                    title="Edit Image"
+                                                >
+                                                    <Crop class="h-4 w-4" />
+                                                    Edit
+                                                </button>
+
+                                                <!-- Replace Button -->
                                                 <button
                                                     type="button"
                                                     @click="$refs.featureInput.click()"
@@ -1992,6 +2321,8 @@ const submit = () => {
                                                     <Upload class="h-4 w-4" />
                                                     Replace
                                                 </button>
+
+                                                <!-- Remove Button -->
                                                 <button
                                                     type="button"
                                                     @click="removeFeatureImage"
@@ -2070,13 +2401,28 @@ const submit = () => {
                                         >
                                             <img :src="preview" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
+
+                                            <!-- Edit Button -->
+                                            <button
+                                                type="button"
+                                                @click="openImageEditor(preview, 'gallery')"
+                                                class="absolute top-2 left-2 p-2 bg-blue-500 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-blue-600 hover:scale-110"
+                                                title="Edit Image"
+                                            >
+                                                <Crop class="h-4 w-4" />
+                                            </button>
+
+                                            <!-- Remove Button -->
                                             <button
                                                 type="button"
                                                 @click="removeGalleryImage(index)"
                                                 class="absolute top-2 right-2 p-2 bg-red-500 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600 hover:scale-110"
+                                                title="Remove Image"
                                             >
                                                 <XIcon class="h-4 w-4" />
                                             </button>
+
+                                            <!-- Position Badge -->
                                             <div class="absolute bottom-2 left-2 px-2 py-1 bg-black/50 backdrop-blur-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <span class="text-xs font-bold text-white">#{{ index + 1 }}</span>
                                             </div>
@@ -2798,6 +3144,13 @@ const submit = () => {
         @close="showTemplateModal = false"
         @save="saveAsTemplate"
         @load="loadFromTemplate"
+    />
+
+    <!-- Product Preview Modal -->
+    <ProductPreview
+        :show="showProductPreview"
+        :product-data="form"
+        @close="showProductPreview = false"
     />
 </template>
 
