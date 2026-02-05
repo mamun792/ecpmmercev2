@@ -21,6 +21,16 @@ import {
     XCircle,
     AlertCircle,
     ExternalLink,
+    Check,
+    Download,
+    Printer,
+    Bike,
+    Filter,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
 } from "lucide-vue-next";
 import CourierSelectionModal from "@/Components/Couriers/CourierSelectionModal.vue";
 import DeleteModal from "@/Components/Modal/DeleteModal.vue";
@@ -641,316 +651,145 @@ const clearAllFilters = () => {
 <template>
     <Head title="Order Management" />
     <AdminLayout>
+        <!-- Loading Overlay -->
         <div
             v-if="checkFraudLoading"
-            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
         >
-            <div
-                class="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"
-            ></div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3">
+                <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Checking fraud...</span>
+            </div>
         </div>
-        <!-- <pre>{{ orders }}</pre> -->
 
-        <div class="order_management p-4 rounded-xl">
-            <!-- Clean Header -->
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-                        <span class="text-white text-xl">📦</span>
+<div class="max-w-7xl mx-auto space-y-8">
+            <!-- Minimal Header -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Orders</h1>
+                        <div class="group relative">
+                            <div class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center cursor-help">
+                                <span class="text-xs font-medium text-blue-600 dark:text-blue-400">?</span>
+                            </div>
+                            <div class="absolute left-0 top-8 w-80 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <div class="space-y-3">
+                                    <h4 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                                            <span class="text-white text-xs">💡</span>
+                                        </div>
+                                        Order Management Tips
+                                    </h4>
+                                    <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <p class="flex items-start gap-2">
+                                            <span class="text-green-500 text-xs mt-1">✓</span>
+                                            <span>Process orders within 24 hours for best customer experience</span>
+                                        </p>
+                                        <p class="flex items-start gap-2">
+                                            <span class="text-blue-500 text-xs mt-1">💡</span>
+                                            <span>Use bulk actions to send multiple orders to courier at once</span>
+                                        </p>
+                                        <p class="flex items-start gap-2">
+                                            <span class="text-purple-500 text-xs mt-1">⚡</span>
+                                            <span>Click on status cards to filter orders quickly</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Orders Management</h1>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ from }}-{{ to }} of {{ total }} orders • Manage efficiently</p>
-                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {{ from }}-{{ to }} of {{ total }} orders
+                        <span class="mx-2">•</span>
+                        <span class="font-medium text-gray-900 dark:text-white">৳{{ Number(props.statusCounts.find(s => s.status === 'total')?.sales || 0).toLocaleString() }}</span> total value
+                        <span class="mx-2">•</span>
+                        <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">Live updates</span>
+                    </p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <Link :href="route('admin.orders.incomplete')" class="inline-flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-lg text-sm font-semibold">
-                        ⏰ Incomplete: {{ props.statusCounts.find(s => s.status === 'incomplete')?.count || 0 }}
+
+                <div class="flex items-center gap-3">
+                    <Link :href="route('admin.orders.incomplete')"
+                          class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+                        <Clock class="w-4 h-4" />
+                        <span>Incomplete</span>
+                        <span class="bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full text-xs font-semibold">
+                            {{ props.statusCounts.find(s => s.status === 'incomplete')?.count || 0 }}
+                        </span>
                     </Link>
-                    <button @click="resetFilters" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1">
-                        🔄 <span class="hidden sm:inline">Reset</span>
+                    <button @click="resetFilters"
+                            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
+                        <ArrowUpDown class="w-4 h-4" />
+                        <span>Reset</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Status Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
-                <!-- Total Orders Card - Enhanced -->
-                <div
-                    @click="selectStatus('')"
-                    class="relative overflow-hidden rounded-xl shadow-sm hover:shadow-lg cursor-pointer transition-all duration-300 group touch-manipulation"
-                    :class="{
-                        'bg-gradient-to-br from-blue-600 to-blue-800 text-white ring-4 ring-blue-400 ring-offset-2 shadow-xl':
-                            filters.status === '',
-                        'bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300':
-                            filters.status !== '',
-                    }"
-                    title="Click to view all orders regardless of status"
-                >
-                    <div class="p-4 sm:p-5 relative z-10">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <h3
-                                    class="text-sm font-bold mb-1 flex items-center gap-2"
-                                    :class="
-                                        filters.status === ''
-                                            ? 'text-blue-100'
-                                            : 'text-gray-600'
-                                    "
-                                >
-                                    <span>📦</span>
-                                    <span class="hidden sm:inline">Total Orders</span>
-                                    <span class="sm:hidden">Total</span>
-                                </h3>
-                                <p
-                                    class="text-2xl sm:text-3xl font-black"
-                                    :class="
-                                        filters.status === ''
-                                            ? 'text-white'
-                                            : 'text-gray-900'
-                                    "
-                                >
-                                    {{
-                                        props.statusCounts.find(
-                                            (s) => s.status === "total"
-                                        )?.count || 0
-                                    }}
-                                </p>
-                                <p
-                                    class="text-xs sm:text-sm mt-1 font-semibold flex items-center gap-1"
-                                    :class="
-                                        filters.status === ''
-                                            ? 'text-blue-100'
-                                            : 'text-gray-600'
-                                    "
-                                >
-                                    <span>💰</span>
-                                    <span>৳{{ Number(props.statusCounts.find(
-                                        (s) => s.status === "total"
-                                    )?.sales || 0).toFixed(2) }}</span>
-                                </p>
-                            </div>
-                            <div
-                                class="p-2 rounded-lg"
-                                :class="
-                                    filters.status === ''
-                                        ? 'bg-blue-500/30 text-white'
-                                        : 'bg-blue-100 text-blue-600'
-                                "
-                            >
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-6 w-6"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                    />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-
-
-                <div
-                    v-for="status in availableStatuses.filter(s => s !== 'incomplete')"
-                    :key="status"
-                    @click="selectStatus(status)"
-                    class="relative overflow-hidden rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all duration-300"
-                    :class="{
-                        'bg-gradient-to-br from-blue-600 to-blue-800 text-white ring-2 ring-blue-400 ring-offset-2':
-                            filters.status === status && status === 'pending',
-                        'bg-gradient-to-br from-emerald-500 to-emerald-700 text-white ring-2 ring-emerald-400 ring-offset-2':
-                            filters.status === status &&
-                            status === 'processing',
-                        'bg-gradient-to-br from-rose-500 to-rose-700 text-white ring-2 ring-rose-400 ring-offset-2':
-                            filters.status === status && status === 'cancelled',
-                        'bg-gradient-to-br from-amber-500 to-amber-700 text-white ring-2 ring-amber-400 ring-offset-2':
-                            filters.status === status && status === 'shipped',
-                        'bg-gradient-to-br from-indigo-500 to-indigo-700 text-white ring-2 ring-indigo-400 ring-offset-2':
-                            filters.status === status && status === 'delivered',
-                        'bg-gradient-to-br from-primary to-primary text-white ring-2 ring-primary ring-offset-2':
-                            filters.status === status && status === 'returned',
-                        'bg-gradient-to-br from-slate-600 to-slate-800 text-white ring-2 ring-slate-400 ring-offset-2':
-                            filters.status === status &&
-                            status === 'incomplete',
-                        'bg-gradient-to-br from-cyan-500 to-cyan-700 text-white ring-2 ring-cyan-400 ring-offset-2':
-                            filters.status === status && status === 'on_hold',
-                        'bg-gradient-to-br from-violet-500 to-violet-700 text-white ring-2 ring-violet-400 ring-offset-2':
-                            filters.status === status && status === 'confirmed',
-
-                        'bg-white hover:bg-gray-50 border border-gray-200':
-                            filters.status !== status,
-                    }"
-                >
-                    <div class="p-5 relative z-10">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <h3
-                                    class="text-sm font-medium mb-1"
-                                    :class="
-                                        filters.status === status
-                                            ? 'text-white/90'
-                                            : 'text-gray-500'
-                                    "
-                                >
-                                    {{
-                                        status.charAt(0).toUpperCase() +
-                                        status.slice(1)
-                                    }}
-                                </h3>
-                                <p
-                                    class="text-3xl font-bold"
-                                    :class="
-                                        filters.status === status
-                                            ? 'text-white'
-                                            : 'text-gray-800'
-                                    "
-                                >
-                                    {{
-                                        props.statusCounts.find(
-                                            (s) => s.status === status
-                                        )?.count || 0
-                                    }}
-                                </p>
-                                <p
-                                    class="text-sm mt-1"
-                                    :class="
-                                        filters.status === status
-                                            ? 'text-white/80'
-                                            : 'text-gray-600'
-                                    "
-                                >
-                                    ৳{{ Number(props.statusCounts.find(
-                                        (s) => s.status === status
-                                    )?.sales || 0).toFixed(2) }}
-                                </p>
-                            </div>
-                            <!-- Icon based on status -->
-                            <div
-                                class="p-2 rounded-lg"
-                                :class="{
-                                    'bg-white/20 text-white':
-                                        filters.status === status,
-                                    'bg-blue-100 text-blue-600':
-                                        filters.status !== status &&
-                                        status === 'pending',
-                                    'bg-emerald-100 text-emerald-600':
-                                        filters.status !== status &&
-                                        status === 'processing',
-                                    'bg-rose-100 text-rose-600':
-                                        filters.status !== status &&
-                                        status === 'cancelled',
-                                    'bg-amber-100 text-amber-600':
-                                        filters.status !== status &&
-                                        status === 'shipped',
-                                    'bg-indigo-100 text-indigo-600':
-                                        filters.status !== status &&
-                                        status === 'delivered',
-                                    'bg-primary/10 text-primary':
-                                        filters.status !== status &&
-                                        status === 'returned',
-                                    'bg-slate-100 text-slate-600':
-                                        filters.status !== status &&
-                                        status === 'incomplete',
-                                    'bg-cyan-100 text-cyan-600':
-                                        filters.status !== status &&
-                                        status === 'on_hold',
-                                    'bg-violet-100 text-violet-600':
-                                        filters.status !== status &&
-                                        status === 'confirmed',
-                                }"
-                            >
-                                <span class="text-xs font-bold">
-                                    {{ status.substring(0, 2).toUpperCase() }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Status Filters -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-4">
-                <div class="flex flex-wrap items-center gap-2">
+<!-- Minimal Status Overview -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    <!-- Total Orders -->
                     <button
                         @click="selectStatus('')"
-                        :class="[
-                            'px-3 py-2 text-sm font-semibold rounded-lg transition-all',
-                            filters.status === ''
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        ]"
+                        class="group p-4 rounded-xl transition-all duration-200"
+                        :class="filters.status === ''
+                            ? 'bg-blue-50 ring-2 ring-blue-500 ring-opacity-20'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'"
                     >
-                        📦 All ({{ props.statusCounts.find((s) => s.status === 'total')?.count || 0 }})
+                        <div class="text-center space-y-1">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                                {{ props.statusCounts.find(s => s.status === 'total')?.count || 0 }}
+                            </div>
+                            <div class="text-xs font-medium text-gray-500 dark:text-gray-400">All Orders</div>
+                            <div class="text-xs font-semibold text-green-600">
+                                ৳{{ Number(props.statusCounts.find(s => s.status === 'total')?.sales || 0).toLocaleString() }}
+                            </div>
+                        </div>
                     </button>
 
-                    <button
-                        @click="selectStatus('pending')"
-                        :class="[
-                            'px-3 py-2 text-sm font-semibold rounded-lg transition-all',
-                            filters.status === 'pending'
-                                ? 'bg-amber-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        ]"
-                    >
-                        ⏰ Pending ({{ props.statusCounts.find((s) => s.status === 'pending')?.count || 0 }})
-                    </button>
 
+
+                    <!-- Individual Status Cards -->
                     <button
-                        @click="selectStatus('processing')"
-                        :class="[
-                            'px-3 py-2 text-sm font-semibold rounded-lg transition-all',
-                            filters.status === 'processing'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        ]"
+                        v-for="status in availableStatuses.filter(s => s !== 'incomplete')"
+                        :key="status"
+                        @click="selectStatus(status)"
+                        class="group p-4 rounded-xl transition-all duration-200"
+                        :class="{
+                            'bg-amber-50 ring-2 ring-amber-500 ring-opacity-20': filters.status === status && status === 'pending',
+                            'bg-blue-50 ring-2 ring-blue-500 ring-opacity-20': filters.status === status && status === 'processing',
+                            'bg-red-50 ring-2 ring-red-500 ring-opacity-20': filters.status === status && status === 'cancelled',
+                            'bg-purple-50 ring-2 ring-purple-500 ring-opacity-20': filters.status === status && status === 'shipped',
+                            'bg-green-50 ring-2 ring-green-500 ring-opacity-20': filters.status === status && status === 'delivered',
+                            'bg-pink-50 ring-2 ring-pink-500 ring-opacity-20': filters.status === status && status === 'returned',
+                            'bg-gray-50 ring-2 ring-gray-500 ring-opacity-20': filters.status === status && status === 'on_hold',
+                            'bg-indigo-50 ring-2 ring-indigo-500 ring-opacity-20': filters.status === status && status === 'confirmed',
+                            'hover:bg-gray-50 dark:hover:bg-gray-700/50': filters.status !== status
+                        }"
                     >
-                        ⚙️ Processing ({{ props.statusCounts.find((s) => s.status === 'processing')?.count || 0 }})
-                    </button>
-                    <button
-                        @click="selectStatus('shipped')"
-                        :class="[
-                            'px-3 py-2 text-sm font-semibold rounded-lg transition-all',
-                            filters.status === 'shipped'
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        ]"
-                    >
-                        🚚 Shipped ({{ props.statusCounts.find((s) => s.status === 'shipped')?.count || 0 }})
-                    </button>
-                    <button
-                        @click="selectStatus('delivered')"
-                        :class="[
-                            'px-3 py-2 text-sm font-semibold rounded-lg transition-all',
-                            filters.status === 'delivered'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        ]"
-                    >
-                        ✅ Delivered ({{ props.statusCounts.find((s) => s.status === 'delivered')?.count || 0 }})
-                    </button>
-                    <button
-                        @click="selectStatus('cancelled')"
-                        :class="[
-                            'px-3 py-2 text-sm font-semibold rounded-lg transition-all',
-                            filters.status === 'cancelled'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        ]"
-                    >
-                        ❌ Cancelled ({{ props.statusCounts.find((s) => s.status === 'cancelled')?.count || 0 }})
+                        <div class="text-center space-y-1">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                                {{ props.statusCounts.find(s => s.status === status)?.count || 0 }}
+                            </div>
+                            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 capitalize">{{ status.replace('_', ' ') }}</div>
+                            <div class="text-xs font-semibold"
+                                 :class="{
+                                     'text-amber-600': status === 'pending',
+                                     'text-blue-600': status === 'processing',
+                                     'text-red-600': status === 'cancelled',
+                                     'text-purple-600': status === 'shipped',
+                                     'text-green-600': status === 'delivered',
+                                     'text-pink-600': status === 'returned',
+                                     'text-gray-600': status === 'on_hold',
+                                     'text-indigo-600': status === 'confirmed'
+                                 }">
+                                ৳{{ Number(props.statusCounts.find(s => s.status === status)?.sales || 0).toLocaleString() }}
+                            </div>
+                        </div>
                     </button>
                 </div>
             </div>
+
+
 
             <!-- Filter Chips - Show Active Filters -->
             <FilterChips
@@ -959,819 +798,566 @@ const clearAllFilters = () => {
                 @clear-all="clearAllFilters"
             />
 
+            <!-- Best Practices Banner -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl border border-blue-200 dark:border-blue-800 p-6 mb-6">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                        <span class="text-white text-xl">💡</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Order Management Best Practices</h3>
+                        <div class="grid md:grid-cols-2 gap-4 text-sm">
+                            <div class="space-y-2">
+                                <p class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                    <span><strong>Quick Processing:</strong> Confirm orders within 2-4 hours</span>
+                                </p>
+                                <p class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    <span><strong>Batch Shipping:</strong> Group orders by area for efficiency</span>
+                                </p>
+                            </div>
+                            <div class="space-y-2">
+                                <p class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                                    <span><strong>Customer Communication:</strong> Update status regularly</span>
+                                </p>
+                                <p class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                    <span><strong>Quality Check:</strong> Verify customer details before shipping</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 transition-colors p-1">
+                        <X class="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+
             <!-- Advanced Filters Component -->
             <AdvancedFilters
                 v-model="filters"
                 :status-counts="statusCounts"
                 @apply="applyFilters"
                 @reset="resetFilters"
-                class="mb-6"
+                class="mb-4"
             />
 
-            <!-- Bulk Actions -->
-            <div class="mb-4" v-if="selectedOrders.length > 0">
-                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700 p-3">
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div class="flex items-center gap-2">
-                            <span class="text-lg">⚡</span>
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ selectedOrders.length }} orders selected</span>
+            <!-- Bulk Actions Bar with Enhanced UX -->
+            <div v-if="selectedOrders.length > 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                            <Check class="w-5 h-5 text-blue-600" />
                         </div>
-
-                        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                            <!-- Steadfast Courier Button -->
-                            <button
-                                @click="sendBulkToSteadfast"
-                                class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 touch-manipulation flex-shrink-0"
-                                :disabled="isDownloading"
-                                title="Send selected orders to Steadfast courier service"
-                            >
-                                <span class="text-lg">🚚</span>
-                                <span class="hidden sm:inline">Send to Steadfast</span>
-                                <span class="sm:hidden">Steadfast</span>
-                                <span class="px-2 py-0.5 bg-blue-700 text-white rounded-full text-xs font-black">{{ selectedOrders.length }}</span>
-                            </button>
-
-                            <!-- Pathao Courier Button -->
-                            <button
-                                @click="sendBulkToPathao"
-                                class="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 touch-manipulation flex-shrink-0"
-                                :disabled="isDownloading"
-                                title="Send selected orders to Pathao courier service"
-                            >
-                                <span class="text-lg">🛵</span>
-                                <span class="hidden sm:inline">Send to Pathao</span>
-                                <span class="sm:hidden">Pathao</span>
-                                <span class="px-2 py-0.5 bg-emerald-700 text-white rounded-full text-xs font-black">{{ selectedOrders.length }}</span>
-                            </button>
-
-                            <!-- Print Invoices Button -->
-                            <button
-                                @click="printBulkInvoice"
-                                class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 touch-manipulation flex-shrink-0"
-                                title="Print invoices for all selected orders"
-                            >
-                                <span class="text-lg">🖨️</span>
-                                <span class="hidden sm:inline">Print Invoices</span>
-                                <span class="sm:hidden">Print</span>
-                                <span class="px-2 py-0.5 bg-purple-700 text-white rounded-full text-xs font-black">{{ selectedOrders.length }}</span>
-                            </button>
+                        <div>
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                {{ selectedOrders.length }} order{{ selectedOrders.length > 1 ? 's' : '' }} selected
+                            </p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                Choose an action to apply to selected orders
+                            </p>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-<!-- Per Page Settings -->
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2">
-                    <label class="text-sm text-gray-600 dark:text-gray-400">Show:</label>
-                    <select
-                        v-model="filters.per_page"
-                        @change="updateFilters"
-                        class="px-3 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
-                    >
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">per page</span>
-                </div>
-            </div>
-
-                <!-- 🎯 Enhanced Beautiful Orders Table -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <!-- 🎨 Compact Table Header -->
-                <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700 p-3 md:p-4">
-                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                        <div class="flex items-center gap-2 md:gap-3">
-                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-                                <span class="text-white text-sm md:text-lg">📋</span>
+                        <!-- Bulk Actions Help -->
+                        <div class="group relative">
+                            <div class="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center cursor-help">
+                                <span class="text-xs font-medium text-green-600 dark:text-green-400">?</span>
                             </div>
-                            <div>
-                                <h3 class="text-sm md:text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                    Orders Management
-                                </h3>
-                                <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                                    📊 {{ from }}-{{ to }} of {{ total }} orders
-                                </p>
-                            </div>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 px-2 py-1 md:px-3 md:py-1.5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
-                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">📈 Live</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 📱 Responsive Table Container -->
-                <div class="overflow-x-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-400 hover:scrollbar-thumb-gray-500">
-                    <table class="min-w-full table-auto" style="min-width: 1200px;">
-                        <thead>
-                            <tr class="bg-gradient-to-r from-gray-800 via-blue-800 to-gray-800">
-                                <!-- ✅ Compact Select All Checkbox -->
-                                <th class="px-2 md:px-4 py-3 text-left min-w-[70px]">
-                                    <div class="flex items-center gap-1 md:gap-2">
-                                        <div class="relative group">
-                                            <input
-                                                type="checkbox"
-                                                :checked="isAllSelected"
-                                                @change="handleSelectAllChange"
-                                                class="w-4 h-4 rounded-lg text-blue-600 bg-white border-2 border-gray-300 focus:ring-2 focus:ring-blue-200 transition-all duration-300 cursor-pointer hover:border-blue-400"
-                                            />
-                                        </div>
-                                        <span class="text-xs font-bold text-white/90 uppercase tracking-wide">
-                                            <span class="hidden sm:inline">Select</span>
-                                            <span class="sm:hidden">All</span>
-                                        </span>
-                                    </div>
-                                </th>
-
-                                <!-- 🏷️ Compact Order ID Header -->
-                                <th
-                                    @click="toggleSort('order_number')"
-                                    class="px-2 md:px-4 py-3 text-left cursor-pointer hover:bg-white/10 transition-all duration-200 rounded-lg group min-w-[140px]"
-                                >
-                                    <div class="flex items-center gap-1 md:gap-2">
-                                        <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-sm">
-                                            <span class="text-white text-xs">🏷️</span>
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-white">Order ID</span>
-                                            <span class="text-xs text-white/60 hidden md:block">Click sort</span>
-                                        </div>
-                                        <div class="text-white/60 group-hover:text-white transition-colors text-xs">
-                                            {{ getSortIcon("order_number") }}
-                                        </div>
-                                    </div>
-                                </th>
-
-                                <!-- 👤 Compact Customer Header -->
-                                <th
-                                    @click="toggleSort('customer_name')"
-                                    class="px-2 md:px-4 py-3 text-left cursor-pointer hover:bg-white/10 transition-all duration-200 rounded-lg group min-w-[160px]"
-                                >
-                                    <div class="flex items-center gap-1 md:gap-2">
-                                        <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center shadow-sm">
-                                            <span class="text-white text-xs">👤</span>
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-white">Customer</span>
-                                            <span class="text-xs text-white/60 hidden md:block">Contact info</span>
-                                        </div>
-                                        <div class="text-white/60 group-hover:text-white transition-colors text-xs">
-                                            {{ getSortIcon("customer_name") }}
-                                        </div>
-                                    </div>
-                                </th>
-
-                                <!-- 🛍️ Compact Products Header -->
-                                <th class="px-2 md:px-4 py-3 text-left min-w-[180px]">
-                                    <div class="flex items-center gap-1 md:gap-2">
-                                        <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center shadow-sm">
-                                            <span class="text-white text-xs">🛍️</span>
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-white">Products</span>
-                                            <span class="text-xs text-white/60 hidden md:block">Items</span>
-                                        </div>
-                                    </div>
-                                </th>
-
-                                <!-- 💰 Compact Total Header -->
-                                <th
-                                    @click="toggleSort('total')"
-                                    class="px-2 md:px-4 py-3 text-left cursor-pointer hover:bg-white/10 transition-all duration-200 rounded-lg group min-w-[100px]"
-                                >
-                                    <div class="flex items-center gap-1 md:gap-2">
-                                        <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-sm">
-                                            <span class="text-white text-xs">💰</span>
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-white">Total</span>
-                                            <span class="text-xs text-white/60 hidden md:block">Amount</span>
-                                        </div>
-                                        <div class="text-white/60 group-hover:text-white transition-colors text-xs">
-                                            {{ getSortIcon("total") }}
-                                        </div>
-                                    </div>
-                                </th>
-
-                                <!-- 📊 Compact Status Header -->
-                                <th
-                                    @click="toggleSort('status')"
-                                    class="px-2 md:px-4 py-3 text-left cursor-pointer hover:bg-white/10 transition-all duration-200 rounded-lg group min-w-[120px]"
-                                >
-                                    <div class="flex items-center gap-1 md:gap-2">
-                                        <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-sm">
-                                            <span class="text-white text-xs">📊</span>
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-white">Status</span>
-                                            <span class="text-xs text-white/60 hidden md:block">Progress</span>
-                                        </div>
-                                        <div class="text-white/60 group-hover:text-white transition-colors text-xs">
-                                            {{ getSortIcon("status") }}
-                                        </div>
-                                    </div>
-                                </th>
-
-                                <!-- 💳 Compact Payment Header -->
-                                <th class="px-2 md:px-4 py-3 text-left min-w-[100px]">
-                                    <div class="flex items-center gap-1 md:gap-2">
-                                        <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center shadow-sm">
-                                            <span class="text-white text-xs">💳</span>
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-white">Payment</span>
-                                            <span class="text-xs text-white/60 hidden md:block">Status</span>
-                                        </div>
-                                    </div>
-                                </th>
-
-                                <!-- 🚚 Compact Courier Header -->
-                                <th class="px-2 md:px-4 py-3 text-left min-w-[140px]">
-                                    <div class="flex items-center gap-1 md:gap-2">
-                                        <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-sm">
-                                            <span class="text-white text-xs">🚚</span>
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-white">Courier</span>
-                                            <span class="text-xs text-white/60 hidden md:block">Shipping</span>
-                                        </div>
-                                    </div>
-                                </th>
-
-                                <!-- ⚡ Compact Actions Header -->
-                                <th class="px-2 md:px-3 py-3 text-left min-w-[80px]">
-                                    <div class="flex items-center gap-1">
-                                        <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-red-400 to-pink-500 flex items-center justify-center shadow-sm">
+                            <div class="absolute left-0 top-8 w-80 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <div class="space-y-3">
+                                    <h4 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center">
                                             <span class="text-white text-xs">⚡</span>
                                         </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-xs font-bold text-white">Actions</span>
+                                        Bulk Actions Guide
+                                    </h4>
+                                    <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <p class="flex items-start gap-2">
+                                            <span class="text-blue-500 text-xs mt-1">🚛</span>
+                                            <span><strong>Courier:</strong> Send multiple orders to Steadfast or Pathao at once</span>
+                                        </p>
+                                        <p class="flex items-start gap-2">
+                                            <span class="text-purple-500 text-xs mt-1">📄</span>
+                                            <span><strong>Invoice:</strong> Download or print invoices for all selected orders</span>
+                                        </p>
+                                        <p class="flex items-start gap-2">
+                                            <span class="text-green-500 text-xs mt-1">💡</span>
+                                            <span><strong>Tip:</strong> Select orders with same status for better workflow</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <!-- Courier Actions -->
+                        <div class="flex items-center gap-2">
+                            <button
+                                @click="sendBulkToSteadfast"
+                                :disabled="isDownloading"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                <Truck class="w-4 h-4 text-white" />
+                                <span>Send to Steadfast</span>
+                                <span class="bg-blue-700 px-2 py-0.5 rounded-full text-xs">{{ selectedOrders.length }}</span>
+                            </button>
+
+                            <button
+                                @click="sendBulkToPathao"
+                                :disabled="isDownloading"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                <Bike class="w-4 h-4 text-white" />
+                                <span>Send to Pathao</span>
+                                <span class="bg-emerald-700 px-2 py-0.5 rounded-full text-xs">{{ selectedOrders.length }}</span>
+                            </button>
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="w-px h-8 bg-gray-200 dark:bg-gray-600"></div>
+
+                        <!-- Document Actions -->
+                        <div class="flex items-center gap-2">
+                            <button
+                                @click="downloadBulkInvoice"
+                                :disabled="isDownloading"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                <span v-if="isDownloading" class="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></span>
+                                <Download v-else class="w-4 h-4 text-blue-600" />
+                                <span>Download Invoice</span>
+                            </button>
+
+                            <button
+                                @click="printBulkInvoice"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                            >
+                                <Printer class="w-4 h-4 text-purple-600" />
+                                <span>Print Invoice</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Table Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <!-- Table Header with Per Page selector and Workflow Tips -->
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Orders</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                Showing {{ from }}-{{ to }} of {{ total }} orders
+                            </p>
+                        </div>
+                        <!-- Quick Tips -->
+                        <div class="group relative hidden lg:block">
+                            <div class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-800 cursor-help">
+                                <span class="text-xs font-medium text-purple-700 dark:text-purple-400">Quick Tips</span>
+                                <span class="w-4 h-4 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
+                                    <span class="text-xs text-purple-600 dark:text-purple-400">?</span>
+                                </span>
+                            </div>
+                            <div class="absolute left-0 top-12 w-96 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl p-6 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <div class="space-y-4">
+                                    <h4 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
+                                            <span class="text-white text-xs">⚡</span>
+                                        </div>
+                                        Order Processing Workflow
+                                    </h4>
+                                    <div class="space-y-3 text-sm">
+                                        <div class="flex items-center gap-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                                            <span class="w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">1</span>
+                                            <span class="text-gray-700 dark:text-gray-300">Review pending orders and verify customer details</span>
+                                        </div>
+                                        <div class="flex items-center gap-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                            <span class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center">2</span>
+                                            <span class="text-gray-700 dark:text-gray-300">Confirm orders and mark as 'Processing'</span>
+                                        </div>
+                                        <div class="flex items-center gap-3 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                                            <span class="w-6 h-6 rounded-full bg-purple-500 text-white text-xs font-bold flex items-center justify-center">3</span>
+                                            <span class="text-gray-700 dark:text-gray-300">Send to courier when ready to ship</span>
+                                        </div>
+                                        <div class="flex items-center gap-3 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                            <span class="w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center">4</span>
+                                            <span class="text-gray-700 dark:text-gray-300">Update to 'Delivered' once confirmed</span>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Show:</span>
+                            <select v-model="filters.per_page" @change="updateFilters"
+                                    class="px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="text-sm text-gray-600 dark:text-gray-400">per page</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Live</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto">
+                    <table class="w-full table-fixed">
+                        <thead class="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <!-- Select All -->
+                                <th class="w-12 px-6 py-4 text-left">
+                                    <input type="checkbox"
+                                           :checked="isAllSelected"
+                                           @change="handleSelectAllChange"
+                                           class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                                    />
+                                </th>
+
+                                <!-- Order ID -->
+                                <th @click="toggleSort('order_number')"
+                                    class="w-40 px-6 py-4 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <div class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                        <span>Order</span>
+                                        <ArrowUpDown class="w-4 h-4 text-blue-500" />
+                                    </div>
+                                </th>
+
+                                <!-- Customer -->
+                                <th @click="toggleSort('customer_name')"
+                                    class="w-48 px-6 py-4 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <div class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                        <span>Customer</span>
+                                        <ArrowUpDown class="w-4 h-4 text-green-500" />
+                                    </div>
+                                </th>
+
+                                <!-- Products -->
+                                <th class="px-6 py-4 text-left">
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Products</span>
+                                </th>
+
+                                <!-- Total -->
+                                <th @click="toggleSort('total')"
+                                    class="w-32 px-6 py-4 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <div class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                        <span>Total</span>
+                                        <ArrowUpDown class="w-4 h-4 text-emerald-500" />
+                                    </div>
+                                </th>
+
+                                <!-- Status -->
+                                <th @click="toggleSort('status')"
+                                    class="w-32 px-6 py-4 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <div class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                        <span>Status</span>
+                                        <ArrowUpDown class="w-4 h-4 text-purple-500" />
+                                    </div>
+                                </th>
+
+                                <!-- Date -->
+                                <th @click="toggleSort('created_at')"
+                                    class="w-40 px-6 py-4 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <div class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                        <span>Date</span>
+                                        <ArrowUpDown class="w-4 h-4 text-amber-500" />
+                                    </div>
+                                </th>
+
+                                <!-- Actions -->
+                                <th class="w-32 px-6 py-4 text-center">
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</span>
                                 </th>
                             </tr>
                         </thead>
-<tbody class="bg-white dark:bg-gray-800">
+
+                        <tbody v-if="visibleOrders.length === 0" class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <tr>
+                                <td colspan="7" class="px-6 py-16">
+                                    <div class="text-center">
+                                        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center">
+                                            <Package class="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No orders found</h3>
+                                        <p class="text-gray-500 dark:text-gray-400 mb-4 max-w-sm mx-auto">
+                                            {{ filters.status ? `No orders with '${filters.status}' status found.` : 'No orders match your current filters.' }}
+                                        </p>
+                                        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                            <button @click="resetFilters"
+                                                    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                                                <ArrowUpDown class="w-4 h-4" />
+                                                Clear All Filters
+                                            </button>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                                or try adjusting your search criteria
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+
+                        <tbody v-else class="divide-y divide-gray-100 dark:divide-gray-700">
                             <tr
                                 v-for="(order, index) in visibleOrders"
                                 :key="order.id"
-                                class="border-b border-gray-100 dark:border-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-blue-900/10 dark:hover:to-indigo-900/10 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-600 transition-all duration-300 transform hover:scale-[1.002] group"
-                                :class="{
-                                    'bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 ring-2 ring-blue-300 dark:ring-blue-600 shadow-xl scale-[1.005]': selectedOrders.includes(order.id),
-                                }"
+                                class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                                :class="{ 'bg-blue-50 dark:bg-blue-900/20': selectedOrders.includes(order.id) }"
                             >
-                                <!-- ✨ Compact Checkbox Cell -->
-                                <td class="px-2 md:px-4 py-3 min-w-[60px]">
-                                    <div class="flex items-center justify-center">
-                                        <div class="relative group">
-                                            <input
-                                                type="checkbox"
-                                                :value="order.id"
-                                                :checked="selectedOrders.includes(order.id)"
-                                                @change="handleOrderSelectionChange(order.id)"
-                                                class="w-4 h-4 rounded-lg text-blue-600 bg-white border-2 border-gray-300 focus:ring-2 focus:ring-blue-200 transition-all duration-300 cursor-pointer hover:border-blue-400"
-                                            />
-                                            <div v-if="selectedOrders.includes(order.id)" class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full animate-pulse"></div>
-                                        </div>
-                                    </div>
+                                <!-- Checkbox -->
+                                <td class="px-6 py-4">
+                                    <input
+                                        type="checkbox"
+                                        :value="order.id"
+                                        :checked="selectedOrders.includes(order.id)"
+                                        @change="handleOrderSelectionChange(order.id)"
+                                        class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                                    />
                                 </td>
 
-                                <!-- 📋 Compact Order ID Cell -->
-                                <td class="px-2 md:px-4 py-3">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition-all duration-300">
-                                            <span class="text-white font-bold text-xs">📋</span>
-                                        </div>
-                                        <div class="flex flex-col">
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-sm font-bold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-indigo-600 transition-all duration-300">{{ order.order_number }}</span>
-                                                <span v-if="order.admin_notes"
-                                                      class="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center shadow-lg hover:scale-110 transition-all duration-200"
-                                                      title="📝 Has admin notes">
-                                                    📝
-                                                </span>
-                                            </div>
-                                            <div class="flex items-center gap-2 mt-1">
-                                                <div v-if="isToday(order.date)" class="px-2 py-1 bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">
-                                                    ✨ TODAY
-                                                </div>
-                                                <span class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-                                                    📅 {{ formatOrderDate(order.date) }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-
-                            <!-- 👤 Compact Customer Cell -->
-                            <td class="px-2 md:px-4 py-3">
-                                <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-2 bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-800 dark:via-gray-750 dark:to-blue-900/20 hover:shadow-lg transition-all duration-300">
-                                    <div class="space-y-2">
-                                        <!-- Customer Header -->
-                                        <div class="flex items-center gap-2 pb-1 border-b border-gray-200 dark:border-gray-600">
-                                            <div class="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                                                <span class="text-white text-xs">👤</span>
-                                            </div>
-                                            <span class="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">
-                                                {{ truncateText(order.customer.name, 2) }}
-                                            </span>
-                                        </div>
-
-                                        <!-- Contact Info Grid -->
-                                        <div class="space-y-1">
-                                            <!-- Email -->
-                                            <div class="flex items-center gap-1 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg px-2 py-1">
-                                                <span class="text-blue-600 text-xs">📧</span>
-                                                <span class="text-xs text-gray-700 dark:text-gray-300 truncate font-medium">{{ order.customer?.email }}</span>
-                                            </div>
-
-                                            <!-- Phone -->
-                                            <div class="flex items-center gap-1 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg px-2 py-1">
-                                                <span class="text-green-600 text-xs">📞</span>
-                                                <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">{{ order.customer?.phone }}</span>
-                                            </div>
-
-                                            <!-- Address -->
-                                            <div class="flex items-start gap-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg px-2 py-1">
-                                                <span class="text-purple-600 text-xs">📍</span>
-                                                <span class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2 font-medium">{{ order.customer?.address }}</span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Customer Note -->
-                                        <div v-if="order.customer?.note && order.customer.note !== 'N/A'"
-                                             class="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-2">
-                                            <div class="flex items-start gap-1">
-                                                <span class="text-yellow-600 text-sm">💬</span>
-                                                <div class="flex-1">
-                                                    <span class="text-xs font-bold text-yellow-800 dark:text-yellow-300">Note:</span>
-                                                    <p class="text-xs text-yellow-700 dark:text-yellow-400 mt-0.5">{{ order.customer?.note }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Admin Notes Section -->
-                                        <div v-if="order.admin_notes" class="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/40 dark:to-blue-900/40 border border-indigo-200 dark:border-indigo-600 rounded-lg p-2">
-                                            <div class="flex items-start gap-1">
-                                                <span class="text-indigo-600 text-sm">🔒</span>
-                                                <div class="flex-1">
-                                                    <p class="text-xs font-bold text-indigo-800 dark:text-indigo-300 mb-0.5">Admin Notes:</p>
-                                                    <p class="text-xs text-indigo-700 dark:text-indigo-400 line-clamp-2">{{ order.admin_notes }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Action Button -->
-                                        <button
-                                            @click="openAdminNotesModal(order)"
-                                            class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-3 py-2 rounded-lg font-bold transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 transform hover:scale-105">
-                                            <div class="flex items-center justify-center gap-1">
-                                                <span class="text-sm">📝</span>
-                                                <span class="text-xs">{{ order.admin_notes ? 'Edit Notes' : 'Add Notes' }}</span>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </div>
-                            </td>
-                            <!-- 🛍️ Compact Items Cell -->
-                            <td class="px-2 md:px-4 py-3">
-                                <div class="space-y-2">
-                                    <!-- No Items State -->
-                                    <div v-if="order.items.length === 0" class="text-center py-4 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-                                        <div class="text-2xl mb-1">📦</div>
-                                        <div class="text-gray-600 dark:text-gray-400 font-medium text-xs">No items</div>
-                                    </div>
-
-                                    <!-- Items List -->
-                                    <div v-else class="space-y-2">
-                                        <div
-                                            v-for="(item, index) in order.items"
-                                            :key="item.id"
-                                            v-show="index < (showAllItems ? order.items.length : 2)"
-                                            class="bg-gradient-to-br from-white via-blue-50 to-indigo-50 dark:from-gray-800 dark:via-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-2 hover:shadow-lg transition-all duration-300 group"
-                                        >
-                                            <div class="flex items-start gap-2">
-                                                <!-- Product Image -->
-                                                <div class="relative shrink-0">
-                                                    <img
-                                                        :src="item.product.image || ''"
-                                                        alt="Product Image"
-                                                        class="w-12 h-12 object-cover rounded-lg shadow-lg ring-1 ring-blue-200 dark:ring-blue-700"
-                                                    />
-                                                    <div class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                                                        <span class="text-white text-xs font-bold">{{ item.quantity }}</span>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Product Details -->
-                                                <div class="flex-1 min-w-0 space-y-1">
-                                                    <!-- Product Name & Badge -->
-                                                    <div class="flex items-start gap-1">
-                                                        <h4 class="font-bold text-gray-900 dark:text-gray-100 text-xs truncate leading-tight">
-                                                            {{ truncateText(item.product.name, 2) }}
-                                                        </h4>
-                                                        <span v-if="item.is_pre_order" class="bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs px-1 py-0.5 rounded-full font-bold shadow-sm whitespace-nowrap">
-                                                            ⏰ Pre
-                                                        </span>
-                                                    </div>
-
-                                                    <!-- Price Info -->
-                                                    <div class="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg px-2 py-1">
-                                                        <div class="flex items-center gap-1 text-xs">
-                                                            <span class="text-green-600">💰</span>
-                                                            <span class="font-bold text-green-800 dark:text-green-300">৳{{ item.price }}</span>
-                                                            <span class="text-green-600">×{{ item.quantity }}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Variation Info -->
-                                                    <div v-if="item.variation" class="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-lg px-2 py-1">
-                                                        <div class="flex flex-wrap gap-1">
-                                                            <span v-for="(value, key) in item.variation.attributes" :key="key" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-1 py-0.5 rounded-full font-bold shadow-sm">
-                                                                {{ key }}: {{ value }}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Show More/Less Button -->
-                                    <div v-if="order.items.length > 2" class="text-center">
-                                        <button
-                                            @click="showAllItems = !showAllItems"
-                                            class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-3 py-1 rounded-lg font-bold transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 transform hover:scale-105 text-xs"
-                                        >
-                                            <div class="flex items-center gap-1">
-                                                <span>{{ showAllItems ? "👆 Less" : "👇 More" }}</span>
-                                                <span class="bg-white/20 px-1 py-0.5 rounded-full text-xs">+{{ order.items.length - 2 }}</span>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </div>
-                            </td>
-                            <!-- 💰 Compact Total Cell -->
-                            <td class="px-2 md:px-4 py-3">
-                                <div class="text-center">
-                                    <div class="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 text-white rounded-lg p-3 shadow-lg ring-2 ring-green-200 dark:ring-green-900/30 hover:scale-105 transition-all duration-300 group">
-                                        <div class="flex flex-col items-center gap-1">
-                                            <div class="text-lg">💰</div>
-                                            <div class="text-sm font-black drop-shadow-lg">৳{{ parseFloat(order.total).toLocaleString() }}</div>
-                                            <div class="text-xs opacity-90 font-medium bg-white/20 px-1 py-0.5 rounded-full">Total</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <!-- 📊 Compact Status Cell -->
-                            <td class="px-2 md:px-4 py-3">
-                                <button
-                                    @click="openStatusChangeModal(order)"
-                                    type="button"
-                                    class="w-full bg-gradient-to-br shadow-lg hover:shadow-xl rounded-lg border-2 px-3 py-2 font-bold transition-all duration-300 hover:scale-105 active:scale-95 transform ring-2 ring-opacity-30 text-xs"
-                                    :class="{
-                                        'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-blue-400 ring-blue-200': order.status === 'pending',
-                                        'from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-orange-400 ring-orange-200': order.status === 'processing',
-                                        'from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-amber-400 ring-amber-200': order.status === 'shipped',
-                                        'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-green-400 ring-green-200': order.status === 'delivered',
-                                        'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-red-400 ring-red-200': order.status === 'cancelled',
-                                        'from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white border-purple-400 ring-purple-200': order.status === 'returned',
-                                        'from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white border-gray-400 ring-gray-200': order.status === 'on_hold',
-                                        'from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white border-indigo-400 ring-indigo-200': order.status === 'confirmed',
-                                        'opacity-60 cursor-not-allowed': updatingOrders[order.id]
-                                    }"
-                                    :disabled="updatingOrders[order.id]"
-                                >
-                                    <div class="flex items-center justify-between gap-1">
-                                        <div class="flex items-center gap-1">
-                                            <div class="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                                                <span class="text-xs">
-                                                    {{ order.status === 'pending' ? '⏳' :
-                                                       order.status === 'processing' ? '🔄' :
-                                                       order.status === 'shipped' ? '🚚' :
-                                                       order.status === 'delivered' ? '✅' :
-                                                       order.status === 'cancelled' ? '❌' :
-                                                       order.status === 'returned' ? '↩️' :
-                                                       order.status === 'on_hold' ? '⏸️' :
-                                                       order.status === 'confirmed' ? '✔️' : '📊' }}
-                                                </span>
-                                            </div>
-                                            <span class="capitalize text-xs drop-shadow-sm">{{ order.status }}</span>
-                                        </div>
-                                        <svg v-if="!updatingOrders[order.id]" class="h-3 w-3 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path>
-                                        </svg>
-                                        <svg v-else class="h-3 w-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    </div>
-                                </button>
-                            </td>
-                            <!-- 💳 Enhanced Payment Status Cell -->
-                            <td class="px-4 py-6">
-                                <div class="text-center">
-                                    <span class="px-4 py-3 rounded-2xl font-black text-sm shadow-lg ring-4 ring-opacity-30 transition-all duration-300 hover:scale-105"
-                                        :class="{
-                                            'bg-gradient-to-br from-red-500 to-red-600 text-white ring-red-200': order.payment_status === 'unpaid',
-                                            'bg-gradient-to-br from-green-500 to-green-600 text-white ring-green-200': order.payment_status === 'paid',
-                                            'bg-gradient-to-br from-gray-500 to-gray-600 text-white ring-gray-200': order.payment_status === 'refunded',
-                                        }">
+                                <!-- Order ID Cell -->
+                                <td class="px-3 py-3">
+                                    <div class="space-y-1">
                                         <div class="flex items-center gap-2">
-                                            <span class="text-lg">
-                                                {{ order.payment_status === 'unpaid' ? '❌' :
-                                                   order.payment_status === 'paid' ? '✅' :
-                                                   order.payment_status === 'refunded' ? '↩️' : '💳' }}
-                                            </span>
-                                            <span class="capitalize drop-shadow-sm">{{ order.payment_status }}</span>
+                                            <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ order.order_number }}</span>
+                                            <span v-if="order.admin_notes" class="text-xs" title="Has admin notes">📝</span>
                                         </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <span v-if="isToday(order.date)" class="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">Today</span>
+                                            <span class="text-xs text-gray-500">{{ formatOrderDate(order.date) }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Customer Cell -->
+                                <td class="px-3 py-3">
+                                    <div class="space-y-1.5">
+                                        <!-- Customer Name & Contact -->
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm">
+                                                👤
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ truncateText(order.customer.name, 3) }}</p>
+                                                <p class="text-xs text-gray-500 truncate">{{ order.customer?.phone }}</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Address -->
+                                        <p class="text-xs text-gray-500 line-clamp-1">📍 {{ order.customer?.address }}</p>
+
+                                        <!-- Customer Note Badge -->
+                                        <div v-if="order.customer?.note && order.customer.note !== 'N/A'"
+                                             class="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 rounded text-xs text-amber-700 dark:text-amber-300 line-clamp-1">
+                                            💬 {{ order.customer?.note }}
+                                        </div>
+
+                                        <!-- Admin Notes Button -->
+                                        <button @click="openAdminNotesModal(order)"
+                                                class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                            {{ order.admin_notes ? '📝 Edit Notes' : '+ Add Notes' }}
+                                        </button>
+                                    </div>
+                                </td>
+
+                                <!-- Products Cell -->
+                                <td class="px-3 py-3">
+                                    <div v-if="order.items.length === 0" class="text-xs text-gray-400">No items</div>
+                                    <div v-else class="space-y-1.5">
+                                        <div v-for="(item, idx) in order.items.slice(0, 2)" :key="item.id"
+                                             class="flex items-center gap-2 p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded">
+                                            <img :src="item.product.image || ''" alt=""
+                                                 class="w-8 h-8 rounded object-cover bg-gray-200" />
+                                            <div class="min-w-0 flex-1">
+                                                <p class="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+                                                    {{ truncateText(item.product.name, 4) }}
+                                                </p>
+                                                <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                                                    <span>৳{{ item.price }}</span>
+                                                    <span>×{{ item.quantity }}</span>
+                                                    <span v-if="item.is_pre_order" class="px-1 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">Pre</span>
+                                                </div>
+                                                <div v-if="item.variation" class="flex flex-wrap gap-1 mt-0.5">
+                                                    <span v-for="(value, key) in item.variation.attributes" :key="key"
+                                                          class="px-1 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs">
+                                                        {{ key }}: {{ value }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button v-if="order.items.length > 2"
+                                                class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                            +{{ order.items.length - 2 }} more items
+                                        </button>
+                                    </div>
+                                </td>
+
+                                <!-- Total Cell -->
+                                <td class="px-3 py-3">
+                                    <div class="text-center">
+                                        <span class="inline-block px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg font-bold text-sm">
+                                            ৳{{ parseFloat(order.total).toLocaleString() }}
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- Status Cell -->
+                                <td class="px-3 py-3">
+                                    <button @click="openStatusChangeModal(order)"
+                                            :disabled="updatingOrders[order.id]"
+                                            class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+                                            :class="{
+                                                'bg-amber-100 text-amber-700 hover:bg-amber-200': order.status === 'pending',
+                                                'bg-blue-100 text-blue-700 hover:bg-blue-200': order.status === 'processing',
+                                                'bg-purple-100 text-purple-700 hover:bg-purple-200': order.status === 'shipped',
+                                                'bg-green-100 text-green-700 hover:bg-green-200': order.status === 'delivered',
+                                                'bg-red-100 text-red-700 hover:bg-red-200': order.status === 'cancelled',
+                                                'bg-pink-100 text-pink-700 hover:bg-pink-200': order.status === 'returned',
+                                                'bg-cyan-100 text-cyan-700 hover:bg-cyan-200': order.status === 'on_hold',
+                                                'bg-indigo-100 text-indigo-700 hover:bg-indigo-200': order.status === 'confirmed',
+                                                'opacity-60': updatingOrders[order.id]
+                                            }">
+                                        <span>{{ order.status === 'pending' ? '⏳' : order.status === 'processing' ? '⚙️' : order.status === 'shipped' ? '🚚' : order.status === 'delivered' ? '✅' : order.status === 'cancelled' ? '❌' : order.status === 'returned' ? '↩️' : order.status === 'on_hold' ? '⏸️' : '✔️' }}</span>
+                                        <span class="capitalize">{{ order.status }}</span>
+                                        <svg v-if="!updatingOrders[order.id]" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        <span v-else class="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                                    </button>
+                                </td>
+
+                                <!-- Payment Cell -->
+                                <td class="px-3 py-3">
+                                    <span class="px-2 py-1 rounded-lg text-xs font-medium"
+                                          :class="{
+                                              'bg-red-100 text-red-700': order.payment_status === 'unpaid',
+                                              'bg-green-100 text-green-700': order.payment_status === 'paid',
+                                              'bg-gray-100 text-gray-700': order.payment_status === 'refunded'
+                                          }">
+                                        {{ order.payment_status === 'unpaid' ? '❌' : order.payment_status === 'paid' ? '✅' : '↩️' }}
+                                        {{ order.payment_status }}
                                     </span>
-                                </div>
-                            </td>
-                            <!-- 🚚 Enhanced Courier Info Cell -->
-                            <td class="px-4 py-5">
-                                <div v-if="order.tracking_number || order.is_courier" class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/30 dark:via-indigo-900/30 dark:to-purple-900/30 border-2 border-blue-200 dark:border-blue-600 rounded-2xl p-4 hover:shadow-xl transition-all duration-300 hover:scale-105">
-                                    <div class="space-y-4">
-                                        <!-- Courier Name -->
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                                                <Truck class="w-5 h-5 text-white" />
-                                            </div>
-                                            <span class="px-3 py-2 rounded-xl font-bold shadow-sm text-sm"
-                                                :class="{
-                                                    'bg-gradient-to-r from-green-400 to-emerald-500 text-white': order.courier_name && order.courier_name !== 'N/A',
-                                                    'bg-gradient-to-r from-gray-400 to-gray-500 text-white': order.courier_name === 'N/A' || !order.courier_name,
-                                                }">
-                                                {{ order.courier_name || "N/A" }}
+                                </td>
+
+                                <!-- Courier Cell -->
+                                <td class="px-3 py-3">
+                                    <div v-if="order.tracking_number || order.is_courier" class="space-y-1.5">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-sm">🚚</span>
+                                            <span class="px-1.5 py-0.5 rounded text-xs font-medium"
+                                                  :class="order.courier_name ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'">
+                                                {{ order.courier_name || 'N/A' }}
                                             </span>
                                         </div>
-
-                                        <!-- Tracking Info -->
-                                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-600 shadow-inner">
-                                            <div class="space-y-3">
-                                                <!-- Consignment ID -->
-                                                <div class="text-center">
-                                                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">📦 Consignment ID</div>
-                                                    <div class="text-sm font-bold text-gray-800 dark:text-gray-200 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 px-3 py-2 rounded-lg">
-                                                        {{ order.consignment_id }}
-                                                    </div>
-                                                </div>
-
-                                                <!-- Tracking Link -->
-                                                <div v-if="order?.tracking_number !== 'N/A'" class="text-center">
-                                                    <a :href="`https://steadfast.com.bd/t/${order.tracking_number}`" target="_blank" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-xl font-bold transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 transform hover:scale-105">
-                                                        <span>🔍</span>
-                                                        <span>Track Shipment</span>
-                                                        <span>↗️</span>
-                                                    </a>
-                                                </div>
-                                            </div>
+                                        <div v-if="order.consignment_id" class="text-xs text-gray-500">
+                                            ID: {{ order.consignment_id }}
                                         </div>
-
-                                        <!-- Area Status -->
-                                        <div v-if="order?.area_id" class="flex items-center justify-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-300 dark:border-green-600 rounded-xl px-4 py-2">
-                                            <MapPin class="w-5 h-5 text-green-600" />
-                                            <span class="text-sm font-bold text-green-800 dark:text-green-300">📍 Address Saved</span>
-                                        </div>
+                                        <a v-if="order.tracking_number && order.tracking_number !== 'N/A'"
+                                           :href="`https://steadfast.com.bd/t/${order.tracking_number}`"
+                                           target="_blank"
+                                           class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                            🔍 Track
+                                        </a>
                                     </div>
-                                </div>
+                                    <div v-else class="text-xs text-gray-400">No courier</div>
+                                </td>
 
-                                <!-- No Courier Info -->
-                                <div v-else class="text-center py-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600">
-                                    <div class="text-3xl mb-2">📭</div>
-                                    <div class="text-gray-600 dark:text-gray-400 font-medium">No courier info</div>
-                                </div>
-                            </td>
-                            <!-- ⚙️ Enhanced Actions Cell -->
-                            <td class="px-4 py-6">
-                                <div class="relative flex justify-center">
-                                    <button
-                                        @click.stop="toggleActionMenu(order.id)"
-                                        class="group w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 hover:from-blue-500 hover:to-indigo-600 rounded-2xl flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-200 hover:shadow-lg hover:scale-110 active:scale-95"
-                                        :class="{
-                                            'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl scale-110': activeActionMenu === order.id,
-                                            'text-gray-600 hover:text-white': activeActionMenu !== order.id,
-                                        }"
-                                    >
-                                        <component
-                                            :is="activeActionMenu === order.id ? X : MoreVertical"
-                                            class="w-6 h-6 transition-transform duration-200"
-                                            :class="{ 'rotate-90': activeActionMenu === order.id }"
-                                        />
-                                    </button>
+                                <!-- Actions Cell -->
+                                <td class="px-3 py-3">
+                                    <div class="relative flex justify-center">
+                                        <button @click.stop="toggleActionMenu(order.id)"
+                                                class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+                                                :class="activeActionMenu === order.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+                                            <component :is="activeActionMenu === order.id ? X : MoreVertical" class="w-4 h-4" />
+                                        </button>
 
-                                    <!-- 🎯 Enhanced Action Menu Dropdown -->
-                                    <div v-if="activeActionMenu === order.id" class="absolute right-0 top-full mt-3 w-64 bg-gradient-to-br from-white via-blue-50 to-indigo-50 rounded-2xl shadow-2xl border-2 border-blue-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300">
-                                        <div class="p-2">
-                                            <!-- Header -->
-                                            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-3 rounded-xl mb-2">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="text-xl">⚙️</span>
-                                                    <span class="font-bold">Quick Actions</span>
-                                                </div>
-                                            </div>
-
-                                            <!-- Action Buttons -->
-                                            <div class="space-y-1">
-                                                <!-- Check Fraud -->
-                                                <button
-                                                    @click="checkFraud(order?.customer?.phone); toggleActionMenu(order.id);"
-                                                    class="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-red-600 flex items-center gap-3 transition-all duration-200 hover:shadow-md hover:scale-105 active:scale-95 group"
-                                                >
-                                                    <div class="w-8 h-8 bg-gradient-to-br from-red-100 to-red-200 group-hover:from-red-500 group-hover:to-red-600 rounded-full flex items-center justify-center transition-all duration-200">
-                                                        <User class="w-4 h-4 group-hover:text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <div class="font-bold">🔍 Check Fraud</div>
-                                                        <div class="text-xs text-gray-500 group-hover:text-red-500">Verify customer details</div>
-                                                    </div>
-                                                </button>
-
-                                                <!-- Courier Management -->
-                                                <button
-                                                    @click="openCourierModal(order, order.id); toggleActionMenu(order.id);"
-                                                    class="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:text-green-600 flex items-center gap-2 transition-all duration-200 hover:shadow-md active:scale-95 group"
-                                                >
-                                                    <div class="w-6 h-6 bg-gradient-to-br from-green-100 to-green-200 group-hover:from-green-500 group-hover:to-green-600 rounded-full flex items-center justify-center transition-all duration-200">
-                                                        <MapPin class="w-3 h-3 group-hover:text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <div class="font-bold text-xs">🚚 Couriers</div>
-                                                    </div>
-                                                </button>
-
-                                                <!-- Edit Order -->
-                                                <Link
-                                                    :href="route('admin.orders.edit', order.id)"
-                                                    @click="toggleActionMenu(order.id)"
-                                                    class="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-amber-50 hover:to-yellow-50 hover:text-amber-600 flex items-center gap-2 transition-all duration-200 hover:shadow-md active:scale-95 group"
-                                                >
-                                                    <div class="w-6 h-6 bg-gradient-to-br from-amber-100 to-amber-200 group-hover:from-amber-500 group-hover:to-amber-600 rounded-full flex items-center justify-center transition-all duration-200">
-                                                        <SquarePen class="w-3 h-3 group-hover:text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <div class="font-bold text-xs">✏️ Edit Order</div>
-                                                    </div>
-                                                </Link>
-
-                                                <!-- Divider -->
-                                                <div class="border-t border-gray-200 my-1"></div>
-
-                                                <!-- Delete Order -->
-                                                <button
-                                                    @click="openDeleteModal(order.id); toggleActionMenu(order.id);"
-                                                    class="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-gray-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-red-600 flex items-center gap-2 transition-all duration-200 hover:shadow-md active:scale-95 group"
-                                                >
-                                                    <div class="w-6 h-6 bg-gradient-to-br from-red-100 to-red-200 group-hover:from-red-500 group-hover:to-red-600 rounded-full flex items-center justify-center transition-all duration-200">
-                                                        <Trash2Icon class="w-3 h-3 group-hover:text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <div class="font-bold text-xs">🗑️ Delete</div>
-                                                    </div>
-                                                </button>
-                                            </div>
+                                        <!-- Action Dropdown -->
+                                        <div v-if="activeActionMenu === order.id"
+                                             class="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-1">
+                                            <button @click="checkFraud(order?.customer?.phone); toggleActionMenu(order.id);"
+                                                    class="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                                <User class="w-4 h-4" /> Check Fraud
+                                            </button>
+                                            <button @click="openCourierModal(order, order.id); toggleActionMenu(order.id);"
+                                                    class="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                                <MapPin class="w-4 h-4" /> Courier
+                                            </button>
+                                            <Link :href="route('admin.orders.edit', order.id)"
+                                                  @click="toggleActionMenu(order.id)"
+                                                  class="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                                <SquarePen class="w-4 h-4" /> Edit
+                                            </Link>
+                                            <hr class="my-1 border-gray-200 dark:border-gray-700" />
+                                            <button @click="openDeleteModal(order.id); toggleActionMenu(order.id);"
+                                                    class="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                                <Trash2Icon class="w-4 h-4" /> Delete
+                                            </button>
                                         </div>
+
+                                        <!-- Backdrop -->
+                                        <div v-if="activeActionMenu === order.id"
+                                             class="fixed inset-0 z-40"
+                                             @click="activeActionMenu = null"></div>
                                     </div>
+                                </td>
+                            </tr>
 
-                                    <!-- 🎭 Compact Backdrop -->
-                                    <div
-                                        v-if="activeActionMenu === order.id"
-                                        class="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
-                                        @click="activeActionMenu = null"
-                                    ></div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr v-if="visibleOrders.length === 0">
-                            <td
-                                colspan="10"
-                                class="px-1 py-6 text-center text-black"
-                            >
-                                No orders found matching your filters.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                            <!-- Empty State -->
+                            <tr v-if="visibleOrders.length === 0">
+                                <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                                    No orders found matching your filters.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            <!-- Enhanced Pagination - User Friendly -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mt-6">
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <!-- Results Summary -->
-                    <div class="flex items-center gap-2 text-sm">
-                        <span class="text-2xl">📊</span>
-                        <span class="text-gray-600 dark:text-gray-400 font-medium">
-                            <strong class="text-gray-900 dark:text-gray-100">{{ from }}-{{ to }}</strong>
-                            of
-                            <strong class="text-gray-900 dark:text-gray-100">{{ total }}</strong>
-                            orders
-                        </span>
-                    </div>
-
-                    <!-- Navigation Buttons -->
-                    <div class="flex items-center gap-2">
-                        <!-- First Page -->
-                        <button
-                            @click="goToPage(1)"
-                            :disabled="currentPage === 1 || loading"
-                            class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 touch-manipulation"
-                            title="Go to first page"
-                        >
-                            ⏮️
-                        </button>
-
-                        <!-- Previous Page -->
-                        <button
-                            @click="goToPage(currentPage - 1)"
-                            :disabled="currentPage === 1 || loading"
-                            class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 touch-manipulation"
-                            title="Go to previous page"
-                        >
-                            ⬅️
-                        </button>
-
-                        <!-- Page Numbers -->
-                        <div class="hidden sm:flex items-center gap-1">
-                            <template v-if="lastPage <= 7">
-                                <button
-                                    v-for="page in lastPage"
-                                    :key="page"
-                                    @click="goToPage(page)"
-                                    :disabled="loading"
-                                    class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl border transition-all duration-200 active:scale-95 touch-manipulation"
-                                    :class="currentPage === page
-                                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
-                                        : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                                    :title="`Go to page ${page}`"
-                                >
-                                    {{ page }}
-                                </button>
-                            </template>
-                            <template v-else>
-                                <button
-                                    v-if="currentPage > 3"
-                                    @click="goToPage(1)"
-                                    class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 active:scale-95 touch-manipulation"
-                                    title="Go to page 1"
-                                >
-                                    1
-                                </button>
-                                <span v-if="currentPage > 4" class="flex items-center justify-center w-10 h-10 text-gray-400 text-lg font-bold">⋯</span>
-
-                                <template v-for="page in lastPage" :key="page">
-                                    <button
-                                        v-if="page >= currentPage - 1 && page <= currentPage + 1"
-                                        @click="goToPage(page)"
-                                        class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl border transition-all duration-200 active:scale-95 touch-manipulation"
-                                        :class="currentPage === page
-                                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
-                                            : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                                        :title="`Go to page ${page}`"
-                                    >
-                                        {{ page }}
-                                    </button>
-                                </template>
-
-                                <span v-if="currentPage < lastPage - 3" class="flex items-center justify-center w-10 h-10 text-gray-400 text-lg font-bold">⋯</span>
-                                <button
-                                    v-if="currentPage < lastPage - 2"
-                                    @click="goToPage(lastPage)"
-                                    class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 active:scale-95 touch-manipulation"
-                                    :title="`Go to page ${lastPage}`"
-                                >
-                                    {{ lastPage }}
-                                </button>
-                            </template>
+                <!-- Pagination -->
+                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/25">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                            Showing <span class="font-medium text-gray-900 dark:text-white">{{ from }}-{{ to }}</span>
+                            of <span class="font-medium text-gray-900 dark:text-white">{{ total }}</span> orders
                         </div>
 
-                        <!-- Mobile Page Indicator -->
-                        <div class="sm:hidden flex items-center gap-2">
-                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl">
-                                Page {{ currentPage }} of {{ lastPage }}
-                            </span>
+                        <div class="flex items-center gap-2">
+                            <button @click="goToPage(1)" :disabled="currentPage === 1 || loading"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">
+                                <ChevronsLeft class="w-4 h-4 text-blue-600" />
+                            </button>
+
+                            <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1 || loading"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">
+                                <ChevronLeft class="w-4 h-4 text-green-600" />
+                            </button>
+
+                            <div class="flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg dark:bg-blue-900/25 dark:text-blue-300">
+                                <span class="font-medium">{{ currentPage }}</span>
+                                <span class="text-blue-500 dark:text-blue-400">of</span>
+                                <span class="font-medium">{{ lastPage }}</span>
+                            </div>
+
+                            <button @click="goToPage(currentPage + 1)" :disabled="currentPage === lastPage || loading"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">
+                                <ChevronRight class="w-4 h-4 text-green-600" />
+                            </button>
+
+                            <button @click="goToPage(lastPage)" :disabled="currentPage === lastPage || loading"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">
+                                <ChevronsRight class="w-4 h-4 text-blue-600" />
+                            </button>
                         </div>
-
-                        <!-- Next Page -->
-                        <button
-                            @click="goToPage(currentPage + 1)"
-                            :disabled="currentPage === lastPage || loading"
-                            class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 touch-manipulation"
-                            title="Go to next page"
-                        >
-                            ➡️
-                        </button>
-
-                        <!-- Last Page -->
-                        <button
-                            @click="goToPage(lastPage)"
-                            :disabled="currentPage === lastPage || loading"
-                            class="inline-flex items-center justify-center w-10 h-10 text-sm font-bold rounded-xl bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 touch-manipulation"
-                            title="Go to last page"
-                        >
-                            ⏭️
-                        </button>
                     </div>
                 </div>
             </div>
@@ -1795,7 +1381,6 @@ const clearAllFilters = () => {
                 @close="showCourierModal = false"
                 @submit="handleCourierSubmit"
             />
-        </div>
 
         <!-- Fraud Checker Modal -->
         <FraudCheckerModal
