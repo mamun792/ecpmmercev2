@@ -283,6 +283,15 @@ onUnmounted(() => {
                         <Filter class="w-5 h-5" />
                     </button>
 
+                    <!-- Advanced Analytics Link -->
+                    <a
+                        :href="route('admin.analytics.advanced')"
+                        class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-colors flex items-center gap-2"
+                    >
+                        <TrendingUp class="w-4 h-4" />
+                        <span>Advanced Analytics</span>
+                    </a>
+
                     <!-- Period selector -->
                     <select v-model="selectedPeriod" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <option value="today">Today</option>

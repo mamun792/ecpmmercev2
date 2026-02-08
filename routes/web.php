@@ -63,6 +63,7 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
 
     // Analytics Dashboard
     Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/analytics/advanced', [\App\Http\Controllers\Admin\AnalyticsController::class, 'advanced'])->name('analytics.advanced');
     Route::get('/analytics/export/pdf', [\App\Http\Controllers\Admin\AnalyticsController::class, 'exportPDF'])->name('analytics.export.pdf');
     Route::get('/analytics/export/excel', [\App\Http\Controllers\Admin\AnalyticsController::class, 'exportExcel'])->name('analytics.export.excel');
 
