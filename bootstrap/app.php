@@ -15,13 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\CheckLicenseMiddleware::class,
+            \App\Http\Middleware\TrackLastSeen::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
 
         ]);
         $middleware->validateCsrfTokens(except: [
             '*',
         ]);
-        
+
         // Exclude cart_session_id cookie from encryption so it persists across login/logout
         $middleware->encryptCookies(except: [
             'cart_session_id',
