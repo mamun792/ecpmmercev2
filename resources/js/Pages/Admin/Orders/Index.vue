@@ -167,29 +167,35 @@ const prioritizedOrders = computed(() => {
         let priority = 'normal';
         let priorityScore = 0;
 
-        // High value orders
-        if (orderValue > 5000) priorityScore += 30;
+        // Skip priority calculation for completed orders
+        const completedStatuses = ['delivered', 'completed', 'cancelled', 'refunded'];
+        const isCompleted = completedStatuses.includes(order.status?.toLowerCase());
 
-        // Time-based priority
-        if (hoursOld > 24) priorityScore += 40; // Older than 24 hours
-        if (hoursOld > 48) priorityScore += 60; // Older than 48 hours
+        if (!isCompleted) {
+            // High value orders
+            if (orderValue > 5000) priorityScore += 30;
 
-        // Status-based priority
-        if (order.status === 'pending') priorityScore += 25;
-        if (order.status === 'processing' && hoursOld > 8) priorityScore += 35;
+            // Time-based priority
+            if (hoursOld > 24) priorityScore += 40; // Older than 24 hours
+            if (hoursOld > 48) priorityScore += 60; // Older than 48 hours
 
-        // New orders today
-        if (hoursOld < 12) {
-            newOrdersToday.value.add(order.id);
+            // Status-based priority
+            if (order.status === 'pending') priorityScore += 25;
+            if (order.status === 'processing' && hoursOld > 8) priorityScore += 35;
+
+            // Determine priority level
+            if (priorityScore >= 80) priority = 'critical';
+            else if (priorityScore >= 50) priority = 'high';
+            else if (priorityScore >= 25) priority = 'medium';
+
+            if (priority === 'critical' || priority === 'high') {
+                urgentOrders.value.add(order.id);
+            }
         }
 
-        // Determine priority level
-        if (priorityScore >= 80) priority = 'critical';
-        else if (priorityScore >= 50) priority = 'high';
-        else if (priorityScore >= 25) priority = 'medium';
-
-        if (priority === 'critical' || priority === 'high') {
-            urgentOrders.value.add(order.id);
+        // New orders today (regardless of status)
+        if (hoursOld < 12) {
+            newOrdersToday.value.add(order.id);
         }
 
         return {
@@ -207,12 +213,14 @@ const prioritizedOrders = computed(() => {
 
 // Courier suggestions based on delivery area
 const getSmartCourierSuggestion = (order) => {
-    if (!order.shipping_address) return 'steadfast';
+    // Check customer.address (formatted by backend) or fallback to shipping_address
+    const address = order.customer?.address || order.shipping_address;
+    if (!address || address === 'N/A') return 'steadfast';
 
-    const address = order.shipping_address.toLowerCase();
+    const addressLower = address.toLowerCase();
 
     // Dhaka area - Pathao is faster
-    if (address.includes('dhaka') || address.includes('gulshan') || address.includes('dhanmondi')) {
+    if (addressLower.includes('dhaka') || addressLower.includes('gulshan') || addressLower.includes('dhanmondi')) {
         return 'pathao';
     }
 
@@ -2163,10 +2171,11 @@ const clearAllFilters = () => {
                                             <span class="text-xs text-gray-500">
                                                 {{ order.hoursOld && !isNaN(order.hoursOld) ? (order.hoursOld < 24 ? `${Math.round(order.hoursOld)}h ago` : `${Math.round(order.hoursOld / 24)}d ago`) : 'Just now' }}
                                             </span>
-                                            <span v-if="order.hoursOld > 72" class="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded font-medium">
+                                            <!-- Only show Urgent/Old for active orders (not delivered/cancelled) -->
+                                            <span v-if="!['delivered', 'completed', 'cancelled', 'refunded'].includes(order.status?.toLowerCase()) && order.hoursOld > 72" class="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded font-medium">
                                                 Urgent
                                             </span>
-                                            <span v-else-if="order.hoursOld > 48" class="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
+                                            <span v-else-if="!['delivered', 'completed', 'cancelled', 'refunded'].includes(order.status?.toLowerCase()) && order.hoursOld > 48" class="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
                                                 Old
                                             </span>
                                         </div>
