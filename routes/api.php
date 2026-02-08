@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Courier\CourierController;
 use App\Http\Controllers\Admin\Courier\FraudcheckController;
 use App\Http\Controllers\Api\Campaign\CampaignController;
 use App\Http\Controllers\Admin\Inventory\InventoryController;
+use App\Http\Controllers\Api\PosAnalyticsController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -48,6 +49,8 @@ Route::middleware(['auth:api', 'role:admin'])->prefix('inventory')->group(functi
     Route::put('/reorder-level', [InventoryController::class, 'updateReorderLevel'])->name('api.inventory.reorder-level');
     Route::post('/reports', [InventoryController::class, 'generateReport'])->name('api.inventory.reports');
 });
+
+
 
 
 Route::group([

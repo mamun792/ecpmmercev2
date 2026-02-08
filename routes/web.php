@@ -84,6 +84,14 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
     //pos
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
 
+    // POS Analytics Routes
+    Route::prefix('api/pos-analytics')->middleware(['auth', 'role:admin'])->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Api\PosAnalyticsController::class, 'dashboard'])->name('api.pos-analytics.dashboard');
+        Route::get('/inventory-alerts', [App\Http\Controllers\Api\PosAnalyticsController::class, 'inventoryAlerts'])->name('api.pos-analytics.inventory-alerts');
+        Route::get('/customer-insights', [App\Http\Controllers\Api\PosAnalyticsController::class, 'customerInsights'])->name('api.pos-analytics.customer-insights');
+        Route::post('/refresh-cache', [App\Http\Controllers\Api\PosAnalyticsController::class, 'refreshCache'])->name('api.pos-analytics.refresh-cache');
+    });
+
     // oders
     Route::resource('/orders', OrderController::class);
     Route::get('/orders/{orderId}/timeline', [OrderController::class, 'timeline'])->name('orders.timeline');

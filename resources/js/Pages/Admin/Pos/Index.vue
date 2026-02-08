@@ -1,10 +1,11 @@
 <script setup>
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import { ref, onMounted, defineProps, computed, watch } from "vue";
+import { ref, onMounted, onUnmounted, defineProps, computed, watch, nextTick } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import axios from "axios";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { X } from "lucide-vue-next";
+import PosAnalyticsDashboard from "@/Components/PosAnalyticsDashboard.vue";
 
 const props = defineProps({
     products: {
@@ -30,6 +31,19 @@ const cartLoading = ref(false);
 const userId = ref(null); // Initialize as null, will be set in onMounted
 const currentPage = ref(props.products?.current_page || 1);
 const perPage = ref(props.products?.per_page || 10);
+
+// Analytics Dashboard State
+const showAnalyticsDashboard = ref(false);
+const lastSearchTime = ref(0);
+const performanceMetrics = ref({
+    searchTime: 0,
+    cartUpdateTime: 0,
+    productLoadTime: 0
+});
+
+// Barcode scanning state
+const barcodeBuffer = ref('');
+const barcodeTimeout = ref(null);
 
 // New state for user selection and order form
 const selectedUser = ref(null);
@@ -434,6 +448,8 @@ const addMatchedVariationToCart = () => {
 const addToCart = async (product, variation = null) => {
     try {
         cartLoading.value = true;
+        const startTime = performance.now();
+
         const payload = {
             product_id: product.id,
             quantity: 1,
@@ -446,8 +462,13 @@ const addToCart = async (product, variation = null) => {
         if (response.data.success) {
             await fetchCartData();
             showVariationModal.value = false;
+
+            const endTime = performance.now();
+            performanceMetrics.value.cartUpdateTime = endTime - startTime;
+
+            // Enhanced success message with product info
             toast.success(
-                response.data.message || "Item added to cart successfully"
+                `✅ ${product.name} ${variation ? `(${getVariationLabel(variation)})` : ''} added to cart`
             );
         } else {
             toast.error(response.data.message || "Failed to add item to cart");
@@ -460,6 +481,17 @@ const addToCart = async (product, variation = null) => {
     } finally {
         cartLoading.value = false;
     }
+};
+
+// Get variation label for display
+const getVariationLabel = (variation) => {
+    if (!variation || !variation.attributes) return '';
+    return variation.attributes.map(attr => attr.value.value).join(', ');
+};
+
+// Toggle analytics dashboard
+const toggleAnalyticsDashboard = () => {
+    showAnalyticsDashboard.value = !showAnalyticsDashboard.value;
 };
 
 const updateQuantity = async (item, increment) => {
@@ -550,6 +582,68 @@ const getVariationAttributes = (variation) => {
 
 const formatPrice = (price) => {
     return parseFloat(price).toFixed(2);
+};
+
+// Performance monitoring function
+const measurePerformance = async (operation, func) => {
+    const startTime = performance.now();
+    const result = await func();
+    const endTime = performance.now();
+    performanceMetrics.value[operation] = endTime - startTime;
+    return result;
+};
+
+// Debounced search function for better performance
+const debouncedSearch = (() => {
+    let timeoutId;
+    return (callback, delay = 300) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(callback, delay);
+    };
+})();
+
+// Barcode scanner handler
+const handleBarcodeInput = (event) => {
+    if (event.key === 'Enter') {
+        if (barcodeBuffer.value.length > 3) {
+            searchQuery.value = barcodeBuffer.value;
+            handleSearch();
+            toast.success(`🔍 Searching for barcode: ${barcodeBuffer.value}`);
+        }
+        barcodeBuffer.value = '';
+        return;
+    }
+
+    // Only accept numeric characters for barcode
+    if (/[0-9]/.test(event.key)) {
+        barcodeBuffer.value += event.key;
+
+        // Clear buffer after 2 seconds of inactivity
+        if (barcodeTimeout.value) clearTimeout(barcodeTimeout.value);
+        barcodeTimeout.value = setTimeout(() => {
+            barcodeBuffer.value = '';
+        }, 2000);
+    }
+};
+
+// Quick product selection with keyboard shortcuts
+const handleKeyboardShortcuts = (event) => {
+    if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+            case 'f':
+                event.preventDefault();
+                document.querySelector('input[placeholder*="Search"]')?.focus();
+                break;
+            case 'd':
+                event.preventDefault();
+                showAnalyticsDashboard.value = true;
+                break;
+            case 'Enter':
+                event.preventDefault();
+                if (cartItems.value.length > 0) handleCheckout();
+                break;
+        }
+    }
 };
 
 const getProductFromCart = (cartItem) => {
@@ -783,6 +877,12 @@ watch(userId, () => {
 
 // Mount
 onMounted(async () => {
+    const startTime = performance.now();
+
+    // Add keyboard event listeners
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    document.addEventListener('keypress', handleBarcodeInput);
+
     const walkInCustomer = props.users.find(
         (user) => user.email === "walkin_customer@gmail.com" || user.email === "working_customer@gmail.com" || user.id === 7
     );
@@ -804,6 +904,7 @@ onMounted(async () => {
 
     await fetchCartData();
 
+    // Handle URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("search")) {
         searchQuery.value = urlParams.get("search");
@@ -814,6 +915,20 @@ onMounted(async () => {
     if (urlParams.get("category")) {
         selectedCategory.value = urlParams.get("category");
     }
+
+    // Performance metric
+    const endTime = performance.now();
+    performanceMetrics.value.productLoadTime = endTime - startTime;
+
+    // Show welcome message with shortcuts
+    toast.success('🎉 POS Ready! Use Ctrl+F to search, Ctrl+D for analytics, Ctrl+Enter to checkout');
+});
+
+// Cleanup on unmount
+onUnmounted(() => {
+    document.removeEventListener('keydown', handleKeyboardShortcuts);
+    document.removeEventListener('keypress', handleBarcodeInput);
+    if (barcodeTimeout.value) clearTimeout(barcodeTimeout.value);
 });
 </script>
 
@@ -847,6 +962,25 @@ onMounted(async () => {
                             </div>
                         </div>
                         <div class="flex items-center gap-3">
+                            <!-- Analytics Dashboard Button -->
+                            <button
+                                @click="toggleAnalyticsDashboard"
+                                class="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                                title="View Analytics Dashboard (Ctrl+D)"
+                            >
+                                <span class="text-lg">📊</span>
+                                <span class="font-medium">Analytics</span>
+                            </button>
+
+                            <!-- Mobile Analytics Button -->
+                            <button
+                                @click="toggleAnalyticsDashboard"
+                                class="sm:hidden p-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg"
+                                title="Analytics"
+                            >
+                                <span class="text-xl">📊</span>
+                            </button>
+
                             <div class="flex items-center gap-2 sm:gap-3">
                                 <div class="px-3 sm:px-4 py-2 rounded-xl text-sm font-bold border-2 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm">
                                     <span class="text-xs uppercase tracking-wider flex items-center gap-1">
@@ -896,49 +1030,76 @@ onMounted(async () => {
                         </div>
 
                         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">
-                            <div class="flex items-center space-x-2 sm:space-x-4 flex-1">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 flex-1">
                                 <div class="flex-1 relative">
                                     <input
                                         v-model="searchQuery"
                                         type="text"
                                         placeholder="🔍 Search by name, code, or scan barcode... (e.g., 'iPhone', 'ABC123')"
-                                        class="w-full pl-12 pr-6 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 text-sm font-medium shadow-sm transition-all touch-manipulation"
-                                        @keyup.enter="handleSearch"
-                                        title="Type product name, code, or scan barcode to search"
+                                        class="w-full pl-12 pr-12 py-3 sm:py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm sm:text-base font-medium shadow-sm transition-all touch-manipulation"
+                                        :class="{ 'border-green-400 bg-green-50': searchQuery.length > 0 }"
+                                        @focus="$event.target.select()"
                                     />
-                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <span class="text-lg">🔍</span>
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span class="text-xl sm:text-2xl">🔍</span>
                                     </div>
-                                    <!-- Search button for mobile -->
-                                    <button
-                                        @click="handleSearch"
-                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-orange-600 hover:text-orange-700 transition-colors"
-                                        title="Click to search or press Enter"
+                                    <div v-if="searchQuery" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                        <button
+                                            @click="searchQuery = ''; handleSearch()"
+                                            class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors touch-manipulation"
+                                            title="Clear search"
+                                        >
+                                            <span class="text-lg text-gray-400">❌</span>
+                                        </button>
+                                    </div>
+                                    <!-- Search suggestions for mobile -->
+                                    <div v-if="searchQuery && searchQuery.length > 0" class="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border-2 border-t-0 border-gray-200 dark:border-gray-600 rounded-b-xl shadow-lg z-10 max-h-48 overflow-y-auto sm:hidden">
+                                        <div class="p-2 text-xs text-gray-500 border-b border-gray-200">
+                                            Press Enter to search or continue typing...
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 sm:gap-4">
+                                    <select
+                                        v-model="selectedCategory"
+                                        class="px-3 sm:px-4 py-3 sm:py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm font-medium shadow-sm transition-all touch-manipulation"
                                     >
-                                        <span class="text-sm font-bold hidden sm:inline">⏎ Search</span>
-                                        <span class="sm:hidden">⏎</span>
-                                    </button>
+                                        <option value="">📁 All Categories</option>
+                                        <option v-for="category in categories" :key="category" :value="category">
+                                            {{ category }}
+                                        </option>
+                                    </select>
+                                    <select
+                                        v-model="perPage"
+                                        @change="changePerPage"
+                                        class="px-2 sm:px-3 py-3 sm:py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm font-medium shadow-sm transition-all touch-manipulation"
+                                    >
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <!-- Items Per Page Selector with User-Friendly Labels -->
-                            <div class="flex items-center gap-3">
-                                <span class="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1">
-                                    <span>📊</span>
-                                    <span class="hidden sm:inline">Show:</span>
-                                    <span class="sm:hidden">Per Page:</span>
-                                </span>
-                                <select
-                                    :value="perPage"
-                                    @change="changePerPage($event.target.value)"
-                                    class="px-3 sm:px-4 py-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all touch-manipulation"
-                                    title="Choose how many products to show at once"
+                            <!-- Performance indicator -->
+                            <div v-if="performanceMetrics.searchTime > 0" class="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
+                                ⚡ {{ performanceMetrics.searchTime.toFixed(0) }}ms
+                            </div>
+                        </div>
+
+                        <!-- Quick search shortcuts for mobile -->
+                        <div class="mt-4 sm:hidden">
+                            <div class="text-xs text-gray-500 mb-2">Quick shortcuts:</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="category in categories.slice(0, 3)"
+                                    :key="category"
+                                    @click="selectedCategory = category; handleCategoryChange()"
+                                    class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200 hover:bg-blue-100 transition-colors"
                                 >
-                                    <option value="10">10</option>
-                                    <option value="25">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
+                                    {{ category }}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1900,57 +2061,77 @@ onMounted(async () => {
                 </div>
             </div>
         </div>
+
+        <!-- Analytics Dashboard Modal -->
+        <PosAnalyticsDashboard
+            :show="showAnalyticsDashboard"
+            @close="showAnalyticsDashboard = false"
+            @refresh-needed="() => { /* Could refresh products/cart if needed */ }"
+        />
     </AdminLayout>
 </template>
 
 <style scoped>
+/* Enhanced mobile-first responsive design */
 .card {
     background: white;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
     border: 1px solid #f3f4f6;
     overflow: hidden;
-    transition: all 0.2s;
+    transition: all 0.2s ease-in-out;
 }
 
 .card:hover {
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     border-color: #e5e7eb;
+    transform: translateY(-1px);
 }
 
-/* Input styles */
+/* Touch-friendly inputs for mobile */
 input[type="text"],
 input[type="email"],
 input[type="number"],
 select,
 textarea {
     width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
+    padding: 0.75rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease-in-out;
+    min-height: 44px; /* Apple's recommended touch target size */
     outline: none;
-    transition: all 0.2s;
 }
 
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="number"]:focus,
+input:focus,
 select:focus,
 textarea:focus {
-    border-color: #9ca3af;
-    box-shadow: 0 0 0 1px #9ca3af;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
 }
 
-/* Button styles */
+/* Enhanced button styles */
+button,
 .btn-primary {
-    padding: 0.5rem 1rem;
+    min-height: 44px;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    touch-action: manipulation;
+    border: none;
+    cursor: pointer;
+}
+
+button:active,
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
     background-color: #111827;
     color: white;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: background-color 0.2s;
 }
 
 .btn-primary:hover {
@@ -1960,37 +2141,252 @@ textarea:focus {
 .btn-primary:disabled {
     background-color: #d1d5db;
     cursor: not-allowed;
+    opacity: 0.6;
 }
 
-/* Status badges */
+/* Responsive grid improvements */
+@media (max-width: 640px) {
+    .grid {
+        gap: 0.75rem;
+    }
+
+    .p-4,
+    .p-6 {
+        padding: 1rem;
+    }
+
+    .text-sm {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+
+    /* Stack elements on mobile */
+    .flex-col-mobile {
+        flex-direction: column;
+    }
+
+    /* Larger touch targets for mobile */
+    .touch-target {
+        min-height: 48px;
+        min-width: 48px;
+    }
+
+    /* Full width buttons on mobile */
+    .mobile-full-width {
+        width: 100%;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1024px) {
+    .tablet-responsive {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .desktop-responsive {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1280px) {
+    .xl-responsive {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* Status badges with improved visibility */
 .status-badge {
-    padding: 0.25rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.875rem;
     border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    border: 2px solid;
+    min-height: 32px;
 }
 
 .status-badge.paid {
-    background-color: #ecfdf5;
+    background-color: #d1fae5;
     color: #047857;
-    border: 1px solid #a7f3d0;
+    border-color: #10b981;
 }
 
 .status-badge.unpaid {
     background-color: #f3f4f6;
     color: #374151;
-    border: 1px solid #e5e7eb;
+    border-color: #9ca3af;
 }
 
 .status-badge.failed {
-    background-color: #fef2f2;
+    background-color: #fee2e2;
     color: #b91c1c;
-    border: 1px solid #fecaca;
+    border-color: #ef4444;
 }
 
 .status-badge.refunded {
-    background-color: #fffbeb;
+    background-color: #fef3c7;
     color: #b45309;
-    border: 1px solid #fcd34d;
+    border-color: #f59e0b;
+}
+
+.status-badge.pending {
+    background-color: #e0f2fe;
+    color: #0277bd;
+    border-color: #29b6f6;
+}
+
+/* Loading and animation improvements */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Performance indicator */
+.performance-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    z-index: 1000;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .card {
+        border-width: 3px;
+    }
+
+    button {
+        border-width: 2px;
+        border-style: solid;
+        border-color: currentColor;
+    }
+
+    .status-badge {
+        border-width: 3px;
+        font-weight: 700;
+    }
+}
+
+/* Focus management for accessibility */
+button:focus,
+input:focus,
+select:focus {
+    outline: 3px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Dark mode ready */
+@media (prefers-color-scheme: dark) {
+    .card {
+        background: #1f2937;
+        border-color: #374151;
+        color: #f9fafb;
+    }
+
+    input,
+    select,
+    textarea {
+        background: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+
+    .status-badge.paid {
+        background-color: #047857;
+        color: #d1fae5;
+    }
+
+    .status-badge.unpaid {
+        background-color: #4b5563;
+        color: #f3f4f6;
+    }
+
+    .performance-indicator {
+        background: rgba(255, 255, 255, 0.1);
+        color: #f9fafb;
+    }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .card {
+        box-shadow: none;
+        border: 1px solid #000;
+        page-break-inside: avoid;
+    }
 }
 </style>
