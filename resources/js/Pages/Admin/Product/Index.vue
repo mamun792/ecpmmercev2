@@ -74,22 +74,67 @@
                   </div>
                </div>
 
-               <div v-if="selectedProductIds.length > 0" class="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl animate-in fade-in slide-in-from-right-4 duration-300">
-                  <span class="text-xs font-bold text-red-600 uppercase tracking-tight">{{ selectedProductIds.length }} Selected</span>
-                  <div class="h-4 w-px bg-red-200 dark:bg-red-800 mx-1"></div>
-                  <input
-                    v-model="confirmationInput"
-                    type="text"
-                    placeholder="Type 'confirm'"
-                    class="w-24 px-2 py-0.5 text-[10px] bg-white dark:bg-gray-900 border-red-200 dark:border-red-800 rounded-lg focus:ring-red-500/20"
-                  >
-                  <button
-                    @click="deleteSelectedProducts"
-                    :disabled="confirmationInput !== 'confirm' || isDeleting"
-                    class="text-[10px] font-black uppercase text-red-600 hover:text-red-700 disabled:opacity-30 transition-all"
-                  >
-                    {{ isDeleting ? '...' : 'Delete' }}
-                  </button>
+               <div v-if="selectedProductIds.length > 0" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/10 dark:to-orange-800/10 border border-orange-200 dark:border-orange-900/30 rounded-xl animate-in fade-in slide-in-from-right-4 duration-300 shadow-lg">
+                  <span class="text-xs font-black text-orange-600 uppercase tracking-tight">{{ selectedProductIds.length }} Selected</span>
+                  <div class="h-4 w-px bg-orange-300 dark:bg-orange-800 mx-1"></div>
+
+                  <!-- Bulk Actions Dropdown -->
+                  <div class="relative" ref="bulkActionsRef">
+                    <button @click="toggleBulkActions" class="flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-gray-900 border border-orange-200 dark:border-orange-800 rounded-lg text-[11px] font-black text-gray-700 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all">
+                      <span>⚙️ Bulk Actions</span>
+                      <ChevronDown class="w-3 h-3" :class="{ 'rotate-180': showBulkActions }" />
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div v-if="showBulkActions" class="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                      <!-- Status Update -->
+                      <div class="p-3 border-b border-gray-100 dark:border-gray-700">
+                        <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Update Status</p>
+                        <div class="flex gap-2">
+                          <button @click="bulkUpdateStatus('Published')" class="flex-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-xs font-bold transition-all">
+                            ✅ Publish
+                          </button>
+                          <button @click="bulkUpdateStatus('Unpublished')" class="flex-1 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-bold transition-all">
+                            ⏸️ Unpublish
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Price Update -->
+                      <div class="p-3 border-b border-gray-100 dark:border-gray-700">
+                        <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Adjust Prices</p>
+                        <div class="flex gap-2 mb-2">
+                          <input v-model="bulkPriceValue" type="number" min="0" max="100" placeholder="%" class="w-20 px-2 py-1 text-xs border rounded-lg" />
+                          <button @click="bulkUpdatePrice('increase')" class="flex-1 px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold">
+                            📈 Increase
+                          </button>
+                          <button @click="bulkUpdatePrice('decrease')" class="flex-1 px-2 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-xs font-bold">
+                            📉 Decrease
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Category Assignment -->
+                      <div class="p-3 border-b border-gray-100 dark:border-gray-700">
+                        <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Assign Category</p>
+                        <select v-model="bulkCategoryId" class="w-full px-3 py-1.5 text-xs border rounded-lg">
+                          <option value="">Select Category...</option>
+                          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                        </select>
+                        <button @click="bulkAssignCategory" :disabled="!bulkCategoryId" class="w-full mt-2 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-bold disabled:opacity-30">
+                          📂 Assign Now
+                        </button>
+                      </div>
+
+                      <!-- Delete -->
+                      <div class="p-3 bg-red-50/50 dark:bg-red-900/10">
+                        <input v-model="confirmationInput" type="text" placeholder="Type 'confirm' to delete" class="w-full px-2 py-1 text-[10px] bg-white dark:bg-gray-900 border-red-200 dark:border-red-800 rounded-lg mb-2" />
+                        <button @click="deleteSelectedProducts" :disabled="confirmationInput !== 'confirm' || isDeleting" class="w-full px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-black disabled:opacity-30 transition-all">
+                          {{ isDeleting ? 'Deleting...' : '🗑️ Delete Selected' }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                </div>
             </div>
 
@@ -193,6 +238,7 @@
                     <span class="hidden sm:inline">📊 Stock</span>
                     <span class="sm:hidden">📊</span>
                   </th>
+                  <th class="hidden xl:table-cell px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Sales performance analytics">📈 Analytics</th>
                   <th class="hidden lg:table-cell px-6 py-4 text-left text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Published or draft status">🚦 Status</th>
                   <th class="px-3 sm:px-6 py-3 sm:py-4 text-center text-[9px] sm:text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Edit, delete, or view details">
                     <span class="hidden sm:inline">⚙️ Actions</span>
@@ -221,11 +267,23 @@
                       :checked="isSelected(item.id)" @change="toggleSelection(item.id)" />
                   </td>
                   <td class="px-2 sm:px-6 py-4 sm:py-5">
-                    <div class="relative w-12 h-12 sm:w-16 sm:h-16 shrink-0 group-hover:scale-105 transition-transform duration-500">
-                        <img class="w-full h-full rounded-xl sm:rounded-2xl object-cover bg-gray-50 dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm"
-                          :src="getFeatureImageUrl(item)" :alt="item.name" />
-                        <div v-if="item.is_daily_product" class="absolute -top-2 -right-2 bg-amber-400 text-white p-1 rounded-lg shadow-lg">
+                    <div class="relative w-12 h-12 sm:w-16 sm:h-16 shrink-0 group">
+                        <!-- Image with hover zoom and lazy loading -->
+                        <div class="product-image-wrapper w-full h-full rounded-xl sm:rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                          <img class="product-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-125"
+                            :src="getFeatureImageUrl(item)"
+                            :alt="item.name"
+                            loading="lazy" />
+                        </div>
+
+                        <!-- Daily Product Badge -->
+                        <div v-if="item.is_daily_product" class="absolute -top-2 -right-2 bg-amber-400 text-white p-1 rounded-lg shadow-lg" title="Daily Deal Product">
                             <Plus class="w-2 h-2 fill-current" />
+                        </div>
+
+                        <!-- Multiple Images Indicator -->
+                        <div v-if="item.gallery_images && item.gallery_images.length > 0" class="absolute -bottom-1 -right-1 bg-blue-500 text-white px-1.5 py-0.5 rounded-md text-[8px] font-black shadow-lg" title="Has gallery images">
+                          {{ item.gallery_images.length + 1 }} 📷
                         </div>
                     </div>
                   </td>
@@ -274,14 +332,27 @@
                     </div>
                   </td>
                   <td class="px-3 sm:px-6 py-4 sm:py-5 whitespace-nowrap">
-                    <div class="flex flex-col">
+                    <div class="flex flex-col gap-1">
                       <div class="flex items-center gap-1 sm:gap-2">
                         <span class="text-sm sm:text-base font-black text-gray-900 dark:text-gray-100">৳{{ formatCurrency(getDisplayPrice(item)) }}</span>
                         <span v-if="item.type === 'variable'" class="text-[8px] sm:text-[10px] text-gray-500 font-bold uppercase hidden sm:inline">VAR</span>
+
+                        <!-- Sale Badge if has previous_price -->
+                        <span v-if="getPreviousPrice(item) !== null && getPreviousPrice(item) > getDisplayPrice(item)"
+                              class="px-1.5 py-0.5 bg-gradient-to-r from-red-500 to-red-600 text-white text-[8px] font-black rounded-full shadow-lg animate-pulse">
+                          🔥 SALE
+                        </span>
                       </div>
-                      <span v-if="getPreviousPrice(item) !== null" class="text-[10px] sm:text-xs text-gray-400 line-through font-medium">
-                        ৳{{ formatCurrency(getPreviousPrice(item)) }}
-                      </span>
+
+                      <!-- Previous Price with discount percentage -->
+                      <div v-if="getPreviousPrice(item) !== null" class="flex items-center gap-2">
+                        <span class="text-[10px] sm:text-xs text-gray-400 line-through font-medium">
+                          ৳{{ formatCurrency(getPreviousPrice(item)) }}
+                        </span>
+                        <span v-if="getPreviousPrice(item) > getDisplayPrice(item)" class="px-1.5 py-0.5 bg-green-100 text-green-700 text-[8px] font-black rounded">
+                          -{{ Math.round(((getPreviousPrice(item) - getDisplayPrice(item)) / getPreviousPrice(item)) * 100) }}%
+                        </span>
+                      </div>
                     </div>
                   </td>
                   <td class="px-3 sm:px-6 py-4 sm:py-5">
@@ -319,7 +390,57 @@
                         </div>
                     </div>
                   </td>
-                  <td class="px-6 py-5 whitespace-nowrap">
+                  <!-- Analytics Column (XL screens only) -->
+                  <td class="hidden xl:table-cell px-6 py-5">
+                    <div class="space-y-2">
+                      <!-- Sales Count -->
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-[9px] font-bold text-gray-400 uppercase">7d Sales</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                              :class="item.sales_count_7_days >= 10 ? 'bg-green-100 text-green-700' : (item.sales_count_7_days >= 5 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')">
+                          {{ item.sales_count_7_days || 0 }}
+                        </span>
+                      </div>
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-[9px] font-bold text-gray-400 uppercase">30d Sales</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                              :class="item.sales_count_30_days >= 30 ? 'bg-green-100 text-green-700' : (item.sales_count_30_days >= 15 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')">
+                          {{ item.sales_count_30_days || 0 }}
+                        </span>
+                      </div>
+                      <!-- Revenue -->
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-[9px] font-bold text-gray-400 uppercase">Revenue</span>
+                        <span class="text-[10px] font-black text-green-600">৳{{ formatCurrency(item.total_revenue || 0) }}</span>
+                      </div>
+                      <!-- Profit Margin -->
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-[9px] font-bold text-gray-400 uppercase">Margin</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                              :class="item.profit_margin >= 30 ? 'bg-green-100 text-green-700' : (item.profit_margin >= 15 ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700')">
+                          {{ item.profit_margin || 0 }}%
+                        </span>
+                      </div>
+                      <!-- Performance Badge -->
+                      <div class="mt-2 pt-2 border-t border-gray-100">
+                        <div class="flex items-center gap-1.5">
+                          <template v-if="item.performance_score === 'fast'">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span class="text-[9px] font-black text-green-600 uppercase">🚀 Fast Moving</span>
+                          </template>
+                          <template v-else-if="item.performance_score === 'moderate'">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            <span class="text-[9px] font-black text-blue-600 uppercase">📊 Moderate</span>
+                          </template>
+                          <template v-else>
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                            <span class="text-[9px] font-black text-gray-500 uppercase">🐌 Slow Moving</span>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="hidden lg:table-cell px-6 py-5 whitespace-nowrap">
                     <div class="flex items-center gap-3">
                         <button
                             @click="toggleStatus(item)"
@@ -348,6 +469,11 @@
                              title="✏️ Edit this product">
                           <SquarePen class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Link>
+                        <button @click="cloneProduct(item.id)"
+                               class="p-1.5 sm:p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg sm:rounded-xl transition-all active:scale-90 touch-manipulation"
+                               title="📋 Clone/Duplicate this product">
+                          <LayoutTemplate class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
                         <button @click="openDeleteModal(item.id)"
                                class="p-1.5 sm:p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg sm:rounded-xl transition-all active:scale-90 touch-manipulation"
                                title="🗑️ Delete this product permanently">
@@ -416,7 +542,21 @@
                           <div class="space-y-3">
                             <div v-for="variation in item.variations" :key="variation.id" class="flex items-center justify-between gap-4 p-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
                               <div class="flex items-center gap-3">
-                                <img :src="getVariationImageUrl(variation)" class="w-12 h-12 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
+                                <!-- Variation Image with Fallback -->
+                                <div class="relative w-12 h-12 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                                  <img
+                                    v-if="getVariationImageUrl(variation)"
+                                    :src="getVariationImageUrl(variation)"
+                                    class="w-full h-full object-cover"
+                                    :alt="getVariationLabel(variation)"
+                                    @error="$event.target.style.display = 'none'; $event.target.nextElementSibling.style.display = 'flex'"
+                                  />
+                                  <!-- Fallback colored placeholder -->
+                                  <div class="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-600 font-black text-xs" style="display: none;">
+                                    {{ getVariationInitials(variation) }}
+                                  </div>
+                                </div>
+
                                 <div class="min-w-0">
                                   <div class="text-sm font-black text-gray-900 dark:text-gray-100 truncate flex items-center gap-2">
                                     {{ getVariationLabel(variation) || `Variation #${variation.id}` }}
@@ -624,6 +764,12 @@ const showDeleteModal = ref(false);
 const productToDelete = ref(null);
 const isDeleting = ref(false);
 const confirmationInput = ref('');
+
+// Bulk operations state
+const showBulkActions = ref(false);
+const bulkPriceValue = ref(10); // Default 10% price adjustment
+const bulkCategoryId = ref('');
+const bulkActionsRef = ref(null);
 
 // Mobile sort modal state & handlers
 const showSortModal = ref(false);
@@ -839,13 +985,134 @@ const deleteSelectedProducts = () => {
   );
 };
 
+// Bulk Operations Methods
+const toggleBulkActions = () => {
+  showBulkActions.value = !showBulkActions.value;
+};
+
+const bulkUpdateStatus = (status) => {
+  if (selectedProductIds.value.length === 0) {
+    toast.error('No products selected');
+    return;
+  }
+
+  router.post(
+    route('admin.products.bulk-update-status'),
+    {
+      product_ids: selectedProductIds.value,
+      status: status
+    },
+    {
+      preserveState: true,
+      onSuccess: () => {
+        toast.success(`${selectedProductIds.value.length} products updated to ${status}`);
+        selectedProductIds.value = [];
+        showBulkActions.value = false;
+      },
+      onError: () => toast.error('Failed to update product status')
+    }
+  );
+};
+
+const bulkUpdatePrice = (type) => {
+  if (selectedProductIds.value.length === 0) {
+    toast.error('No products selected');
+    return;
+  }
+
+  if (!bulkPriceValue.value || bulkPriceValue.value <= 0 || bulkPriceValue.value > 100) {
+    toast.error('Please enter a valid percentage (1-100)');
+    return;
+  }
+
+  router.post(
+    route('admin.products.bulk-update-price'),
+    {
+      product_ids: selectedProductIds.value,
+      price_type: type,
+      price_value: bulkPriceValue.value
+    },
+    {
+      preserveState: true,
+      onSuccess: () => {
+        const action = type === 'increase' ? 'increased' : 'decreased';
+        toast.success(`Prices ${action} by ${bulkPriceValue.value}%`);
+        selectedProductIds.value = [];
+        showBulkActions.value = false;
+      },
+      onError: () => toast.error('Failed to update product prices')
+    }
+  );
+};
+
+const bulkAssignCategory = () => {
+  if (selectedProductIds.value.length === 0) {
+    toast.error('No products selected');
+    return;
+  }
+
+  if (!bulkCategoryId.value) {
+    toast.error('Please select a category');
+    return;
+  }
+
+  router.post(
+    route('admin.products.bulk-assign-category'),
+    {
+      product_ids: selectedProductIds.value,
+      category_id: bulkCategoryId.value
+    },
+    {
+      preserveState: true,
+      onSuccess: () => {
+        toast.success('Category assigned successfully');
+        selectedProductIds.value = [];
+        bulkCategoryId.value = '';
+        showBulkActions.value = false;
+      },
+      onError: () => toast.error('Failed to assign category')
+    }
+  );
+};
+
+const cloneProduct = (productId) => {
+  if (confirm('Clone this product? A copy will be created as draft.')) {
+    router.post(
+      route('admin.products.clone', productId),
+      {},
+      {
+        preserveState: true,
+        onSuccess: () => {
+          toast.success('Product cloned successfully!');
+        },
+        onError: () => toast.error('Failed to clone product')
+      }
+    );
+  }
+};
+
+// Close bulk actions dropdown when clicking outside
+const handleClickOutside = (event) => {
+  if (bulkActionsRef.value && !bulkActionsRef.value.contains(event.target)) {
+    showBulkActions.value = false;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('click', handleClickOutside);
+});
+
 // Helpers: default variation & compact variation preview
-function getDefaultVariation(item) {
+const getDefaultVariation = (item) => {
   if (!item || !item.variations || !item.variations.length) return null;
   return item.variations.find(v => v.is_default) || item.variations[0];
-}
+};
 
-function getDisplayPrice(item) {
+const getDisplayPrice = (item) => {
   if (!item) return 0;
 
   // For variable products prefer the default variation's price first (even if 0),
@@ -889,9 +1156,9 @@ function getDisplayPrice(item) {
   const p = item.price ?? item.previous_price;
   const n = Number(p);
   return (!Number.isNaN(n) && p !== null && p !== undefined) ? n : 0;
-}
+};
 
-function getPreviousPrice(item) {
+const getPreviousPrice = (item) => {
   if (!item) return null;
   if (item.type === 'variable' && item.variations && item.variations.length) {
     const def = getDefaultVariation(item);
@@ -902,16 +1169,16 @@ function getPreviousPrice(item) {
   }
   if (item.previous_price !== undefined && item.previous_price !== null) return Number(item.previous_price);
   return null;
-}
+};
 
-function formatCurrency(val) {
+const formatCurrency = (val) => {
   if (val === null || val === undefined) return '0.00';
   const n = Number(val);
   if (Number.isNaN(n)) return '0.00';
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+};
 
-function getCompactVariations(item, limit = 2) {
+const getCompactVariations = (item, limit = 2) => {
   if (!item || !item.variations || !item.variations.length) return [];
   const arr = item.variations.slice(0, limit).map(v => {
     const attrs = (v.attributes || []).map(a => a.value?.value || a.value).join(' / ');
@@ -922,28 +1189,34 @@ function getCompactVariations(item, limit = 2) {
     arr.push({ label: `+${item.variations.length - limit} more`, isMore: true });
   }
   return arr;
-}
+};
 
 // Image helpers: normalize URLs and provide placeholder when missing
-function normalizeImageUrl(pathOrUrl, opts = { width: 400, height: 400 }) {
+const normalizeImageUrl = (pathOrUrl, opts = { width: 400, height: 400 }) => {
   if (!pathOrUrl) return `/placeholder.svg?width=${opts.width}&height=${opts.height}`;
   if (typeof pathOrUrl !== 'string') return `/placeholder.svg?width=${opts.width}&height=${opts.height}`;
   if (pathOrUrl.startsWith('http') || pathOrUrl.startsWith('//')) return pathOrUrl;
   if (pathOrUrl.startsWith('/')) return pathOrUrl;
   return '/' + pathOrUrl;
-}
+};
 
-function getFeatureImageUrl(item) {
+const getFeatureImageUrl = (item) => {
   if (!item) return normalizeImageUrl(null);
   return normalizeImageUrl(item.feature_image_url ?? item.feature_image, { width: 480, height: 320 });
-}
+};
 
-function getVariationImageUrl(variation) {
+const getVariationImageUrl = (variation) => {
   if (!variation) return normalizeImageUrl(null, { width: 96, height: 96 });
-  return normalizeImageUrl(variation.image_url ?? variation.image_path, { width: 96, height: 96 });
-}
+  // Check for variation image first, then fallback to parent product image
+  const variationImage = variation.image_path;
+  if (variationImage) {
+    return normalizeImageUrl(variationImage, { width: 96, height: 96 });
+  }
+  // Fallback to parent product feature image
+  return normalizeImageUrl(variation.product?.feature_image, { width: 96, height: 96 });
+};
 
-function getVariationLabel(variation) {
+const getVariationLabel = (variation) => {
   if (!variation) return '';
 
   // First try to create a label from attributes
@@ -956,21 +1229,35 @@ function getVariationLabel(variation) {
 
   // Fallback to SKU or variation code or ID
   return variation.sku || variation.variation_code || `Variation #${variation.id}`;
-}
+};
 
+// Generate initials for variation placeholder (e.g., "BL" for Blue, Large)
+const getVariationInitials = (variation) => {
+  if (!variation) return '?';
+  
+  if (variation.attributes && variation.attributes.length > 0) {
+    return variation.attributes
+      .slice(0, 2) // Take first 2 attributes
+      .map(attr => (attr.value?.value || 'X')[0].toUpperCase())
+      .join('');
+  }
+  
+  // Fallback to variation ID
+  return `V${variation.id}`.slice(0, 2);
+};
 // Short description helpers
-function stripHtml(html) {
+const stripHtml = (html) => {
   if (!html) return '';
   return html.replace(/<[^>]*>/g, '')?.trim();
-}
+};
 
-function getShortDescription(item, limit = 100) {
+const getShortDescription = (item, limit = 100) => {
   if (!item || !item.short_description) return '';
   const text = stripHtml(item.short_description);
   return text.length > limit ? text.slice(0, limit).trim() + '...' : text;
-}
+};
 
-function formatDate(isoDate) {
+const formatDate = (isoDate) => {
   const date = new Date(isoDate);
   const now = new Date();
   const diffInMs = now - date; // Difference in milliseconds
@@ -989,7 +1276,7 @@ function formatDate(isoDate) {
   } else {
     return `${seconds} second${seconds === 1 ? '' : 's'} ago`;
   }
-}
+};
 
 // Debounce search input
 let searchTimeout = null;
@@ -1023,6 +1310,34 @@ const debouncedSearch = () => {
 
 .shadow-inner-lg {
     box-shadow: inset 0 2px 15px 0 rgba(0, 0, 0, 0.02);
+}
+
+/* Product Image Hover Zoom */
+.product-image-wrapper {
+  position: relative;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.product-image {
+  object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-image-wrapper:hover .product-image {
+  transform: scale(1.25);
+}
+
+/* Smooth loading state for lazy images */
+.product-image[loading="lazy"] {
+  opacity: 0;
+  animation: fadeIn 0.3s ease-in forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
 }
 
 /* Mobile Responsive Utilities */

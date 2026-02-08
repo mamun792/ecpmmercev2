@@ -143,7 +143,12 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
     Route::resource('attributes', AttributeController::class)->except(['destroy']);
     Route::put('/attributes/{id}/toggle-status', [AttributeController::class, 'toggleStatus'])->name('attributes.toggle-status');
 
+    // Product Bulk Operations (Big Tech Enterprise Features)
     Route::post('/products/bulk-delete', [ProductController::class, 'bulkDeleteProducts'])->name('products.bulk-delete');
+    Route::post('/products/bulk-update-status', [ProductController::class, 'bulkUpdateStatus'])->name('products.bulk-update-status');
+    Route::post('/products/bulk-update-price', [ProductController::class, 'bulkUpdatePrice'])->name('products.bulk-update-price');
+    Route::post('/products/bulk-assign-category', [ProductController::class, 'bulkAssignCategory'])->name('products.bulk-assign-category');
+    Route::post('/products/{product}/clone', [ProductController::class, 'cloneProduct'])->name('products.clone');
     Route::post('/products/{slug}/restore', [ProductController::class, 'restore'])->name('products.restore');
 
     // categories

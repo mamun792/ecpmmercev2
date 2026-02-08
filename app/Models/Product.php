@@ -79,7 +79,18 @@ class Product extends Model
         'previous_price' => 'decimal:2',
     ];
 
-    protected $appends = ['feature_image_url', 'avg_rating', 'reviews_count', 'stock', 'variations_count'];
+    protected $appends = [
+        'feature_image_url',
+        'avg_rating',
+        'reviews_count',
+        'stock',
+        'variations_count',
+        'sales_count_7_days',
+        'sales_count_30_days',
+        'total_revenue',
+        'profit_margin',
+        'performance_score'
+    ];
 
     /**
      * Get the indexable data array for the model.
@@ -131,6 +142,11 @@ class Product extends Model
     {
         return $this->belongsToMany(Coupon::class)
             ->withTimestamps();
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     public function brand()
@@ -260,6 +276,80 @@ class Product extends Model
 
         return (int) $this->variations()->count();
     }
+
+    /**
+     * Get total sales count for last 7 days
+     */
+    public function getSalesCount7DaysAttribute(): int
+    {
+        return $this->orderItems()
+            ->whereHas('order', function ($q) {
+                $q->where('created_at', '>=', now()->subDays(7))
+                  ->whereNotIn('status', ['Cancelled', 'Refunded']);
+            })
+            ->sum('quantity') ?? 0;
+    }
+
+    /**
+     * Get total sales count for last 30 days
+     */
+    public function getSalesCount30DaysAttribute(): int
+    {
+        return $this->orderItems()
+            ->whereHas('order', function ($q) {
+                $q->where('created_at', '>=', now()->subDays(30))
+                  ->whereNotIn('status', ['Cancelled', 'Refunded']);
+            })
+            ->sum('quantity') ?? 0;
+    }
+
+    /**
+     * Get total revenue generated from this product (all time)
+     */
+    public function getTotalRevenueAttribute(): float
+    {
+        return $this->orderItems()
+            ->whereHas('order', function ($q) {
+                $q->whereIn('status', ['Delivered', 'Completed', 'Processing']);
+            })
+            ->sum(\DB::raw('unit_price * quantity')) ?? 0;
+    }
+
+    /**
+     * Get profit margin percentage (based on cost_price)
+     */
+    public function getProfitMarginAttribute(): float
+    {
+        if (!$this->cost_price || $this->cost_price <= 0 || !$this->price || $this->price <= 0) {
+            return 0;
+        }
+
+        $profit = $this->price - $this->cost_price;
+        return round(($profit / $this->price) * 100, 1);
+    }
+
+    /**
+     * Get performance score (fast/slow moving indicator)
+     */
+    public function getPerformanceScoreAttribute(): string
+    {
+        $sales7Days = $this->sales_count_7_days;
+        $sales30Days = $this->sales_count_30_days;
+
+        // Fast moving: 10+ sales in last 7 days OR 30+ in last 30 days
+        if ($sales7Days >= 10 || $sales30Days >= 30) {
+            return 'fast';
+        }
+
+        // Moderate: 5+ sales in last 7 days OR 15+ in last 30 days
+        if ($sales7Days >= 5 || $sales30Days >= 15) {
+            return 'moderate';
+        }
+
+        // Slow moving: < 5 sales in 7 days AND < 15 in 30 days
+        return 'slow';
+    }
+
     /**
      * Get the gallery images with full URLs
      */

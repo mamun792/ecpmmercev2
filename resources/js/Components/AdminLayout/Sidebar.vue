@@ -1079,6 +1079,16 @@ onMounted(() => {
     // Start auto-refresh
     startAutoRefresh();
 
+    // Listen for real-time order notifications to update sidebar stats
+    if (window.Echo) {
+        window.Echo.channel('notifications')
+            .listen('.notification.sent', (event) => {
+                console.log('Sidebar: New order notification, refreshing stats...');
+                // Reload only sidebarStats to update quick stats
+                router.reload({ only: ['sidebarStats'], preserveScroll: true, preserveState: true });
+            });
+    }
+
     // Add touch event listeners for mobile swipe
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
@@ -1110,6 +1120,11 @@ onMounted(() => {
         }
         document.removeEventListener('keydown', handleKeyPress);
         stopAutoRefresh();
+
+        // Leave Echo channel
+        if (window.Echo) {
+            window.Echo.leave('notifications');
+        }
     });
 });
 

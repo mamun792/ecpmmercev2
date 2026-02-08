@@ -418,6 +418,150 @@ class ProductController extends Controller
     }
 
     /**
+     * Bulk update product status (Published/Unpublished)
+     */
+    public function bulkUpdateStatus(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+            'status' => 'required|in:Published,Unpublished'
+        ]);
+
+        try {
+            $count = Product::whereIn('id', $request->product_ids)->update([
+                'status' => $request->status,
+                'updated_at' => now()
+            ]);
+
+            $this->clearAllProductCaches();
+
+            return redirect()->back()->with('success', "{$count} products updated to {$request->status}");
+        } catch (\Exception $e) {
+            Log::error('Bulk Status Update Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update product status');
+        }
+    }
+
+    /**
+     * Bulk update product prices (percentage increase/decrease)
+     */
+    public function bulkUpdatePrice(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+            'price_type' => 'required|in:increase,decrease',
+            'price_value' => 'required|numeric|min:0|max:100', // Percentage
+        ]);
+
+        try {
+            $products = Product::whereIn('id', $request->product_ids)->get();
+            $count = 0;
+
+            foreach ($products as $product) {
+                if ($product->price > 0) {
+                    $adjustment = ($product->price * $request->price_value) / 100;
+                    $newPrice = $request->price_type === 'increase'
+                        ? $product->price + $adjustment
+                        : max(0, $product->price - $adjustment); // Prevent negative prices
+
+                    $product->update(['price' => round($newPrice, 2)]);
+                    $count++;
+                }
+            }
+
+            $this->clearAllProductCaches();
+
+            $action = $request->price_type === 'increase' ? 'increased' : 'decreased';
+            return redirect()->back()->with('success', "{$count} product prices {$action} by {$request->price_value}%");
+        } catch (\Exception $e) {
+            Log::error('Bulk Price Update Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update product prices');
+        }
+    }
+
+    /**
+     * Bulk assign category to products
+     */
+    public function bulkAssignCategory(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+            'category_id' => 'required|exists:categories,id'
+        ]);
+
+        try {
+            $count = Product::whereIn('id', $request->product_ids)->update([
+                'category_id' => $request->category_id,
+                'updated_at' => now()
+            ]);
+
+            $this->clearAllProductCaches();
+
+            $category = Category::find($request->category_id);
+            return redirect()->back()->with('success', "{$count} products assigned to category: {$category->name}");
+        } catch (\Exception $e) {
+            Log::error('Bulk Category Assignment Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to assign category');
+        }
+    }
+
+    /**
+     * Clone/duplicate a product
+     */
+    public function cloneProduct(Product $product)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Clone main product
+            $cloned = $product->replicate();
+            $cloned->name = $product->name . ' (Copy)';
+            $cloned->product_code = $product->product_code . '-COPY-' . Str::random(4);
+            $cloned->slug = Str::slug($cloned->name) . '-' . Str::random(6);
+            $cloned->status = 'Unpublished'; // Safety: cloned products start as draft
+            $cloned->save();
+
+            // Clone variations if exists
+            if ($product->type === 'variable' && $product->variations->count() > 0) {
+                foreach ($product->variations as $variation) {
+                    $clonedVariation = $variation->replicate();
+                    $clonedVariation->product_id = $cloned->id;
+                    $clonedVariation->save();
+
+                    // Clone variation attributes
+                    foreach ($variation->attributes as $attribute) {
+                        $clonedVariation->attributes()->create([
+                            'attribute_value_id' => $attribute->attribute_value_id
+                        ]);
+                    }
+
+                    // Clone inventory stock
+                    if ($variation->inventoryStock) {
+                        $clonedVariation->inventoryStock()->create([
+                            'inventory_location_id' => $variation->inventoryStock->inventory_location_id,
+                            'available_quantity' => 0, // Start with 0 stock
+                            'reserved_quantity' => 0
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+            $this->clearAllProductCaches();
+
+            return redirect()->route('admin.products.edit', $cloned->id)
+                ->with('success', "Product cloned successfully! Edit and publish when ready.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Product Clone Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to clone product');
+        }
+    }
+
+    /**
      * Get inventory locations for dropdown
      */
     private function getInventoryLocations(): array
