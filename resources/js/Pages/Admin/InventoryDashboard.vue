@@ -12,7 +12,7 @@
       </div>
 
       <!-- Main Dashboard Component -->
-      <InventoryAnalyticsDashboard 
+      <InventoryAnalyticsDashboard
         v-if="success !== false"
         :initialData="dashboardData"
         :reorderAlerts="reorderAlerts"
@@ -37,7 +37,7 @@ defineProps({
     default: () => ({})
   },
   reorderAlerts: {
-    type: Object, 
+    type: Object,
     default: () => ({})
   },
   success: {

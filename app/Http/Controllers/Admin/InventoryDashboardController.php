@@ -73,7 +73,7 @@ class InventoryDashboardController extends Controller
             ];
 
             return Inertia::render('Admin/InventoryDashboard', [
-                'title' => 'ইনভেন্টরি অ্যানালিটিক্স ড্যাশবোর্ড', 
+                'title' => 'ইনভেন্টরি অ্যানালিটিক্স ড্যাশবোর্ড',
                 'dashboardData' => $fallbackData,
                 'reorderAlerts' => $fallbackAlerts,
                 'error' => 'ড্যাশবোর্ড ডেটা লোড করতে সমস্যা হয়েছে: ' . $e->getMessage(),
@@ -89,7 +89,7 @@ class InventoryDashboardController extends Controller
     {
         try {
             $alerts = $this->autoReorderService->checkReorderTriggers();
-            
+
             $emailSent = $this->notificationService->sendInventoryAlert(
                 $alerts['critical']->toArray(),
                 $alerts['low']->toArray(),
@@ -98,8 +98,8 @@ class InventoryDashboardController extends Controller
 
             return response()->json([
                 'success' => $emailSent,
-                'message' => $emailSent 
-                    ? 'দৈনিক রিপোর্ট সফলভাবে পাঠানো হয়েছে!' 
+                'message' => $emailSent
+                    ? 'দৈনিক রিপোর্ট সফলভাবে পাঠানো হয়েছে!'
                     : 'ইমেইল পাঠাতে সমস্যা হয়েছে'
             ]);
 
@@ -139,7 +139,7 @@ class InventoryDashboardController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Weekly report error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -164,14 +164,14 @@ class InventoryDashboardController extends Controller
         try {
             $settings = $request->validate([
                 'daily_morning_report' => 'boolean',
-                'critical_alerts' => 'boolean', 
+                'critical_alerts' => 'boolean',
                 'weekly_optimization' => 'boolean',
                 'promotional_opportunities' => 'boolean'
             ]);
 
             // In a real app, save to database or config file
             // For now, just return success
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'ইমেইল সেটিংস সফলভাবে সেভ করা হয়েছে!'
@@ -207,7 +207,7 @@ class InventoryDashboardController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Dashboard refresh error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [

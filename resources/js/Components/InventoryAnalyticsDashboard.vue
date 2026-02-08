@@ -70,16 +70,16 @@
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-bold text-gray-800">📋 Today's Summary Report</h2>
         <div class="flex gap-2">
-          <button 
-            @click="refreshDailyReport" 
+          <button
+            @click="refreshDailyReport"
             class="btn btn-sm btn-primary"
             :disabled="loading"
           >
             <span v-if="loading" class="loading loading-spinner loading-xs"></span>
             {{ loading ? 'Updating...' : '🔄 Refresh' }}
           </button>
-          <button 
-            @click="sendDailyEmail" 
+          <button
+            @click="sendDailyEmail"
             class="btn btn-sm btn-accent"
             :disabled="emailSending"
           >
@@ -88,7 +88,7 @@
           </button>
         </div>
       </div>
-      
+
       <!-- Sales Velocity Chart -->
       <div class="mb-6">
         <h3 class="text-lg font-semibold mb-3">📊 Sales Velocity Analysis</h3>
@@ -121,15 +121,15 @@
                   <div class="badge badge-error">{{ product.priority_score || 10 }}/10</div>
                 </td>
                 <td>
-                  <span v-if="product.days_until_stockout !== null" 
+                  <span v-if="product.days_until_stockout !== null"
                         class="text-red-600 font-bold">
                     {{ product.days_until_stockout }} days
                   </span>
                   <span v-else class="text-gray-500">Unknown</span>
                 </td>
                 <td>
-                  <button 
-                    @click="createPurchaseOrder(product)" 
+                  <button
+                    @click="createPurchaseOrder(product)"
                     class="btn btn-xs btn-primary"
                   >
                     📝 Order Now
@@ -179,8 +179,8 @@
     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-bold text-gray-800">📈 Weekly Optimization</h2>
-        <button 
-          @click="generateWeeklyReport" 
+        <button
+          @click="generateWeeklyReport"
           class="btn btn-sm btn-secondary"
           :disabled="weeklyLoading"
         >
@@ -193,8 +193,8 @@
       <div v-if="promotionalProducts && promotionalProducts.length > 0" class="mb-6">
         <h3 class="text-lg font-semibold text-purple-600 mb-3">🎯 Promotional Suggestions</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div 
-            v-for="product in promotionalProducts" 
+          <div
+            v-for="product in promotionalProducts"
             :key="product.id"
             class="card bg-gradient-to-br from-purple-50 to-pink-50 shadow-md"
           >
@@ -208,8 +208,8 @@
                 </p>
               </div>
               <div class="card-actions justify-end mt-3">
-                <button 
-                  @click="createPromotion(product)" 
+                <button
+                  @click="createPromotion(product)"
                   class="btn btn-xs btn-secondary"
                 >
                   🏷️ Create Promo
@@ -230,60 +230,60 @@
     <!-- Email Notification Settings -->
     <div class="bg-white rounded-lg shadow-lg p-6">
       <h2 class="text-xl font-bold text-gray-800 mb-4">📧 Email Notification Settings</h2>
-      
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="space-y-4">
           <h3 class="font-semibold text-gray-700">Daily Reports</h3>
           <div class="form-control">
             <label class="label cursor-pointer">
               <span class="label-text">Morning Summary (6:00 AM)</span>
-              <input 
-                type="checkbox" 
-                v-model="emailSettings.daily_morning_report" 
-                class="toggle toggle-primary" 
+              <input
+                type="checkbox"
+                v-model="emailSettings.daily_morning_report"
+                class="toggle toggle-primary"
               />
             </label>
           </div>
           <div class="form-control">
             <label class="label cursor-pointer">
               <span class="label-text">Critical Stock Alerts</span>
-              <input 
-                type="checkbox" 
-                v-model="emailSettings.critical_alerts" 
-                class="toggle toggle-error" 
+              <input
+                type="checkbox"
+                v-model="emailSettings.critical_alerts"
+                class="toggle toggle-error"
               />
             </label>
           </div>
         </div>
-        
+
         <div class="space-y-4">
           <h3 class="font-semibold text-gray-700">Weekly Reports</h3>
           <div class="form-control">
             <label class="label cursor-pointer">
               <span class="label-text">Optimization Suggestions</span>
-              <input 
-                type="checkbox" 
-                v-model="emailSettings.weekly_optimization" 
-                class="toggle toggle-secondary" 
+              <input
+                type="checkbox"
+                v-model="emailSettings.weekly_optimization"
+                class="toggle toggle-secondary"
               />
             </label>
           </div>
           <div class="form-control">
             <label class="label cursor-pointer">
               <span class="label-text">Promotional Opportunities</span>
-              <input 
-                type="checkbox" 
-                v-model="emailSettings.promotional_opportunities" 
-                class="toggle toggle-accent" 
+              <input
+                type="checkbox"
+                v-model="emailSettings.promotional_opportunities"
+                class="toggle toggle-accent"
               />
             </label>
           </div>
         </div>
       </div>
-      
+
       <div class="mt-6 flex justify-end">
-        <button 
-          @click="saveEmailSettings" 
+        <button
+          @click="saveEmailSettings"
           class="btn btn-primary"
           :disabled="settingsSaving"
         >
@@ -367,16 +367,16 @@ const refreshDailyReport = async () => {
   try {
     const response = await fetch('/admin/api/inventory-analytics/dashboard')
     const data = await response.json()
-    
+
     if (data.success) {
       summary.value = data.data.summary
       criticalProducts.value = data.data.critical || []
       lowProducts.value = data.data.low || []
     }
-    
+
     // Update charts
     updateVelocityChart()
-    
+
   } catch (error) {
     console.error('Error fetching daily report:', error)
   } finally {
@@ -394,7 +394,7 @@ const sendDailyEmail = async () => {
         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
       }
     })
-    
+
     const data = await response.json()
     if (data.success) {
       alert('✅ Daily report sent successfully!')
@@ -417,7 +417,7 @@ const generateWeeklyReport = async () => {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     const data = await response.json()
-    
+
     if (data.success) {
       promotionalProducts.value = data.data?.promotional || []
       updateRevenueChart(data.data?.revenue || [])
@@ -458,7 +458,7 @@ const saveEmailSettings = async () => {
       },
       body: JSON.stringify(emailSettings.value)
     })
-    
+
     if (response.ok) {
       alert('✅ Settings saved successfully!')
     } else {
@@ -503,7 +503,7 @@ const updateVelocityChart = () => {
       },
     }
   }
-  
+
   const chart = new ApexCharts(document.querySelector('#velocityChart'), options)
   chart.render()
 }
@@ -530,7 +530,7 @@ const updateRevenueChart = (revenueData) => {
       }
     }
   }
-  
+
   const chart = new ApexCharts(document.querySelector('#revenueChart'), options)
   chart.render()
 }

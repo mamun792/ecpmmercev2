@@ -102,11 +102,11 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
         Route::get('/sales-velocity', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'salesVelocity'])->name('api.inventory-analytics.sales-velocity');
         Route::get('/demand-forecast', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'demandForecast'])->name('api.inventory-analytics.demand-forecast');
         Route::get('/turnover-analysis', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'turnoverAnalysis'])->name('api.inventory-analytics.turnover-analysis');
-        
+
         // Test endpoints - remove in production
         Route::get('/test-weekly-report', [\App\Http\Controllers\Api\InventoryTestController::class, 'testWeeklyReport'])->name('api.inventory-analytics.test-weekly-report');
         Route::get('/test-dashboard', [\App\Http\Controllers\Api\InventoryTestController::class, 'testDashboard'])->name('api.inventory-analytics.test-dashboard');
-        
+
         // Bengali Dashboard API Routes
         Route::post('/send-daily-report', [InventoryDashboardController::class, 'sendDailyReport'])->name('api.inventory-analytics.send-daily-report');
         Route::get('/weekly-report', [InventoryDashboardController::class, 'weeklyReport'])->name('api.inventory-analytics.weekly-report');
@@ -331,7 +331,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // Admin notifications
     Route::get('/notifications', [App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
-    
+
     // Bengali Inventory Analytics Dashboard
     Route::get('/inventory-dashboard', [InventoryDashboardController::class, 'index'])->name('inventory-dashboard');
     Route::post('/notifications/read-all', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');

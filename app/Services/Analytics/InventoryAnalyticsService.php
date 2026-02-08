@@ -269,7 +269,7 @@ class InventoryAnalyticsService
                 $productName = $stock->product?->name ?? 'Unknown Product';
                 $categoryName = $stock->product?->category?->name ?? 'Uncategorized';
                 $unitCost = $stock->product?->cost_price ?? $stock->product?->price ?? 0;
-                
+
                 return [
                     'product_id' => $stock->product_id,
                     'product_name' => $productName,
@@ -418,7 +418,7 @@ class InventoryAnalyticsService
             $stocks = InventoryStock::with(['product' => function($query) {
                 $query->select('id', 'name', 'price', 'cost_price');
             }])->get();
-            
+
             $summary = [
                 'total_products' => $stocks->count(),
                 'critical_count' => 0,
@@ -444,7 +444,7 @@ class InventoryAnalyticsService
 
         } catch (\Exception $e) {
             \Log::error('Dashboard Summary Error: ' . $e->getMessage());
-            
+
             // Return safe fallback data
             return [
                 'summary' => [
@@ -473,7 +473,7 @@ class InventoryAnalyticsService
     }
 
     /**
-     * Safe inventory overview with error handling  
+     * Safe inventory overview with error handling
      */
     private function getSafeInventoryOverview()
     {
@@ -499,7 +499,7 @@ class InventoryAnalyticsService
     public function getSlowMovingProducts($days = 30)
     {
         $cutoffDate = Carbon::now()->subDays($days);
-        
+
         return InventoryStock::with(['product', 'product.orderItems' => function($query) use ($cutoffDate) {
                 $query->whereHas('order', function($q) use ($cutoffDate) {
                     $q->where('created_at', '>=', $cutoffDate);
@@ -510,7 +510,7 @@ class InventoryAnalyticsService
                 $recentSales = $stock->product->orderItems
                     ->where('created_at', '>=', $cutoffDate)
                     ->sum('quantity');
-                
+
                 return $recentSales == 0 && $stock->available_quantity > 20;
             })
             ->map(function($stock) {
@@ -534,7 +534,7 @@ class InventoryAnalyticsService
     public function getWeeklyRevenue()
     {
         $startDate = Carbon::now()->subDays(7);
-        
+
         return Order::whereBetween('created_at', [$startDate, Carbon::now()])
             ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue')
             ->groupBy('date')
@@ -566,7 +566,7 @@ class InventoryAnalyticsService
     private function generatePromotionSuggestion($stock)
     {
         $stockLevel = $stock->available_quantity;
-        
+
         if ($stockLevel > 100) {
             return '20-30% ছাড় দিয়ে দ্রুত বিক্রয় করুন';
         } elseif ($stockLevel > 50) {
