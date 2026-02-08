@@ -287,8 +287,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::patch('/leads/{id}/status', [App\Http\Controllers\Admin\PreOrderLeadController::class, 'updateStatus'])->name('leads.update-status');
     Route::delete('/leads/{id}', [App\Http\Controllers\Admin\PreOrderLeadController::class, 'destroy'])->name('leads.destroy');
 
-    // Admin notifications listing
+    // Admin notifications
     Route::get('/notifications', [App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
+    Route::post('/notifications/read-all', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    Route::post('/notifications/read-multiple', [App\Http\Controllers\Admin\NotificationController::class, 'markMultipleAsRead'])->name('notifications.mark-multiple-read');
+    Route::delete('/notifications/clear-read', [App\Http\Controllers\Admin\NotificationController::class, 'clearRead'])->name('notifications.clear-read');
 });
 
 require __DIR__ . '/auth.php';

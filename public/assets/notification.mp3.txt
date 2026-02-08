@@ -1,0 +1,7 @@
+This is a placeholder for notification.mp3
+Download a notification sound from:
+- https://notificationsounds.com/
+- https://freesound.org/
+- Or use any .mp3 file
+
+Place it at: public/assets/notification.mp3

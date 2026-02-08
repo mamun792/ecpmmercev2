@@ -46,7 +46,17 @@
                     >
                         <div class="px-4 pb-3 border-b border-gray-100 flex items-center justify-between">
                             <p class="text-sm font-semibold text-gray-900">Notifications</p>
-                            <span v-if="unreadCount > 0" class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">{{ unreadCount }} new</span>
+                            <div class="flex items-center gap-2">
+                                <span v-if="unreadCount > 0" class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">{{ unreadCount }} new</span>
+                                <button
+                                    v-if="unreadCount > 0"
+                                    @click="markAllAsRead"
+                                    class="text-xs font-medium text-gray-600 hover:text-blue-600 transition-colors"
+                                    title="Mark all as read"
+                                >
+                                    ✓ All
+                                </button>
+                            </div>
                         </div>
 
                         <div class="max-h-96 overflow-y-auto">
@@ -55,23 +65,30 @@
                                 <p class="text-sm text-gray-500">No notifications</p>
                             </div>
 
-                            <div v-for="n in notifications.slice(0, 5)" :key="n.id" class="px-4 py-3 hover:bg-gray-50 transition-all border-b border-gray-50 last:border-0">
+                            <button
+                                v-for="n in notifications.slice(0, 5)"
+                                :key="n.id"
+                                @click="handleNotificationClick(n)"
+                                class="w-full text-left px-4 py-3 hover:bg-gray-50 transition-all border-b border-gray-50 last:border-0"
+                                :class="{ 'bg-blue-50/30': !n.is_read }"
+                            >
                                 <div class="flex items-start gap-3">
                                     <div class="p-1.5 bg-blue-50 text-blue-600 rounded-md flex-shrink-0">
-                                        <ShoppingCart v-if="n.data.order_number" class="w-4 h-4" />
+                                        <ShoppingCart v-if="n.data?.order_number" class="w-4 h-4" />
                                         <Bell v-else class="w-4 h-4" />
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-medium text-gray-900 truncate">
-                                            {{ n.data.order_number ?? n.data.title ?? n.type }}
+                                        <div class="text-sm font-medium text-gray-900 truncate" :class="{ 'font-bold': !n.is_read }">
+                                            {{ n.data?.order_number ?? n.data?.title ?? n.type }}
                                         </div>
                                         <p class="text-xs text-gray-500 mt-0.5 truncate">
-                                            {{ n.data.customer_name ?? 'System' }}
+                                            {{ n.data?.customer_name ?? 'System' }}
                                         </p>
                                         <p class="text-xs text-gray-400 mt-1">{{ formatDate(n.created_at) }}</p>
                                     </div>
+                                    <div v-if="!n.is_read" class="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></div>
                                 </div>
-                            </div>
+                            </button>
                         </div>
 
                         <div class="px-4 pt-3 border-t border-gray-100">
@@ -169,7 +186,7 @@
 
 <script setup>
 import { defineProps, ref, computed, onMounted, onUnmounted } from "vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, router } from "@inertiajs/vue3";
 import {
     Menu,
     Sun,
@@ -186,6 +203,7 @@ import {
     Database,
 } from "lucide-vue-next";
 import { Link } from "@inertiajs/vue3";
+import { toast } from '@steveyuowo/vue-hot-toast';
 
 defineProps({
     sidebarOpen: Boolean,
@@ -204,6 +222,9 @@ const toggleNotifications = () => (isNotificationsOpen.value = !isNotificationsO
 
 const page = usePage();
 
+// Notification sound
+const notificationSound = new Audio('/assets/notification.mp3');
+
 // Bangladesh (Dhaka) time display
 const bdTime = ref('');
 let bdTimer = null;
@@ -220,10 +241,45 @@ function updateBdTime() {
 onMounted(() => {
     updateBdTime();
     bdTimer = setInterval(updateBdTime, 1000);
+
+    // Listen for real-time notifications (if Echo is available)
+    if (window.Echo) {
+        window.Echo.channel('notifications')
+            .listen('.notification.sent', (event) => {
+                console.log('New notification received:', event);
+
+                // Play sound
+                try {
+                    notificationSound.play().catch(err => {
+                        console.log('Could not play notification sound:', err);
+                    });
+                } catch (e) {
+                    console.log('Notification sound error:', e);
+                }
+
+                // Show toast
+                toast.success(`New notification: ${event.data?.order_number || 'New event'}`, {
+                    duration: 4000,
+                });
+
+                // Reload notifications
+                router.reload({ only: ['adminNotifications'] });
+            });
+    } else {
+        // Fallback: Poll for new notifications every 60 seconds if Echo is not available
+        setInterval(() => {
+            router.reload({ only: ['adminNotifications'], preserveScroll: true, preserveState: true });
+        }, 60000);
+    }
 });
 
 onUnmounted(() => {
     if (bdTimer) clearInterval(bdTimer);
+
+    // Leave Echo channel
+    if (window.Echo) {
+        window.Echo.leave('notifications');
+    }
 });
 
 const currentRouteLabel = computed(() => {
@@ -258,10 +314,9 @@ const currentRouteLabel = computed(() => {
     }
 });
 
-// Safely resolve adminNotifications from Inertia props (handles SSR / shape differences)
+// Safely resolve adminNotifications from Inertia props
 const adminNotifications = computed(() => {
     try {
-        // Prefer the .props.value shape (Vue 3 + Inertia), fall back to .props directly
         if (page && page.props && page.props.value && page.props.value.adminNotifications) {
             return page.props.value.adminNotifications;
         }
@@ -271,7 +326,6 @@ const adminNotifications = computed(() => {
     } catch (e) {
         // ignore and fall through
     }
-
     return { count: 0, notifications: [] };
 });
 
@@ -294,6 +348,51 @@ function formatDate(value) {
         return new Date(value).toLocaleString();
     } catch (e) {
         return value;
+    }
+}
+
+// Handle notification click - navigate to related page and mark as read
+async function handleNotificationClick(notification) {
+    try {
+        // Mark as read first
+        await axios.post(route('admin.notifications.mark-as-read', notification.id));
+
+        // Close dropdown
+        isNotificationsOpen.value = false;
+
+        // Navigate to related page
+        let url = null;
+
+        if (notification.order_id) {
+            url = `/admin/orders/${notification.order_id}`;
+        } else if (notification.data?.product_id) {
+            url = `/admin/products/${notification.data.product_id}/edit`;
+        }
+
+        if (url) {
+            router.visit(url);
+            toast.success('Notification marked as read');
+        } else {
+            // Just mark as read and reload notifications
+            router.reload({ only: ['adminNotifications'] });
+            toast.success('Notification marked as read');
+        }
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+        toast.error('Failed to mark notification as read');
+    }
+}
+
+// Mark all as read
+async function markAllAsRead() {
+    try {
+        await axios.post(route('admin.notifications.mark-all-read'));
+        router.reload({ only: ['adminNotifications'] });
+        toast.success('All notifications marked as read');
+        isNotificationsOpen.value = false;
+    } catch (error) {
+        console.error('Error marking all as read:', error);
+        toast.error('Failed to mark all as read');
     }
 }
 </script>
