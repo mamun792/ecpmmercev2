@@ -639,6 +639,11 @@ const baseNavigationItems = [
         id: 2,
         children: [
             {
+                label: "📊 Analytics Dashboard",
+                route: "admin.inventory-dashboard",
+                permission: "admin.inventory-dashboard",
+            },
+            {
                 label: "Stocks",
                 route: "admin.inventory.getAllProductsStock",
                 permission: "admin.inventory.getAllProductsStock",

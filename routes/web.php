@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\Product\ProductController;
 use App\Http\Controllers\Admin\Category\CategoryController;
 use App\Http\Controllers\Admin\Attribute\AttributeController;
 use App\Http\Controllers\Admin\Dashboard\DashboardController;
+use App\Http\Controllers\Admin\InventoryDashboardController;
 use App\Http\Controllers\Admin\Marketing\MarketingController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\GeneralSetting\GeneralSettingController;
@@ -90,6 +91,27 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
         Route::get('/inventory-alerts', [App\Http\Controllers\Api\PosAnalyticsController::class, 'inventoryAlerts'])->name('api.pos-analytics.inventory-alerts');
         Route::get('/customer-insights', [App\Http\Controllers\Api\PosAnalyticsController::class, 'customerInsights'])->name('api.pos-analytics.customer-insights');
         Route::post('/refresh-cache', [App\Http\Controllers\Api\PosAnalyticsController::class, 'refreshCache'])->name('api.pos-analytics.refresh-cache');
+    });
+
+    // Enhanced Inventory Analytics Routes
+    Route::prefix('api/inventory-analytics')->middleware(['auth', 'role:admin'])->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'dashboard'])->name('api.inventory-analytics.dashboard');
+        Route::get('/reorder-alerts', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'reorderAlerts'])->name('api.inventory-analytics.reorder-alerts');
+        Route::post('/generate-purchase-orders', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'generatePurchaseOrders'])->name('api.inventory-analytics.generate-orders');
+        Route::post('/optimize-reorder-points', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'optimizeReorderPoints'])->name('api.inventory-analytics.optimize-reorder');
+        Route::get('/sales-velocity', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'salesVelocity'])->name('api.inventory-analytics.sales-velocity');
+        Route::get('/demand-forecast', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'demandForecast'])->name('api.inventory-analytics.demand-forecast');
+        Route::get('/turnover-analysis', [\App\Http\Controllers\Api\InventoryAnalyticsController::class, 'turnoverAnalysis'])->name('api.inventory-analytics.turnover-analysis');
+        
+        // Test endpoints - remove in production
+        Route::get('/test-weekly-report', [\App\Http\Controllers\Api\InventoryTestController::class, 'testWeeklyReport'])->name('api.inventory-analytics.test-weekly-report');
+        Route::get('/test-dashboard', [\App\Http\Controllers\Api\InventoryTestController::class, 'testDashboard'])->name('api.inventory-analytics.test-dashboard');
+        
+        // Bengali Dashboard API Routes
+        Route::post('/send-daily-report', [InventoryDashboardController::class, 'sendDailyReport'])->name('api.inventory-analytics.send-daily-report');
+        Route::get('/weekly-report', [InventoryDashboardController::class, 'weeklyReport'])->name('api.inventory-analytics.weekly-report');
+        Route::post('/email-settings', [InventoryDashboardController::class, 'saveEmailSettings'])->name('api.inventory-analytics.email-settings');
+        Route::get('/refresh-dashboard', [InventoryDashboardController::class, 'refreshDashboard'])->name('api.inventory-analytics.refresh-dashboard');
     });
 
     // oders
@@ -309,6 +331,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // Admin notifications
     Route::get('/notifications', [App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
+    
+    // Bengali Inventory Analytics Dashboard
+    Route::get('/inventory-dashboard', [InventoryDashboardController::class, 'index'])->name('inventory-dashboard');
     Route::post('/notifications/read-all', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
     Route::post('/notifications/read-multiple', [App\Http\Controllers\Admin\NotificationController::class, 'markMultipleAsRead'])->name('notifications.mark-multiple-read');
     Route::delete('/notifications/clear-read', [App\Http\Controllers\Admin\NotificationController::class, 'clearRead'])->name('notifications.clear-read');
