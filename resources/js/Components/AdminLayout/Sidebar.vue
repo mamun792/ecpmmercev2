@@ -564,6 +564,13 @@ const baseNavigationItems = [
         badge: userIsAdmin.value ? "Admin" : null,
     },
     {
+        label: "Analytics",
+        route: "admin.analytics.index",
+        icon: BarChart3,
+        permission: "admin.analytics.index",
+        badge: "New",
+    },
+    {
         label: "Orders",
         route: "admin.orders.index",
         icon: ShoppingCart,

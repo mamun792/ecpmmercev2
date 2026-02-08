@@ -61,6 +61,8 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
     // Global Search
     Route::get('/search', [SearchController::class, 'search'])->name('search');
 
+    // Analytics Dashboard
+    Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
 
     // profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
