@@ -116,16 +116,14 @@
                 <td>
                   <span class="badge badge-error">{{ product.current_stock || 0 }}</span>
                 </td>
-                <td>{{ product.minimum_stock || 0 }}</td>
+                <td>{{ product.minimum_threshold || 0 }}</td>
                 <td>
-                  <div class="badge badge-error">{{ product.priority_score || 10 }}/10</div>
+                  <div class="badge badge-error">{{ product.urgency || 'critical' }}</div>
                 </td>
                 <td>
-                  <span v-if="product.days_until_stockout !== null"
-                        class="text-red-600 font-bold">
-                    {{ product.days_until_stockout }} days
+                  <span class="text-red-600 font-bold">
+                    {{ product.days_out_of_stock || 0 }} days
                   </span>
-                  <span v-else class="text-gray-500">Unknown</span>
                 </td>
                 <td>
                   <button
@@ -161,13 +159,13 @@
                 <td>
                   <span class="badge badge-warning">{{ product.current_stock || 0 }}</span>
                 </td>
-                <td>{{ product.minimum_stock || 0 }}</td>
+                <td>{{ product.minimum_threshold || 0 }}</td>
                 <td>
-                  <div class="badge" :class="getVelocityBadgeClass(product.velocity)">
-                    {{ getVelocityText(product.velocity) }}
+                  <div class="badge" :class="getVelocityBadgeClass(product.urgency === 'low' ? 'low' : 'medium')">
+                    {{ product.urgency || 'low' }}
                   </div>
                 </td>
-                <td class="text-sm text-gray-600">{{ product.recommendation || 'Monitor closely' }}</td>
+                <td class="text-sm text-gray-600">Order {{ product.suggested_order_qty || 0 }} units</td>
               </tr>
             </tbody>
           </table>
@@ -296,9 +294,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import ApexCharts from 'apexcharts'
+
+// Accept props from Inertia page
+const props = defineProps({
+  initialData: {
+    type: Object,
+    default: () => ({})
+  },
+  reorderAlerts: {
+    type: Object,
+    default: () => ({})
+  },
+  weeklyRevenue: {
+    type: [Object, Array],
+    default: () => ({})
+  },
+  initialPromotionalProducts: {
+    type: Array,
+    default: () => ([])
+  }
+})
 
 // Reactive data
 const loading = ref(false)
@@ -306,16 +324,18 @@ const emailSending = ref(false)
 const weeklyLoading = ref(false)
 const settingsSaving = ref(false)
 
+// Initialize from props (real DB data from Inertia)
 const summary = ref({
-  critical_count: 0,
-  low_count: 0,
-  total_products: 0,
-  good_stock: 0
+  critical_count: props.initialData?.summary?.critical_count || 0,
+  low_count: props.initialData?.summary?.low_count || 0,
+  total_products: props.initialData?.summary?.total_products || 0,
+  good_stock: props.initialData?.summary?.good_stock || 0
 })
 
-const criticalProducts = ref([])
-const lowProducts = ref([])
-const promotionalProducts = ref([])
+const criticalProducts = ref(props.reorderAlerts?.critical || [])
+const lowProducts = ref(props.reorderAlerts?.low || [])
+const promotionalProducts = ref(props.initialPromotionalProducts || [])
+const salesVelocity = ref(props.initialData?.sales_velocity || [])
 
 const emailSettings = ref({
   daily_morning_report: true,
@@ -323,6 +343,10 @@ const emailSettings = ref({
   weekly_optimization: true,
   promotional_opportunities: true
 })
+
+// Chart instances for cleanup
+let velocityChartInstance = null
+let revenueChartInstance = null
 
 // Computed properties
 const currentDate = computed(() => {
@@ -332,6 +356,32 @@ const currentDate = computed(() => {
     month: 'long',
     day: 'numeric'
   })
+})
+
+// Computed: Calculate velocity distribution from real data
+const velocityDistribution = computed(() => {
+  const velocity = salesVelocity.value || []
+  if (!velocity.length) {
+    // Calculate from stock data
+    const total = summary.value.total_products || 1
+    const critical = summary.value.critical_count || 0
+    const low = summary.value.low_count || 0
+    const good = summary.value.good_stock || 0
+    return {
+      fast: Math.round((good / total) * 100) || 0,
+      medium: Math.round((low / total) * 100) || 0,
+      slow: Math.round((critical / total) * 100) || 0
+    }
+  }
+  const total = velocity.length || 1
+  const fast = velocity.filter(v => v.velocity_rating === 'high').length
+  const medium = velocity.filter(v => v.velocity_rating === 'medium').length
+  const slow = velocity.filter(v => ['low', 'none'].includes(v.velocity_rating)).length
+  return {
+    fast: Math.round((fast / total) * 100),
+    medium: Math.round((medium / total) * 100),
+    slow: Math.round((slow / total) * 100)
+  }
 })
 
 // Methods
@@ -365,20 +415,35 @@ const getVelocityBadgeClass = (velocity) => {
 const refreshDailyReport = async () => {
   loading.value = true
   try {
-    const response = await fetch('/admin/api/inventory-analytics/dashboard')
+    const response = await fetch('/admin/api/inventory-analytics/refresh-dashboard', {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
     const data = await response.json()
 
-    if (data.success) {
-      summary.value = data.data.summary
+    if (data.success && data.data) {
+      summary.value = {
+        critical_count: data.data.summary?.critical_count || 0,
+        low_count: data.data.summary?.low_count || 0,
+        total_products: data.data.summary?.total_products || 0,
+        good_stock: data.data.summary?.good_stock || 0
+      }
       criticalProducts.value = data.data.critical || []
       lowProducts.value = data.data.low || []
+      salesVelocity.value = data.data.sales_velocity || []
     }
 
-    // Update charts
+    await nextTick()
     updateVelocityChart()
 
   } catch (error) {
-    console.error('Error fetching daily report:', error)
+    console.error('Error refreshing dashboard:', error)
+    alert('❌ Failed to refresh. Please reload the page.')
   } finally {
     loading.value = false
   }
@@ -391,7 +456,9 @@ const sendDailyEmail = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+        'X-Requested-With': 'XMLHttpRequest'
       }
     })
 
@@ -399,7 +466,7 @@ const sendDailyEmail = async () => {
     if (data.success) {
       alert('✅ Daily report sent successfully!')
     } else {
-      alert('❌ Failed to send email')
+      alert('❌ Failed to send email: ' + (data.message || 'Unknown error'))
     }
   } catch (error) {
     console.error('Error sending daily email:', error)
@@ -412,38 +479,36 @@ const sendDailyEmail = async () => {
 const generateWeeklyReport = async () => {
   weeklyLoading.value = true
   try {
-    const response = await fetch('/admin/api/inventory-analytics/weekly-report')
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
+    const response = await fetch('/admin/api/inventory-analytics/weekly-report', {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
     const data = await response.json()
 
     if (data.success) {
       promotionalProducts.value = data.data?.promotional || []
-      updateRevenueChart(data.data?.revenue || [])
-    } else {
-      console.error('Weekly report generation failed:', data.message)
-      // Set fallback data
-      promotionalProducts.value = []
-      updateRevenueChart([10000, 12000, 15000, 14000, 16000, 18000, 20000])
+
+      const revenueObj = data.data?.revenue || {}
+      await nextTick()
+      updateRevenueChart(revenueObj.data || [], revenueObj.labels || [])
     }
   } catch (error) {
     console.error('Error generating weekly report:', error)
-    // Set fallback data on error
-    promotionalProducts.value = []
-    updateRevenueChart([10000, 12000, 15000, 14000, 16000, 18000, 20000])
   } finally {
     weeklyLoading.value = false
   }
 }
 
 const createPurchaseOrder = (product) => {
-  // Redirect to purchase order creation
   window.location.href = `/admin/purchase-orders/create?product_id=${product.id}`
 }
 
 const createPromotion = (product) => {
-  // Redirect to promotion creation
   window.location.href = `/admin/promotions/create?product_id=${product.id}`
 }
 
@@ -454,7 +519,9 @@ const saveEmailSettings = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+        'X-Requested-With': 'XMLHttpRequest'
       },
       body: JSON.stringify(emailSettings.value)
     })
@@ -473,16 +540,27 @@ const saveEmailSettings = async () => {
 }
 
 const updateVelocityChart = () => {
+  const el = document.querySelector('#velocityChart')
+  if (!el) return
+
+  // Destroy previous chart instance
+  if (velocityChartInstance) {
+    velocityChartInstance.destroy()
+    velocityChartInstance = null
+  }
+
+  const dist = velocityDistribution.value
+
   const options = {
     series: [{
       name: 'Fast Sales',
-      data: [65]
+      data: [dist.fast]
     }, {
       name: 'Medium Sales',
-      data: [25]
+      data: [dist.medium]
     }, {
       name: 'Slow Sales',
-      data: [10]
+      data: [dist.slow]
     }],
     chart: {
       type: 'bar',
@@ -501,43 +579,89 @@ const updateVelocityChart = () => {
       bar: {
         horizontal: true,
       },
-    }
-  }
-
-  const chart = new ApexCharts(document.querySelector('#velocityChart'), options)
-  chart.render()
-}
-
-const updateRevenueChart = (revenueData) => {
-  const options = {
-    series: [{
-      name: 'Revenue',
-      data: revenueData || [10000, 12000, 15000, 14000, 16000, 18000, 20000]
-    }],
-    chart: {
-      type: 'line',
-      height: 250
     },
-    colors: ['#8B5CF6'],
-    xaxis: {
-      categories: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    },
-    yaxis: {
-      labels: {
-        formatter: function (val) {
-          return '৳' + val.toLocaleString()
-        }
+    dataLabels: {
+      formatter: function(val) {
+        return val.toFixed(0) + '%'
       }
     }
   }
 
-  const chart = new ApexCharts(document.querySelector('#revenueChart'), options)
-  chart.render()
+  velocityChartInstance = new ApexCharts(el, options)
+  velocityChartInstance.render()
 }
 
-// Initialize component
-onMounted(() => {
-  refreshDailyReport()
-  generateWeeklyReport()
+const updateRevenueChart = (revenueData, labels) => {
+  const el = document.querySelector('#revenueChart')
+  if (!el) return
+
+  // Destroy previous chart instance
+  if (revenueChartInstance) {
+    revenueChartInstance.destroy()
+    revenueChartInstance = null
+  }
+
+  const chartLabels = labels?.length ? labels : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const chartData = revenueData?.length ? revenueData : [0, 0, 0, 0, 0, 0, 0]
+
+  const options = {
+    series: [{
+      name: 'Revenue',
+      data: chartData
+    }],
+    chart: {
+      type: 'area',
+      height: 250,
+      toolbar: { show: false }
+    },
+    colors: ['#8B5CF6'],
+    fill: {
+      type: 'gradient',
+      gradient: {
+        shadeIntensity: 1,
+        opacityFrom: 0.4,
+        opacityTo: 0.1,
+      }
+    },
+    xaxis: {
+      categories: chartLabels
+    },
+    yaxis: {
+      labels: {
+        formatter: function (val) {
+          return '৳' + (val || 0).toLocaleString()
+        }
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: function(val) {
+        return val > 0 ? '৳' + val.toLocaleString() : ''
+      }
+    }
+  }
+
+  revenueChartInstance = new ApexCharts(el, options)
+  revenueChartInstance.render()
+}
+
+// Initialize component using props data (no API call needed on mount)
+onMounted(async () => {
+  console.log('Dashboard mounted with props:', {
+    summary: summary.value,
+    critical: criticalProducts.value.length,
+    low: lowProducts.value.length,
+    velocity: salesVelocity.value.length,
+    promotional: promotionalProducts.value.length
+  })
+
+  await nextTick()
+
+  // Render charts with props data
+  updateVelocityChart()
+
+  // Render revenue chart from props
+  const rev = props.weeklyRevenue || {}
+  updateRevenueChart(rev.data || [], rev.labels || [])
 })
 </script>

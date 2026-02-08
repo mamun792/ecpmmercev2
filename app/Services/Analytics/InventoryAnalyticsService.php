@@ -83,7 +83,7 @@ class InventoryAnalyticsService
             ->join('products', 'products.id', '=', 'order_items.product_id')
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
             ->where('orders.created_at', '>=', $startDate)
-            ->where('orders.status', 'completed')
+            ->whereIn('orders.status', ['completed', 'delivered', 'processing'])
             ->select(
                 'order_items.product_id',
                 'products.name as product_name',
@@ -199,7 +199,7 @@ class InventoryAnalyticsService
         $cogs = OrderItem::join('orders', 'orders.id', '=', 'order_items.order_id')
             ->join('products', 'products.id', '=', 'order_items.product_id')
             ->where('orders.created_at', '>=', $startDate)
-            ->where('orders.status', 'completed')
+            ->whereIn('orders.status', ['completed', 'delivered', 'processing'])
             ->sum(DB::raw('order_items.quantity * COALESCE(products.cost_price, products.price * 0.7)'));
 
         $days = now()->diffInDays($startDate);
@@ -225,7 +225,7 @@ class InventoryAnalyticsService
             ->join('products', 'products.id', '=', 'order_items.product_id')
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
             ->where('orders.created_at', '>=', Carbon::now()->subMonths(12))
-            ->where('orders.status', 'completed')
+            ->whereIn('orders.status', ['completed', 'delivered', 'processing'])
             ->select(
                 DB::raw('MONTH(orders.created_at) as month'),
                 DB::raw('YEAR(orders.created_at) as year'),
@@ -307,7 +307,7 @@ class InventoryAnalyticsService
         $totalSold = OrderItem::join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('order_items.product_id', $productId)
             ->where('orders.created_at', '>=', $startDate)
-            ->where('orders.status', 'completed')
+            ->whereIn('orders.status', ['completed', 'delivered', 'processing'])
             ->sum('order_items.quantity');
 
         $days = now()->diffInDays($startDate);
@@ -369,7 +369,7 @@ class InventoryAnalyticsService
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->join('products', 'products.id', '=', 'order_items.product_id')
             ->where('orders.created_at', '>=', $startDate)
-            ->where('orders.status', 'completed')
+            ->whereIn('orders.status', ['completed', 'delivered', 'processing'])
             ->select(
                 'order_items.product_id',
                 'products.name as product_name',
@@ -498,50 +498,82 @@ class InventoryAnalyticsService
      */
     public function getSlowMovingProducts($days = 30)
     {
-        $cutoffDate = Carbon::now()->subDays($days);
+        try {
+            $cutoffDate = Carbon::now()->subDays($days);
 
-        return InventoryStock::with(['product', 'product.orderItems' => function($query) use ($cutoffDate) {
-                $query->whereHas('order', function($q) use ($cutoffDate) {
-                    $q->where('created_at', '>=', $cutoffDate);
-                });
-            }])
-            ->get()
-            ->filter(function($stock) use ($cutoffDate) {
-                $recentSales = $stock->product->orderItems
-                    ->where('created_at', '>=', $cutoffDate)
-                    ->sum('quantity');
+            return InventoryStock::with(['product', 'product.orderItems' => function($query) use ($cutoffDate) {
+                    $query->whereHas('order', function($q) use ($cutoffDate) {
+                        $q->where('created_at', '>=', $cutoffDate);
+                    });
+                }])
+                ->whereHas('product', function($query) {
+                    $query->whereNull('deleted_at');
+                })
+                ->get()
+                ->filter(function($stock) use ($cutoffDate) {
+                    if (!$stock->product) return false;
 
-                return $recentSales == 0 && $stock->available_quantity > 20;
-            })
-            ->map(function($stock) {
-                return [
-                    'id' => $stock->product->id,
-                    'name' => $stock->product->name,
-                    'current_stock' => $stock->available_quantity,
-                    'last_sale_date' => $stock->product->orderItems
-                        ->sortByDesc('created_at')
-                        ->first()?->created_at?->format('Y-m-d'),
-                    'promotion_suggestion' => $this->generatePromotionSuggestion($stock)
-                ];
-            })
-            ->values()
-            ->all();
+                    $recentSales = $stock->product->orderItems
+                        ->where('created_at', '>=', $cutoffDate)
+                        ->sum('quantity');
+
+                    return $recentSales == 0 && $stock->available_quantity > 20;
+                })
+                ->map(function($stock) {
+                    return [
+                        'id' => $stock->product->id,
+                        'name' => $stock->product->name,
+                        'current_stock' => $stock->available_quantity,
+                        'last_sale_date' => $stock->product->orderItems
+                            ->sortByDesc('created_at')
+                            ->first()?->created_at?->format('Y-m-d'),
+                        'promotion_suggestion' => $this->generatePromotionSuggestion($stock)
+                    ];
+                })
+                ->values()
+                ->all();
+        } catch (\Exception $e) {
+            \Log::error('Slow moving products error: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
-     * Get weekly revenue data
+     * Get weekly revenue data (last 7 days)
      */
     public function getWeeklyRevenue()
     {
-        $startDate = Carbon::now()->subDays(7);
+        $days = [];
+        $labels = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $days[$date] = 0;
+            $labels[] = Carbon::now()->subDays($i)->format('D');
+        }
 
-        return Order::whereBetween('created_at', [$startDate, Carbon::now()])
-            ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue')
+        $revenueData = Order::where('created_at', '>=', Carbon::now()->subDays(7))
+            ->whereIn('status', ['completed', 'delivered', 'processing', 'pending'])
+            ->selectRaw('DATE(created_at) as date, SUM(total) as revenue, COUNT(*) as order_count')
             ->groupBy('date')
             ->orderBy('date')
-            ->pluck('revenue', 'date')
-            ->values()
-            ->all();
+            ->get();
+
+        foreach ($revenueData as $row) {
+            $dateKey = ($row->date instanceof \Carbon\Carbon)
+                ? $row->date->format('Y-m-d')
+                : substr((string) $row->date, 0, 10);
+
+            if (isset($days[$dateKey])) {
+                $days[$dateKey] = (float) $row->revenue;
+            }
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => array_values($days),
+            'total' => array_sum($days),
+            'order_count' => $revenueData->sum('order_count'),
+        ];
     }
 
     /**
@@ -568,13 +600,13 @@ class InventoryAnalyticsService
         $stockLevel = $stock->available_quantity;
 
         if ($stockLevel > 100) {
-            return '20-30% ছাড় দিয়ে দ্রুত বিক্রয় করুন';
+            return 'Apply 20-30% discount for quick clearance';
         } elseif ($stockLevel > 50) {
-            return '15-20% ছাড় বা বান্ডেল অফার দিন';
+            return 'Offer 15-20% discount or bundle deal';
         } elseif ($stockLevel > 20) {
-            return '10-15% ছাড় বা কম্বো প্যাকেজ তৈরি করুন';
+            return 'Create 10-15% discount or combo package';
         } else {
-            return 'সোশ্যাল মিডিয়ায় প্রমোট করুন';
+            return 'Promote on social media channels';
         }
     }
 }

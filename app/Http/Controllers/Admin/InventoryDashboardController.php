@@ -31,52 +31,42 @@ class InventoryDashboardController extends Controller
     public function index()
     {
         try {
-            // Get comprehensive dashboard data with error handling
             $dashboardData = $this->inventoryAnalyticsService->getDashboardSummary();
             $reorderAlerts = $this->autoReorderService->checkReorderTriggers();
+            $weeklyRevenue = $this->inventoryAnalyticsService->getWeeklyRevenue();
+            $slowMoving = $this->inventoryAnalyticsService->getSlowMovingProducts(30);
 
             return Inertia::render('Admin/InventoryDashboard', [
-                'title' => 'ইনভেন্টরি অ্যানালিটিক্স ড্যাশবোর্ড',
+                'title' => 'Inventory Analytics Dashboard',
                 'dashboardData' => $dashboardData,
-                'reorderAlerts' => $reorderAlerts,
+                'reorderAlerts' => [
+                    'summary' => $reorderAlerts['summary'] ?? [],
+                    'critical' => ($reorderAlerts['critical'] ?? collect([]))->values()->toArray(),
+                    'low' => ($reorderAlerts['low'] ?? collect([]))->values()->toArray(),
+                ],
+                'weeklyRevenue' => $weeklyRevenue,
+                'promotionalProducts' => $slowMoving,
                 'success' => true
             ]);
 
         } catch (\Exception $e) {
-            // Log the error for debugging
             \Log::error('Inventory Dashboard Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
             ]);
 
-            // Provide fallback data
-            $fallbackData = [
-                'summary' => [
-                    'total_products' => 0,
-                    'critical_count' => 0,
-                    'low_count' => 0,
-                    'good_stock' => 0,
-                ],
-                'sales_velocity' => [],
-                'stock_analysis' => []
-            ];
-
-            $fallbackAlerts = [
-                'summary' => [
-                    'critical_count' => 0,
-                    'low_count' => 0,
-                    'total_affected' => 0
-                ],
-                'critical' => collect([]),
-                'low' => collect([])
-            ];
-
             return Inertia::render('Admin/InventoryDashboard', [
-                'title' => 'ইনভেন্টরি অ্যানালিটিক্স ড্যাশবোর্ড',
-                'dashboardData' => $fallbackData,
-                'reorderAlerts' => $fallbackAlerts,
-                'error' => 'ড্যাশবোর্ড ডেটা লোড করতে সমস্যা হয়েছে: ' . $e->getMessage(),
+                'title' => 'Inventory Analytics Dashboard',
+                'dashboardData' => [
+                    'summary' => ['total_products' => 0, 'critical_count' => 0, 'low_count' => 0, 'good_stock' => 0],
+                    'sales_velocity' => [],
+                    'stock_analysis' => []
+                ],
+                'reorderAlerts' => ['summary' => ['critical_count' => 0, 'low_count' => 0, 'total_affected' => 0], 'critical' => [], 'low' => []],
+                'weeklyRevenue' => [],
+                'promotionalProducts' => [],
+                'error' => 'Failed to load dashboard data: ' . $e->getMessage(),
                 'success' => false
             ]);
         }
@@ -99,14 +89,14 @@ class InventoryDashboardController extends Controller
             return response()->json([
                 'success' => $emailSent,
                 'message' => $emailSent
-                    ? 'দৈনিক রিপোর্ট সফলভাবে পাঠানো হয়েছে!'
-                    : 'ইমেইল পাঠাতে সমস্যা হয়েছে'
+                    ? 'Daily report sent successfully!'
+                    : 'Failed to send email'
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'ইমেইল পাঠাতে সমস্যা হয়েছে: ' . $e->getMessage()
+                'message' => 'Failed to send email: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -119,16 +109,8 @@ class InventoryDashboardController extends Controller
         try {
             $weeklyData = [
                 'promotional' => $this->inventoryAnalyticsService->getSlowMovingProducts(30),
-                'revenue' => [10000, 12000, 15000, 14000, 16000, 18000, 20000], // Sample data
-                'optimization' => [
-                    'optimized_points' => 5,
-                    'savings_potential' => 25000,
-                    'recommendations' => [
-                        'Optimize reorder points based on sales velocity',
-                        'Reduce safety stock for slow-moving items',
-                        'Increase frequency for high-velocity products'
-                    ]
-                ]
+                'revenue' => $this->inventoryAnalyticsService->getWeeklyRevenue(),
+                'optimization' => $this->inventoryAnalyticsService->getReorderOptimization()
             ];
 
             return response()->json([
@@ -144,7 +126,7 @@ class InventoryDashboardController extends Controller
                 'success' => true,
                 'data' => [
                     'promotional' => [],
-                    'revenue' => [10000, 12000, 15000, 14000, 16000, 18000, 20000],
+                    'revenue' => ['labels' => [], 'data' => [], 'total' => 0, 'order_count' => 0],
                     'optimization' => [
                         'optimized_points' => 0,
                         'savings_potential' => 0,
@@ -174,13 +156,13 @@ class InventoryDashboardController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'ইমেইল সেটিংস সফলভাবে সেভ করা হয়েছে!'
+                'message' => 'Email settings saved successfully!'
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'সেটিংস সেভ করতে সমস্যা হয়েছে: ' . $e->getMessage()
+                'message' => 'Failed to save settings: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -193,14 +175,17 @@ class InventoryDashboardController extends Controller
         try {
             $dashboardData = $this->inventoryAnalyticsService->getDashboardSummary();
             $reorderAlerts = $this->autoReorderService->checkReorderTriggers();
+            $weeklyRevenue = $this->inventoryAnalyticsService->getWeeklyRevenue();
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'summary' => $dashboardData['summary'],
-                    'critical' => $reorderAlerts['critical'] ?? [],
-                    'low' => $reorderAlerts['low'] ?? [],
-                    'sales_velocity' => $dashboardData['sales_velocity'] ?? []
+                    'critical' => ($reorderAlerts['critical'] ?? collect([]))->values()->toArray(),
+                    'low' => ($reorderAlerts['low'] ?? collect([]))->values()->toArray(),
+                    'sales_velocity' => $dashboardData['sales_velocity'] ?? [],
+                    'stock_analysis' => $dashboardData['stock_analysis'] ?? [],
+                    'weekly_revenue' => $weeklyRevenue,
                 ],
                 'message' => 'Dashboard updated successfully'
             ]);

@@ -16,6 +16,8 @@
         v-if="success !== false"
         :initialData="dashboardData"
         :reorderAlerts="reorderAlerts"
+        :weeklyRevenue="weeklyRevenue"
+        :initialPromotionalProducts="promotionalProducts"
       />
     </div>
   </AdminLayout>
@@ -39,6 +41,14 @@ defineProps({
   reorderAlerts: {
     type: Object,
     default: () => ({})
+  },
+  weeklyRevenue: {
+    type: [Object, Array],
+    default: () => ({})
+  },
+  promotionalProducts: {
+    type: Array,
+    default: () => ([])
   },
   success: {
     type: Boolean,
