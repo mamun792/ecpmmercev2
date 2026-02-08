@@ -1234,14 +1234,14 @@ const getVariationLabel = (variation) => {
 // Generate initials for variation placeholder (e.g., "BL" for Blue, Large)
 const getVariationInitials = (variation) => {
   if (!variation) return '?';
-  
+
   if (variation.attributes && variation.attributes.length > 0) {
     return variation.attributes
       .slice(0, 2) // Take first 2 attributes
       .map(attr => (attr.value?.value || 'X')[0].toUpperCase())
       .join('');
   }
-  
+
   // Fallback to variation ID
   return `V${variation.id}`.slice(0, 2);
 };
