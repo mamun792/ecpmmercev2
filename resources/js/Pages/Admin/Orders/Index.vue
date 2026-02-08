@@ -200,7 +200,9 @@ const prioritizedOrders = computed(() => {
             isNew: hoursOld < 12,
             timeInStatus: calculateTimeInStatus(order)
         };
-    }).sort((a, b) => b.priorityScore - a.priorityScore);
+    });
+    // Keep backend sorting (date DESC - newest first)
+    // Priority info is still available on each order for display
 });
 
 // Courier suggestions based on delivery area
@@ -1191,23 +1193,14 @@ const fetchOrderTimeline = async (orderId) => {
         orderTimelines.value[orderId] = response.data.timeline || response.data || [];
     } catch (error) {
         console.error('Failed to fetch timeline:', error);
-        // Mock timeline data for development if endpoint doesn't exist
-        orderTimelines.value[orderId] = [
-            {
-                title: 'Order Created',
-                description: 'Order was placed by customer',
-                status: 'pending',
-                user: 'System',
-                timestamp: 'Just now'
-            },
-            {
-                title: 'Payment Received',
-                description: 'Payment confirmed',
-                status: 'processing',
-                user: 'System',
-                timestamp: '5 minutes ago'
-            }
-        ];
+        // Show error state instead of fake data
+        orderTimelines.value[orderId] = [{
+            title: 'Timeline Unavailable',
+            description: 'Could not load order history',
+            status: 'error',
+            user: 'System',
+            timestamp: 'N/A'
+        }];
     }
 };
 

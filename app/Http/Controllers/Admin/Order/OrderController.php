@@ -101,6 +101,38 @@ class OrderController extends Controller
         ]);
     }
 
+    /**
+     * Show the form for creating a new order
+     */
+    public function create()
+    {
+        // Get all products with variations for order creation
+        $products = $this->productService->getAllProducts(['with_variations' => true]);
+
+        // Get payment methods for dropdown
+        $paymentMethods = [
+            'cod' => 'Cash on Delivery',
+            'credit_card' => 'Credit Card',
+            'paypal' => 'PayPal',
+            'bank_transfer' => 'Bank Transfer'
+        ];
+
+        // Get order statuses for dropdown
+        $orderStatuses = [
+            'pending' => 'Pending',
+            'processing' => 'Processing',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled',
+            'incomplete' => 'Incomplete'
+        ];
+
+        return Inertia::render('Admin/Orders/Create', [
+            'products' => $products,
+            'paymentMethods' => $paymentMethods,
+            'orderStatuses' => $orderStatuses,
+        ]);
+    }
+
 
 
     /**
@@ -582,5 +614,76 @@ class OrderController extends Controller
     private function updateOrderCache(): void
     {
         Order::invalidateCache();
+    }
+
+    /**
+     * Get order timeline (status history)
+     * AJAX endpoint for order expansion
+     */
+    public function timeline(int $orderId): JsonResponse
+    {
+        try {
+            $order = Order::findOrFail($orderId);
+
+            // Get status history from database
+            $historyRecords = $order->statusHistories()
+                ->with('changedBy')
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            if ($historyRecords->isNotEmpty()) {
+                // Build timeline from actual status history
+                $timeline = $historyRecords->map(function ($history) {
+                    return [
+                        'title' => ucfirst(str_replace('_', ' ', $history->new_status)),
+                        'description' => $history->notes ?: 'Status changed from ' . ucfirst(str_replace('_', ' ', $history->previous_status ?? 'new')) . ' to ' . ucfirst(str_replace('_', ' ', $history->new_status)),
+                        'status' => $history->new_status,
+                        'user' => $history->changedBy ? $history->changedBy->name : 'System',
+                        'timestamp' => $history->created_at->diffForHumans(),
+                        'created_at' => $history->created_at->toISOString(),
+                    ];
+                })->values();
+            } else {
+                // No history records - build timeline from order data
+                $timeline = collect();
+
+                // Order creation event
+                $timeline->push([
+                    'title' => 'Order Created',
+                    'description' => 'Order #' . $order->order_number . ' was placed',
+                    'status' => 'pending',
+                    'user' => $order->createdByUser ? $order->createdByUser->name : 'System',
+                    'timestamp' => $order->created_at->diffForHumans(),
+                    'created_at' => $order->created_at->toISOString(),
+                ]);
+
+                // If status changed from pending
+                if ($order->status !== 'pending' && $order->updated_at->gt($order->created_at)) {
+                    $timeline->push([
+                        'title' => ucfirst(str_replace('_', ' ', $order->status)),
+                        'description' => 'Order status updated to ' . ucfirst(str_replace('_', ' ', $order->status)),
+                        'status' => $order->status,
+                        'user' => $order->updatedByUser ? $order->updatedByUser->name : 'System',
+                        'timestamp' => $order->updated_at->diffForHumans(),
+                        'created_at' => $order->updated_at->toISOString(),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'timeline' => $timeline
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch order timeline', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load timeline'
+            ], 500);
+        }
     }
 }

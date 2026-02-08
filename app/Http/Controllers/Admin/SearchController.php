@@ -33,7 +33,7 @@ class SearchController extends Controller
                         'title' => $product->name,
                         'subtitle' => ($product->product_code ? "SKU: {$product->product_code} · " : '') . "৳{$product->price}",
                         'type' => 'Product',
-                        'url' => '/admin/products/' . $product->id . '/edit',
+                        'url' => '/admin/products/' . $product->id,
                         'icon' => 'Package',
                     ];
                 })
@@ -53,7 +53,7 @@ class SearchController extends Controller
                         'title' => $product->name,
                         'subtitle' => ($product->product_code ? "SKU: {$product->product_code} · " : '') . "৳{$product->price}",
                         'type' => 'Product',
-                        'url' => '/admin/products/' . $product->id . '/edit',
+                        'url' => '/admin/products/' . $product->id,
                         'icon' => 'Package',
                     ];
                 })

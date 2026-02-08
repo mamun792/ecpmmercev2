@@ -81,6 +81,7 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
 
     // oders
     Route::resource('/orders', OrderController::class);
+    Route::get('/orders/{orderId}/timeline', [OrderController::class, 'timeline'])->name('orders.timeline');
     Route::get('/incomplete-orders', [OrderController::class, 'incompleteOrders'])->name('orders.incomplete');
     Route::get('/order-map', [OrderController::class, 'districtWiseOrders'])->name('orders.map');
 

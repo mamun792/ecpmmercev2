@@ -222,8 +222,14 @@ const toggleNotifications = () => (isNotificationsOpen.value = !isNotificationsO
 
 const page = usePage();
 
-// Notification sound
-const notificationSound = new Audio('/assets/notification.mp3');
+// Notification sound (optional - will fail silently if file doesn't exist)
+let notificationSound;
+try {
+    notificationSound = new Audio('/assets/notification.wav');
+    notificationSound.volume = 0.5; // Set volume to 50%
+} catch (e) {
+    console.log('Notification sound not loaded:', e);
+}
 
 // Bangladesh (Dhaka) time display
 const bdTime = ref('');
@@ -250,9 +256,11 @@ onMounted(() => {
 
                 // Play sound
                 try {
-                    notificationSound.play().catch(err => {
-                        console.log('Could not play notification sound:', err);
-                    });
+                    if (notificationSound) {
+                        notificationSound.play().catch(err => {
+                            console.log('Could not play notification sound:', err);
+                        });
+                    }
                 } catch (e) {
                     console.log('Notification sound error:', e);
                 }
