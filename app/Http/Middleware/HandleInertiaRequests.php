@@ -124,7 +124,16 @@ class HandleInertiaRequests extends Middleware
             'sidebarStats' => fn () => ($user && ($user->hasRole('admin') || $user->hasRole('super-admin') || $user->hasRole('manager')))
                 ? array_merge(
                     $this->orderService->getSidebarStats(),
-                    ['lowStockCount' => $this->inventoryService->getLowStockCount()]
+                    [
+                        'lowStockCount' => $this->inventoryService->getLowStockCount(),
+                        // Product counts (automatically excludes soft deleted due to SoftDeletes trait)
+                        'totalProducts' => \App\Models\Product::count(), // Active products only (5)
+                        'publishedProducts' => \App\Models\Product::where('status', 'published')->count(),
+                        'draftProducts' => \App\Models\Product::where('status', 'draft')->count(),
+                        // Inventory counts
+                        'totalInventoryItems' => \App\Models\InventoryStock::sum('available_quantity'),
+                        'reservedInventoryItems' => \App\Models\InventoryStock::sum('reserved_quantity'),
+                    ]
                 )
                 : null,
         ];

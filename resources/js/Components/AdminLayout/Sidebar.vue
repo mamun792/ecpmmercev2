@@ -58,12 +58,16 @@
                     <div class="flex items-center">
                         <ShoppingCart class="w-3 h-3 md:w-4 md:h-4 text-blue-600 mr-1 md:mr-2" />
                         <div>
-                            <p class="text-xs md:text-sm font-bold text-gray-800">{{ quickStats.todayOrders }}</p>
-                            <p class="text-xs text-gray-500">Orders</p>
+                            <p class="text-xs md:text-sm font-bold text-gray-800">{{ quickStats.totalOrders }}</p>
+                            <p class="text-xs text-gray-500">Total Orders</p>
                         </div>
                     </div>
-                    <div v-if="notifications.newOrders > 0" class="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
-                        <span class="text-xs font-bold text-white">{{ notifications.newOrders > 9 ? '9+' : notifications.newOrders }}</span>
+                    <div v-if="quickStats.activeOrders > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                        <span class="text-xs font-bold text-white">{{ quickStats.activeOrders > 9 ? '9+' : quickStats.activeOrders }}</span>
+                    </div>
+                    <!-- Tooltip showing breakdown -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                        Today: {{ quickStats.todayOrders }} | Active: {{ quickStats.activeOrders }}
                     </div>
                 </div>
 
@@ -93,20 +97,73 @@
         </div>
 
         <!-- Global Search Bar (Enhanced) -->
-        <div v-if="sidebarOpen" class="p-2 md:p-3 border-b border-gray-100 bg-white">
+        <div v-if="sidebarOpen" class="p-2 md:p-3 border-b border-gray-100 bg-white relative">
             <div class="relative">
                 <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                     v-model="searchQuery"
                     type="text"
                     placeholder="Search orders, products, customers..."
-                    class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                    class="w-full pl-9 pr-10 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
                     @focus="showSearch = true"
-                    @blur="showSearch = false"
+                    @blur="handleSearchBlur"
                 />
-                <div v-if="searchQuery" class="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <Loader2 class="w-4 h-4 animate-spin text-blue-500" />
+                <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Loader2 v-if="isSearching" class="w-4 h-4 animate-spin text-blue-500" />
+                    <X v-else-if="searchQuery"
+                       @click="searchQuery = ''; searchResults = []"
+                       class="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" />
                 </div>
+            </div>
+
+            <!-- Search Results Dropdown -->
+            <div v-if="showSearch && searchResults.length > 0"
+                 class="absolute left-2 right-2 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                <div v-for="(result, idx) in searchResults" :key="idx"
+                     class="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 transition-colors"
+                     @click="router.visit(result.url); searchQuery = ''; searchResults = [];">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 w-8 h-8 rounded bg-gray-100 flex items-center justify-center mr-2">
+                            <component :is="result.icon" class="w-4 h-4 text-gray-500" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ result.title }}</p>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">{{ result.type }}</span>
+                                <p v-if="result.subtitle" class="text-xs text-gray-500 truncate">{{ result.subtitle }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- No Results -->
+            <div v-if="showSearch && searchQuery.length > 2 && !isSearching && searchResults.length === 0"
+                 class="absolute left-2 right-2 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3">
+                <p class="text-sm text-gray-500 text-center">No results found</p>
+            </div>
+        </div>
+
+        <!-- Pinned/Favorite Items -->
+        <div v-if="sidebarOpen && pinnedItems.length > 0" class="p-2 md:p-3 border-b border-gray-100 bg-amber-50">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center">
+                    <Star class="w-3 h-3 text-amber-500 mr-1 fill-amber-500" />
+                    <span class="text-xs font-semibold text-gray-700">Favorites</span>
+                </div>
+                <span class="text-xs text-gray-500">{{ pinnedItems.length }}/5</span>
+            </div>
+            <div class="space-y-1">
+                <Link v-for="(item, idx) in pinnedItems" :key="idx"
+                      :href="route(item.route)"
+                      class="flex items-center justify-between px-2 py-1.5 rounded-lg bg-white hover:bg-amber-100 transition-all group">
+                    <div class="flex items-center flex-1">
+                        <Star class="w-3 h-3 text-amber-500 mr-2 fill-amber-500" />
+                        <span class="text-xs font-medium text-gray-700 truncate">{{ item.label }}</span>
+                    </div>
+                    <X @click.prevent="togglePin(item)"
+                       class="w-3 h-3 text-gray-400 hover:text-red-500 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
             </div>
         </div>
 
@@ -184,7 +241,14 @@
                                     </span>
 
                                     <!-- Enhanced Badge with Animations -->
-                                    <div v-if="sidebarOpen && (item.badge || item.count)" class="ml-auto flex items-center space-x-1">
+                                    <div v-if="sidebarOpen" class="ml-auto flex items-center space-x-1">
+                                        <!-- Pin Button -->
+                                        <button v-if="item.route && !item.badge"
+                                                @click.prevent="togglePin(item)"
+                                                class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/20 rounded">
+                                            <Star :class="isPinned(item.route) ? 'fill-amber-400 text-amber-400' : 'text-gray-400'"
+                                                  class="w-3 h-3" />
+                                        </button>
                                         <span v-if="item.badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-800 animate-pulse">
                                             {{ item.badge }}
                                         </span>
@@ -236,8 +300,10 @@
                                     </span>
 
                                     <div v-if="sidebarOpen" class="flex items-center space-x-2">
-                                        <span v-if="getVisibleChildrenCount(item) > 0" class="text-xs text-gray-400 font-medium">
-                                            {{ getVisibleChildrenCount(item) }}
+                                        <span v-if="item.count != null && item.count > 0"
+                                              class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold"
+                                              :class="item.hasNotification ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700'">
+                                            {{ item.count > 99 ? '99+' : item.count }}
                                         </span>
                                         <ChevronDown
                                             class="w-4 h-4 transition-all duration-300 text-gray-400"
@@ -389,7 +455,9 @@ import {
     DollarSign,
     Package,
     ChevronRight,
-    Loader2
+    Loader2,
+    Pin,
+    X
 } from "lucide-vue-next";
 import { Link, usePage, router } from "@inertiajs/vue3";
 import { toast } from "@steveyuowo/vue-hot-toast";
@@ -415,27 +483,49 @@ const props = defineProps({
 const isLoading = ref(false);
 const searchQuery = ref('');
 const showSearch = ref(false);
+const searchResults = ref([]);
+const isSearching = ref(false);
 const quickActions = ref([
     { label: 'New Order', route: 'admin.orders.create', icon: ShoppingCart, color: 'bg-blue-500' },
     { label: 'Add Product', route: 'admin.products.create', icon: Package, color: 'bg-green-500' },
     { label: 'View Reports', route: 'admin.reports.revenue.dashboard', icon: BarChart3, color: 'bg-purple-500' }
 ]);
 const recentPages = ref([]);
+const pinnedItems = ref([]);
+const autoRefreshInterval = ref(null);
+
+// Mobile swipe gesture state
+const touchStartX = ref(0);
+const touchEndX = ref(0);
+
+// Search blur handler
+const handleSearchBlur = () => {
+    setTimeout(() => {
+        showSearch.value = false;
+    }, 200);
+};
 
 // Dynamic stats from backend
 const sidebarStats = computed(() => page.props.sidebarStats || null);
 const quickStats = computed(() => ({
     todayRevenue: sidebarStats.value?.todayRevenue || 0,
     todayOrders: sidebarStats.value?.todayOrders || 0,
+    totalOrders: sidebarStats.value?.totalOrders || 0,
+    activeOrders: sidebarStats.value?.activeOrders || 0,
     lowStockCount: sidebarStats.value?.lowStockCount || 0,
     pendingCount: sidebarStats.value?.pendingOrders || 0,
+    processingCount: sidebarStats.value?.processingOrders || 0,
     incompleteOrders: sidebarStats.value?.incompleteOrders || 0,
+    totalProducts: sidebarStats.value?.totalProducts || 0,
+    publishedProducts: sidebarStats.value?.publishedProducts || 0,
+    draftProducts: sidebarStats.value?.draftProducts || 0,
+    totalInventoryItems: sidebarStats.value?.totalInventoryItems || 0,
     isLoading: !sidebarStats.value
 }));
 const notifications = computed(() => ({
-    urgent: (sidebarStats.value?.pendingOrders || 0) + (sidebarStats.value?.incompleteOrders || 0),
+    urgent: quickStats.value.activeOrders + (quickStats.value.incompleteOrders > 5 ? quickStats.value.incompleteOrders : 0),
     lowStock: sidebarStats.value?.lowStockCount || 0,
-    newOrders: sidebarStats.value?.pendingOrders || 0
+    newOrders: quickStats.value.activeOrders
 }));
 
 // User Permissions Logic
@@ -769,6 +859,126 @@ const getRoleColor = () => {
     return colors[role] || 'text-gray-600';
 };
 
+// Debounce helper
+const debounce = (fn, delay) => {
+    let timeoutId;
+    return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), delay);
+    };
+};
+
+// Search functionality
+const performSearch = debounce(async () => {
+    if (searchQuery.value.length < 2) {
+        searchResults.value = [];
+        return;
+    }
+
+    isSearching.value = true;
+
+    try {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        // Use web route: /admin/search
+        const url = `/admin/search?q=${encodeURIComponent(searchQuery.value)}`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken || ''
+            },
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                console.warn('Authentication required for search');
+                return;
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        searchResults.value = data.results || [];
+    } catch (error) {
+        console.error('Search error:', error);
+        searchResults.value = [];
+    } finally {
+        isSearching.value = false;
+    }
+}, 300);
+
+// Favorite/Pin functionality
+const loadPinnedItems = () => {
+    const stored = localStorage.getItem('sidebar_pinned_items');
+    pinnedItems.value = stored ? JSON.parse(stored) : [];
+};
+
+const togglePin = (item) => {
+    const index = pinnedItems.value.findIndex(p => p.route === item.route);
+
+    if (index > -1) {
+        pinnedItems.value.splice(index, 1);
+        toast.success('Removed from favorites');
+    } else {
+        if (pinnedItems.value.length >= 5) {
+            toast.error('Maximum 5 favorites allowed');
+            return;
+        }
+        pinnedItems.value.push({ label: item.label, route: item.route, icon: item.icon });
+        toast.success('Added to favorites');
+    }
+
+    localStorage.setItem('sidebar_pinned_items', JSON.stringify(pinnedItems.value));
+};
+
+const isPinned = (route) => {
+    return pinnedItems.value.some(p => p.route === route);
+};
+
+// Mobile swipe gesture handlers
+const handleTouchStart = (e) => {
+    touchStartX.value = e.changedTouches[0].screenX;
+};
+
+const handleTouchEnd = (e) => {
+    touchEndX.value = e.changedTouches[0].screenX;
+    handleSwipeGesture();
+};
+
+const handleSwipeGesture = () => {
+    const swipeDistance = touchEndX.value - touchStartX.value;
+    const minSwipeDistance = 50;
+
+    // Swipe right to open
+    if (swipeDistance > minSwipeDistance && !props.sidebarOpen) {
+        props.toggleSubmenu('sidebar', true);
+    }
+    // Swipe left to close
+    else if (swipeDistance < -minSwipeDistance && props.sidebarOpen) {
+        props.toggleSubmenu('sidebar', false);
+    }
+};
+
+// Auto-refresh stats
+const startAutoRefresh = () => {
+    autoRefreshInterval.value = setInterval(() => {
+        // Only reload sidebar stats, not entire page
+        router.reload({ only: ['sidebarStats'], preserveScroll: true });
+    }, 60000); // Every 1 minute
+};
+
+const stopAutoRefresh = () => {
+    if (autoRefreshInterval.value) {
+        clearInterval(autoRefreshInterval.value);
+        autoRefreshInterval.value = null;
+    }
+};
+
 const trackVisit = (item) => {
     if (item.route) {
         const recent = recentPages.value;
@@ -818,19 +1028,33 @@ const navigationItemsWithNotifications = computed(() => {
     return baseNavigationItems.map(item => {
         const enhanced = { ...item };
 
-        // Add notification counts based on item type (using computed values)
+        // Orders badge - show active (pending + processing) count
         if (item.label === 'Orders') {
             enhanced.count = notifications.value.newOrders;
             enhanced.hasNotification = notifications.value.newOrders > 0;
         }
 
+        // Incomplete Orders badge
         if (item.label === 'Incomplete Orders') {
             enhanced.count = quickStats.value.incompleteOrders;
             enhanced.hasNotification = quickStats.value.incompleteOrders > 5;
         }
 
+        // Products badge - total active products (without trashed)
+        if (item.label === 'Products') {
+            enhanced.count = quickStats.value.totalProducts;
+        }
+
+        // Inventory badge - show low stock count if any
+        if (item.label === 'Inventory') {
+            const lowStock = quickStats.value.lowStockCount;
+            enhanced.count = lowStock > 0 ? lowStock : null;
+            enhanced.hasNotification = lowStock > 5;
+        }
+
+        // Section header notification dot
         if (item.label === 'Inventory & Catalog') {
-            enhanced.hasNotifications = notifications.value.lowStock > 10;
+            enhanced.hasNotifications = quickStats.value.lowStockCount > 5;
         }
 
         return enhanced;
@@ -842,6 +1066,19 @@ const navigationItems = navigationItemsWithNotifications;
 
 // Lifecycle Management
 onMounted(() => {
+    // Load pinned items
+    loadPinnedItems();
+
+    // Start auto-refresh
+    startAutoRefresh();
+
+    // Add touch event listeners for mobile swipe
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.addEventListener('touchstart', handleTouchStart);
+        sidebar.addEventListener('touchend', handleTouchEnd);
+    }
+
     // Keyboard shortcuts
     const handleKeyPress = (e) => {
         if (e.altKey) {
@@ -859,7 +1096,13 @@ onMounted(() => {
     document.addEventListener('keydown', handleKeyPress);
 
     onUnmounted(() => {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            sidebar.removeEventListener('touchstart', handleTouchStart);
+            sidebar.removeEventListener('touchend', handleTouchEnd);
+        }
         document.removeEventListener('keydown', handleKeyPress);
+        stopAutoRefresh();
     });
 });
 
@@ -880,6 +1123,11 @@ watch(
     },
     { immediate: true },
 );
+
+// Watch search query
+watch(searchQuery, () => {
+    performSearch();
+});
 </script>
 
 <style scoped>

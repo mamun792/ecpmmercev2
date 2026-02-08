@@ -40,6 +40,7 @@ use App\Http\Controllers\Admin\Campaign\CampaignController;
 use App\Http\Controllers\Admin\CorporateClient\CorporateClientController;
 use App\Http\Controllers\Admin\Banner\BannerController;
 use App\Http\Controllers\Admin\ProductGroup\ProductGroupController;
+use App\Http\Controllers\Admin\SearchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +57,9 @@ Route::group(['middleware' => ['auth', 'check.route.permission'], 'prefix' => 'a
 
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+
+    // Global Search
+    Route::get('/search', [SearchController::class, 'search'])->name('search');
 
 
     // profile

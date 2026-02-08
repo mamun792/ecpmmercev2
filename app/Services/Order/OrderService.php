@@ -1958,13 +1958,24 @@ class OrderService implements OrderInterface
         return Cache::remember('admin.sidebar.stats', 300, function () {
             $today = now()->startOfDay();
 
+            // Get all order counts for better visibility
+            $totalOrders = Order::count();
+            $todayOrders = Order::where('created_at', '>=', $today)->count();
+            $pendingOrders = Order::where('status', 'pending')->count();
+            $processingOrders = Order::where('status', 'processing')->count();
+            $incompleteOrders = Order::where('status', 'incomplete')->count();
+
             return [
                 'todayRevenue' => (int) Order::where('created_at', '>=', $today)
                     ->whereNotIn('status', ['cancelled', 'returned'])
                     ->sum('total'),
-                'todayOrders' => Order::where('created_at', '>=', $today)->count(),
-                'pendingOrders' => Order::where('status', 'pending')->count(),
-                'incompleteOrders' => Order::where('status', 'incomplete')->count(),
+                'todayOrders' => $todayOrders,
+                'totalOrders' => $totalOrders,
+                'pendingOrders' => $pendingOrders,
+                'processingOrders' => $processingOrders,
+                'incompleteOrders' => $incompleteOrders,
+                // Combined active orders (pending + processing)
+                'activeOrders' => $pendingOrders + $processingOrders,
             ];
         });
     }
