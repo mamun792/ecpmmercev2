@@ -1949,6 +1949,23 @@ class OrderService implements OrderInterface
         return ['count' => $unreadCount, 'notifications' => $notifications];
     }
 
+    /**
+     * Get statistics for sidebar (Today's revenue, orders, pending counts)
+     */
+    public function getSidebarStats(): array
+    {
+        // Cache these stats for 5 minutes since they can be heavy
+        return Cache::remember('admin.sidebar.stats', 300, function () {
+            $today = now()->startOfDay();
 
-
+            return [
+                'todayRevenue' => (int) Order::where('created_at', '>=', $today)
+                    ->whereNotIn('status', ['cancelled', 'returned'])
+                    ->sum('total'),
+                'todayOrders' => Order::where('created_at', '>=', $today)->count(),
+                'pendingOrders' => Order::where('status', 'pending')->count(),
+                'incompleteOrders' => Order::where('status', 'incomplete')->count(),
+            ];
+        });
+    }
 }

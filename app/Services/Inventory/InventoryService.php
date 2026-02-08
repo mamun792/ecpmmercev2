@@ -529,4 +529,13 @@ class InventoryService
 
         return $locations[$locationCode] ?? $locationCode;
     }
+
+    /**
+     * Get count of low stock items
+     */
+    public function getLowStockCount(): int
+    {
+        return InventoryStock::whereColumn('available_quantity', '<=', 'minimum_threshold')
+            ->count();
+    }
 }

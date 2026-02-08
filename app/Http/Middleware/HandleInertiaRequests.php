@@ -12,6 +12,7 @@ use App\Services\Compare\CompareService;
 use App\Http\Resources\Cart\CartResource;
 use Illuminate\Support\Str;
 use App\Services\Order\OrderInterface as OrderServiceInterface;
+use App\Services\Inventory\InventoryService;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -21,14 +22,16 @@ class HandleInertiaRequests extends Middleware
     protected $wishlistService;
     protected $compareService;
     protected $orderService;
+    protected $inventoryService;
 
     public function __construct(
-        CategoryService $categoryService, 
+        CategoryService $categoryService,
         CartService $cartService,
         SettingsService $settingsService,
         WishlistService $wishlistService,
         CompareService $compareService,
-        OrderServiceInterface $orderService
+        OrderServiceInterface $orderService,
+        InventoryService $inventoryService
     ) {
         $this->categoryService = $categoryService;
         $this->cartService = $cartService;
@@ -36,6 +39,7 @@ class HandleInertiaRequests extends Middleware
         $this->wishlistService = $wishlistService;
         $this->compareService = $compareService;
         $this->orderService = $orderService;
+        $this->inventoryService = $inventoryService;
     }
 
     /**
@@ -61,7 +65,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        
+
         // Get or create session ID for cart (use cookie to persist across login/logout)
         $sessionId = $request->cookie('cart_session_id') ?? $request->session()->get('cart_session_id');
         if (!$sessionId) {
@@ -74,10 +78,10 @@ class HandleInertiaRequests extends Middleware
         // Get cart data
         $userId = $user ? $user->id : null;
         $cart = $this->cartService->getCart($userId, $sessionId);
-        
+
         // Calculate cart count from items relationship
         $cartCount = $cart ? $cart->items->count() : 0;
-        
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -116,6 +120,13 @@ class HandleInertiaRequests extends Middleware
             'adminNotifications' => fn () => ($user && ($user->hasRole('admin') || $user->hasRole('super-admin')))
                 ? $this->orderService->adminNotifications()
                 : ['count' => 0, 'notifications' => collect()],
+            // Admin sidebar stats (only visible to admin users)
+            'sidebarStats' => fn () => ($user && ($user->hasRole('admin') || $user->hasRole('super-admin') || $user->hasRole('manager')))
+                ? array_merge(
+                    $this->orderService->getSidebarStats(),
+                    ['lowStockCount' => $this->inventoryService->getLowStockCount()]
+                )
+                : null,
         ];
     }
 }

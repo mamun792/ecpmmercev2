@@ -39,6 +39,13 @@ interface OrderInterface
     public function adminNotifications(): array;
 
     /**
+     * Get statistics for sidebar (Today's revenue, orders, pending counts)
+     *
+     * @return array
+     */
+    public function getSidebarStats(): array;
+
+    /**
      * Update product stock (V2 inventory integration)
      */
     public function updateProductStock(
