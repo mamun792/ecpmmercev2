@@ -10,10 +10,11 @@ class AttributeValue extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['attribute_id', 'value', 'color', 'status'];
+    protected $fillable = ['attribute_id', 'value', 'color', 'status', 'display_order'];
 
     protected $casts = [
         'status' => 'string',
+        'display_order' => 'integer',
     ];
 
     /**

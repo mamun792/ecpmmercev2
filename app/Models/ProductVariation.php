@@ -21,6 +21,9 @@ class ProductVariation extends Model
         'price',
         'previous_price',
         'image_path',
+        // Dynamic Pricing (Big Tech Style)
+        'price_type',
+        'price_value',
         // Status & Control
         'status',
         'is_default',
@@ -60,6 +63,7 @@ class ProductVariation extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'previous_price' => 'decimal:2',
+        'price_value' => 'decimal:2',
         'cost_price' => 'decimal:2',
         'compare_at_price' => 'decimal:2',
         'weight' => 'decimal:2',
@@ -116,5 +120,39 @@ class ProductVariation extends Model
     public function getImageUrlAttribute()
     {
         return $this->image_path ? asset($this->image_path) : null;
+    }
+
+    /**
+     * Big Tech Style: Calculate final price based on dynamic pricing
+     *
+     * @return float
+     */
+    public function getFinalPriceAttribute(): float
+    {
+        $basePrice = $this->product->price ?? 0;
+
+        return match($this->price_type ?? 'adjustment') {
+            'adjustment' => $basePrice + ($this->price_value ?? 0),
+            'percentage' => $basePrice * (1 + (($this->price_value ?? 0) / 100)),
+            'override' => $this->price_value ?? $this->price,
+            default => $this->price
+        };
+    }
+
+    /**
+     * Get price calculation formula for display
+     *
+     * @return string
+     */
+    public function getPriceFormulaAttribute(): string
+    {
+        $basePrice = $this->product->price ?? 0;
+
+        return match($this->price_type ?? 'adjustment') {
+            'adjustment' => "৳" . number_format($basePrice, 2) . " + ৳" . number_format($this->price_value ?? 0, 2),
+            'percentage' => "৳" . number_format($basePrice, 2) . " × " . (1 + (($this->price_value ?? 0) / 100)),
+            'override' => "Fixed Price",
+            default => "Base Price"
+        };
     }
 }

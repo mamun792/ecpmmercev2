@@ -9,10 +9,13 @@ class Attribute extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['name', 'status'];
+    protected $fillable = ['name', 'status', 'is_global', 'display_order', 'settings'];
 
     protected $casts = [
         'status' => 'string',
+        'is_global' => 'boolean',
+        'display_order' => 'integer',
+        'settings' => 'array',
     ];
 
     /**
@@ -33,6 +36,24 @@ class Attribute extends Model
      */
     public function activeValues()
     {
-        return $this->hasMany(AttributeValue::class)->where('status', 'active');
+        return $this->hasMany(AttributeValue::class)
+            ->where('status', 'active')
+            ->orderBy('display_order');
+    }
+
+    /**
+     * Scope: Only global library attributes
+     */
+    public function scopeGlobal($query)
+    {
+        return $query->where('is_global', true)->orderBy('display_order');
+    }
+
+    /**
+     * Scope: Non-global (product-specific) attributes
+     */
+    public function scopeProductSpecific($query)
+    {
+        return $query->where('is_global', false);
     }
 }

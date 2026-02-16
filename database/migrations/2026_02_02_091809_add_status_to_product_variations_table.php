@@ -13,16 +13,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('product_variations', function (Blueprint $table) {
-            // Add status column with default 'active'
-            $table->enum('status', ['active', 'inactive'])->default('active')->after('image_path');
+        // Check if status column doesn't exist before adding
+        if (!Schema::hasColumn('product_variations', 'status')) {
+            Schema::table('product_variations', function (Blueprint $table) {
+                $table->enum('status', ['active', 'inactive'])->default('active')->after('image_path');
+                $table->index(['product_id', 'status']);
+            });
 
-            // Add index for performance
-            $table->index(['product_id', 'status']);
-        });
-
-        // Update existing variations to 'active' status
-        DB::table('product_variations')->update(['status' => 'active']);
+            // Update existing variations to 'active' status
+            DB::table('product_variations')->update(['status' => 'active']);
+        }
     }
 
     /**
