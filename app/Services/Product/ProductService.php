@@ -760,6 +760,7 @@ class ProductService
 
       $variation = ProductVariation::create([
         'product_id' => $product->id,
+        'cost_price' => $variationData['cost_price'] ?? 0,
         'price' => $variationData['price'],
         // Accept previous_price when provided
         'previous_price' => $variationData['previous_price'] ?? null,

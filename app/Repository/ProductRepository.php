@@ -502,6 +502,7 @@ class ProductRepository implements ProductRepositoryInterface
             // Create variation record (stock is now managed via inventory_stocks table)
             $variation = \App\Models\ProductVariation::create([
                 'product_id' => $product->id,
+                'cost_price' => $variationData['cost_price'] ?? 0,
                 'price' => $variationData['price'] ?? 0,
                 'previous_price' => $variationData['previous_price'] ?? null,
                 'image_path' => $variationData['image_path'] ?? null,
@@ -605,6 +606,7 @@ class ProductRepository implements ProductRepositoryInterface
                 // Create new variation (stock managed via inventory_stocks)
                 $variation = \App\Models\ProductVariation::create([
                     'product_id' => $product->id,
+                    'cost_price' => $variationData['cost_price'] ?? 0,
                     'price' => $variationData['price'] ?? 0,
                     'previous_price' => $variationData['previous_price'] ?? null,
                     'image_path' => $variationData['image_path'] ?? null,

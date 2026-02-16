@@ -77,7 +77,11 @@ class CartService
             throw new ProductNotAvailableException('Product not found');
         }
 
-        if ($product->status !== 'Published') {
+        // For POS/Admin, allow adding unpublished products (check if user is admin/has POS access)
+        // For frontend customers, check status
+        $isAdminOrPOS = request()->is('api/pos/*') || (auth()->check() && auth()->user()->hasRole(['ADMINISTRATOR', 'MANAGER']));
+
+        if (!$isAdminOrPOS && $product->status !== 'Published') {
             throw new ProductNotAvailableException('Product is not available for sale');
         }
 
@@ -103,7 +107,16 @@ class CartService
                 throw new InsufficientStockException("Insufficient stock for selected variation. You already have {$existingQuantity} in cart.");
             }
 
-            $itemPrice = $variation->price + $product->price;
+            // For variable products, variation price is already the final price (calculated from base + adjustment/percentage/override)
+            // For simple products with variations, we'd add product->price + variation->price
+            $itemPrice = $product->type === 'variable' ? $variation->price : ($variation->price + $product->price);
+
+            Log::info('Variation pricing', [
+                'product_type' => $product->type,
+                'variation_price' => $variation->price,
+                'product_price' => $product->price,
+                'final_item_price' => $itemPrice
+            ]);
         } else {
             if (!$product->is_pre_order && $product->stock < $totalRequestedQuantity) {
                 throw new InsufficientStockException("Insufficient stock for this product. You already have {$existingQuantity} in cart.");

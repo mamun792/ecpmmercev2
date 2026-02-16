@@ -149,6 +149,11 @@ const globalVariationCostPrice = ref("");
 const globalVariationStock = ref("");
 // Bulk previous price for variations
 const globalVariationPreviousPrice = ref("");
+// Bulk modals
+const showBulkStockModal = ref(false);
+const bulkStockValue = ref("");
+// Attributes & Variants inner tab
+const attributesVariantsTab = ref('attributes');
 // Per-variation validation messages (keyed by variation index)
 const variationPriceErrors = ref({});
 
@@ -307,6 +312,27 @@ const applyBulkCostUpdate = () => {
 
     showBulkCostModal.value = false;
     bulkCostValue.value = 0;
+};
+
+// Apply bulk stock update to all variations
+const applyBulkStockUpdate = () => {
+    if (!form.variations || form.variations.length === 0) {
+        return;
+    }
+
+    const stockVal = parseInt(bulkStockValue.value);
+    if (isNaN(stockVal) || stockVal < 0) {
+        toast.error('Please enter a valid stock quantity');
+        return;
+    }
+
+    form.variations.forEach(variation => {
+        variation.stock = stockVal;
+    });
+
+    toast.success(`Stock of ${stockVal} applied to all ${form.variations.length} variants`);
+    showBulkStockModal.value = false;
+    bulkStockValue.value = "";
 };
 
 watch(
@@ -601,8 +627,7 @@ const getTabs = computed(() => {
     ];
     if (form.type !== "simple") {
         tabs.push(
-            { id: "attributes", name: "Attributes", icon: "Layers", description: "Product variants" },
-            { id: "variations", name: "Variations", icon: "Palette", description: "Variant pricing" }
+            { id: "attributes", name: "Attributes & Variants", icon: "Layers", description: "Product attributes and variants" }
         );
     }
     return tabs;
@@ -1767,6 +1792,12 @@ const submit = () => {
 
     // Validation: For variable products, each variation's previous_price must be > its price (if provided)
     if (form.type === 'variable') {
+        // Calculate final prices for all variations before submission
+        form.variations.forEach((variation) => {
+            const finalPrice = calculateFinalPrice(variation);
+            variation.price = finalPrice; // Set the calculated final price
+        });
+
         for (let i = 0; i < form.variations.length; i++) {
             const v = form.variations[i];
             if (v.previous_price !== undefined && v.previous_price !== "" && v.price !== undefined && v.price !== "") {
@@ -1775,7 +1806,7 @@ const submit = () => {
                 if (!isNaN(p) && !isNaN(prev) && prev <= p) {
                     variationPriceErrors.value = { [i]: 'Previous price must be greater than price' };
                     toast.error('Each variation\'s Previous price must be greater than its Price');
-                    activeTab.value = 'variations';
+                    activeTab.value = 'attributes';
                     return;
                 }
             }
@@ -2399,15 +2430,46 @@ const submit = () => {
                                             </div>
                                         </template>
 
-                                        <div v-else class="md:col-span-2 flex items-center gap-3 bg-blue-50 rounded-xl p-3 border border-blue-100">
-                                            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
-                                                <Layers class="w-5 h-5" />
-                                            </div>
+                                        <!-- Variable Product: Show Base Price Field -->
+                                        <div v-else class="md:col-span-2 space-y-4">
+                                            <!-- Base Price Field for Variable Products -->
                                             <div>
-                                                <p class="text-sm font-semibold text-gray-900">Variable product selected</p>
-                                                <p class="text-xs text-gray-500 mt-0.5">
-                                                    Regular, Cost & Previous price fields are hidden. Prices should be set on each variation; main product price will be submitted as 0.
+                                                <label for="base_price" class="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                                                    <span>Base Price (For Variations) <span class="text-red-500">*</span></span>
+                                                    <Tooltip content="This base price will be used for dynamic pricing calculations in variations (Adjustment, Percentage, Override)" />
+                                                </label>
+                                                <div class="relative">
+                                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">৳</span>
+                                                    <input
+                                                        id="base_price"
+                                                        v-model="form.price"
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        class="w-full pl-10 pr-4 py-3 border-2 border-blue-200 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all bg-blue-50/30 focus:bg-white"
+                                                        placeholder="Enter base price (e.g., 200.00)"
+                                                    />
+                                                </div>
+                                                <p class="mt-1.5 text-xs text-blue-600 flex items-center gap-1">
+                                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                                    </svg>
+                                                    This price will be used as base for variant calculations (e.g., ৳200 + ৳50 = ৳250)
                                                 </p>
+                                                <p v-if="form.errors.price" class="mt-2 text-sm text-red-600">{{ form.errors.price }}</p>
+                                            </div>
+
+                                            <!-- Info Box -->
+                                            <div class="flex items-center gap-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
+                                                <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white flex-shrink-0">
+                                                    <Layers class="w-5 h-5" />
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-semibold text-gray-900">Variable Product Pricing</p>
+                                                    <p class="text-xs text-gray-600 mt-1">
+                                                        Set base price above, then configure each variation with adjustment/percentage/override in the Variants tab.
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -2988,56 +3050,65 @@ const submit = () => {
                             </div>
                         </div>
 
-                        <!-- ATTRIBUTES & VARIANTS SECTION (Tabbed) -->
-                        <div v-if="form.type === 'variable'" class="space-y-6">
-                            <!-- Tab Header -->
-                            <div class="flex gap-2 mb-4">
-                                <button
-                                    type="button"
-                                    @click="attributesVariantsTab = 'attributes'"
-                                    :class="[
-                                        'flex-1 px-4 py-2.5 text-base font-semibold rounded-t-xl transition-all',
-                                        attributesVariantsTab === 'attributes'
-                                            ? 'bg-white text-indigo-700 border-b-2 border-indigo-600 shadow'
-                                            : 'bg-gray-100 text-gray-500 hover:text-indigo-700 border-b-2 border-transparent'
-                                    ]"
-                                >
-                                    Attributes ({{ selectedAttributes.filter(a => a.values && a.values.length > 0).length }})
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="attributesVariantsTab = 'variants'"
-                                    :class="[
-                                        'flex-1 px-4 py-2.5 text-base font-semibold rounded-t-xl transition-all',
-                                        attributesVariantsTab === 'variants'
-                                            ? 'bg-white text-indigo-700 border-b-2 border-indigo-600 shadow'
-                                            : 'bg-gray-100 text-gray-500 hover:text-indigo-700 border-b-2 border-transparent'
-                                    ]"
-                                >
-                                    Variants ({{ form.variations.length }})
-                                </button>
-                            </div>
+                        <!-- ATTRIBUTES & VARIANTS SECTION (With Tabs) -->
+                        <div v-show="activeTab === 'attributes'" class="space-y-6">
+                            <div class="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+                                <!-- Header -->
+                                <div class="bg-gradient-to-r from-blue-50 to-purple-50 px-6 py-4 border-b-2 border-gray-200">
+                                    <h3 class="text-xl font-bold text-gray-900">Attributes & Variants</h3>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Configure attributes and manage variants -
+                                        <span class="font-semibold text-blue-700">{{ selectedAttributes.filter(a => a.values && a.values.length > 0).length }} Attributes</span>
+                                        ·
+                                        <span class="font-semibold text-purple-700">{{ form.variations.length }} Variants</span>
+                                    </p>
+                                </div>
 
-                            <!-- Tab Content -->
-                            <div v-if="attributesVariantsTab === 'attributes'">
-                                <!-- Attributes Section -->
-                                <div class="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b-2 border-gray-200">
-                                        <h3 class="text-lg font-bold text-gray-900">Product Attributes</h3>
-                                        <p class="text-sm text-gray-500">Select attribute values to create product variants</p>
+                                <!-- Tabs -->
+                                <div class="border-b border-gray-200">
+                                    <div class="flex px-6">
+                                        <button
+                                            type="button"
+                                            @click="attributesVariantsTab = 'attributes'"
+                                            :class="[
+                                                'px-6 py-3 text-sm font-semibold border-b-2 transition-all',
+                                                attributesVariantsTab === 'attributes'
+                                                    ? 'border-blue-600 text-blue-600'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            ]"
+                                        >
+                                            Attributes ({{ selectedAttributes.filter(a => a.values && a.values.length > 0).length }})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="attributesVariantsTab = 'variants'"
+                                            :class="[
+                                                'px-6 py-3 text-sm font-semibold border-b-2 transition-all',
+                                                attributesVariantsTab === 'variants'
+                                                    ? 'border-purple-600 text-purple-600'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            ]"
+                                        >
+                                            Variants ({{ form.variations.length }})
+                                        </button>
                                     </div>
-                                    <div class="p-6">
+                                </div>
+
+                                <!-- Tab Content -->
+                                <div class="p-6">
+                                    <!-- Attributes Tab -->
+                                    <div v-if="attributesVariantsTab === 'attributes'">
                                         <AttributeSelector
                                             :attributes="props.attributes"
                                             v-model:selected-attributes-map="selectedAttributesMap"
                                         />
                                     </div>
-                                </div>
-                            </div>
 
-                            <div v-else-if="attributesVariantsTab === 'variants'">
-                                <!-- Variants Section -->
-                                <div class="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+                                    <!-- Variants Tab -->
+                                    <div v-else-if="attributesVariantsTab === 'variants'">
+                                        <div class="space-y-4">
+                            <!-- Variants Section -->
+                            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                                     <!-- Header -->
                                     <div class="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b-2 border-gray-200">
                                         <div class="flex items-center justify-between">
@@ -3059,6 +3130,13 @@ const submit = () => {
                                                     class="px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white text-sm font-semibold rounded-lg transition-all shadow-md"
                                                 >
                                                     Bulk Cost Price
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    @click="showBulkStockModal = true"
+                                                    class="px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white text-sm font-semibold rounded-lg transition-all shadow-md"
+                                                >
+                                                    Bulk Stock
                                                 </button>
                                             </div>
                                         </div>
@@ -3371,6 +3449,80 @@ const submit = () => {
                                         </div>
                                     </div>
                                 </Teleport>
+
+                                <!-- Bulk Stock Update Modal -->
+                                <Teleport to="body">
+                                    <div v-if="showBulkStockModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                                        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all" @click.stop>
+                                            <!-- Modal Header -->
+                                            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-600 to-teal-600">
+                                                <h3 class="text-xl font-bold text-white">Bulk Stock Update</h3>
+                                                <p class="text-sm text-green-100 mt-1">Set stock quantity for all {{ form.variations.length }} variants</p>
+                                            </div>
+
+                                            <!-- Modal Body -->
+                                            <div class="p-6 space-y-4">
+                                                <!-- Stock Input -->
+                                                <div>
+                                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                                        Stock Quantity (Per Variant)
+                                                    </label>
+                                                    <div class="relative">
+                                                        <input
+                                                            v-model.number="bulkStockValue"
+                                                            type="number"
+                                                            min="0"
+                                                            step="1"
+                                                            class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                                            placeholder="Enter stock quantity"
+                                                        />
+                                                    </div>
+                                                    <p class="mt-2 text-xs text-gray-500">
+                                                        This will set the same stock quantity for all variants
+                                                    </p>
+                                                </div>
+
+                                                <!-- Preview Example -->
+                                                <div class="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-4 border border-green-200">
+                                                    <p class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Applied Value</p>
+                                                    <div class="flex items-baseline gap-2">
+                                                        <span class="text-2xl font-bold text-green-700">
+                                                            {{ parseInt(bulkStockValue || 0) }}
+                                                        </span>
+                                                        <span class="text-sm text-gray-600">units per variant</span>
+                                                    </div>
+                                                    <div class="mt-2 pt-2 border-t border-green-200">
+                                                        <span class="text-xs text-gray-600">Total Stock: </span>
+                                                        <span class="text-sm font-bold text-green-700">
+                                                            {{ parseInt(bulkStockValue || 0) * form.variations.length }} units
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Modal Footer -->
+                                            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end rounded-b-2xl">
+                                                <button
+                                                    type="button"
+                                                    @click="showBulkStockModal = false"
+                                                    class="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    @click="applyBulkStockUpdate"
+                                                    class="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-600 to-teal-600 rounded-xl hover:from-green-700 hover:to-teal-700 transition-all shadow-lg shadow-green-500/30"
+                                                >
+                                                    Apply to All Variants
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Teleport>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
