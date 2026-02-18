@@ -10,9 +10,15 @@ return new class extends Migration
      * Enterprise Grade Order Status Audit Trail
      * Tracks every status change for compliance and customer service
      * Supports automated and manual status transitions
+     *
+     * NOTE: This migration is disabled. Using order_status_histories (plural) instead.
+     * See migration: 2026_02_01_064738_add_audit_columns_to_orders_table.php
      */
     public function up(): void
     {
+        // Disabled - using order_status_histories (plural) table instead
+        return;
+
         Schema::create('order_status_history', function (Blueprint $table) {
             $table->id();
 

@@ -1136,9 +1136,13 @@ const submitForm = () => {
                               Selected: {{ selectedAttributes[product.id][attrName] }}
                             </span>
                           </div>
-                          <div class="flex flex-wrap gap-2">
+                          <!-- Scrollable container for many options -->
+                          <div :class="[
+                            'flex flex-wrap gap-2',
+                            Array.from(values).length > 15 ? 'max-h-32 overflow-y-auto custom-scrollbar' : ''
+                          ]">
                             <button v-for="value in Array.from(values)" :key="value" @click="selectAttribute(product, attrName, value)" :class="[
-                              'px-3 py-1.5 text-xs rounded-lg border-2 font-bold transition-all duration-200 transform hover:scale-105',
+                              'px-3 py-1.5 text-xs rounded-lg border-2 font-bold transition-all duration-200 transform hover:scale-105 shrink-0',
                               selectedAttributes[product.id]?.[attrName] === value
                                 ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-md'
                                 : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600 hover:shadow-sm'
@@ -1146,6 +1150,13 @@ const submitForm = () => {
                               {{ value }}
                             </button>
                           </div>
+                          <!-- Indicator for scrollable content -->
+                          <p v-if="Array.from(values).length > 15" class="text-[10px] text-gray-500 mt-1.5 flex items-center gap-1">
+                            <svg class="w-3 h-3 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>{{ Array.from(values).length }} options available • Scroll to see more</span>
+                          </p>
                         </div>
 
                         <!-- Variation Status Messages -->
@@ -1254,3 +1265,30 @@ const submitForm = () => {
     </div>
   </AdminLayout>
 </template>
+<style scoped>
+/* Custom scrollbar for variant options */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #3b82f6, #2563eb);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #2563eb, #1d4ed8);
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #f1f1f1;
+}
+</style>

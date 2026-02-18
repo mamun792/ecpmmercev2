@@ -230,6 +230,10 @@ class OrderService implements OrderInterface
             'payment_status' => $validatedData['payment_status'] ?? 'unpaid',
         ]);
 
+        // Record initial status in history
+        $initialStatus = $validatedData['status'] ?? 'pending';
+        $order->recordStatusChange($initialStatus, "Order #{$order->order_number} was placed");
+
         // Log the created order's cart_id
         Log::info('Order created with cart_id', [
             'order_id' => $order->id,
@@ -1639,6 +1643,9 @@ class OrderService implements OrderInterface
         // Update the order status
         $order->update(['status' => $newStatus]);
 
+        // Record the status change in history
+        $order->recordStatusChange($newStatus, "Status changed from {$oldStatus} to {$newStatus}");
+
         return $order;
     }
 
@@ -1663,6 +1670,7 @@ class OrderService implements OrderInterface
             $order = Order::findOrFail($id);
 
             if ($order->status !== 'cancelled' && $order->status !== 'returned') {
+                $oldStatus = $order->status;
                 foreach ($order->items as $item) {
                     $this->adjustProductStock(
                         $item->product,
@@ -1673,6 +1681,9 @@ class OrderService implements OrderInterface
                     );
                 }
                 $order->update(['status' => 'cancelled']);
+
+                // Record the status change in history
+                $order->recordStatusChange('cancelled', "Order cancelled during deletion from {$oldStatus}");
             } else {
                 $order->items()->delete();
             }
