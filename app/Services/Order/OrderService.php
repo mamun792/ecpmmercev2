@@ -1068,7 +1068,15 @@ class OrderService implements OrderInterface
         $updates = [];
         foreach ($updateFields as $field) {
             if (isset($validatedData[$field])) {
-                $updates[$field] = $validatedData[$field];
+                // Log the change if value is different
+                $oldValue = $order->$field;
+                $newValue = $validatedData[$field];
+
+                if ($oldValue != $newValue) {
+                    // Record the edit log
+                    $order->logEdit($field, $oldValue, $newValue, 'Order basic info updated');
+                    $updates[$field] = $newValue;
+                }
             }
         }
 
@@ -1105,6 +1113,13 @@ class OrderService implements OrderInterface
 
             // Handle item removal
             if ($itemUpdate['action'] === 'remove') {
+                // Log the removal
+                $order->logEdit(
+                    'order_item_removed',
+                    "Item: {$orderItem->product->name} (Qty: {$orderItem->quantity})",
+                    'Removed',
+                    'Item removed from order'
+                );
                 $this->removeOrderItem($orderItem);
                 continue;
             }
@@ -1119,6 +1134,14 @@ class OrderService implements OrderInterface
                 if ($quantityDiff === 0) {
                     continue;
                 }
+
+                // Log the quantity change
+                $order->logEdit(
+                    'order_item_quantity',
+                    "Item: {$orderItem->product->name} - Qty: {$oldQuantity}",
+                    "Item: {$orderItem->product->name} - Qty: {$newQuantity}",
+                    'Item quantity updated'
+                );
 
                 // If increasing quantity, check stock availability
                 if ($quantityDiff > 0) {
@@ -1184,7 +1207,8 @@ class OrderService implements OrderInterface
 
             $order = Order::findOrFail($orderId);
 
-            $order->update([
+            // Track changes for logging
+            $courierFields = [
                 'courier_name' => $data['courier_name'] ?? null,
                 'city_name' => $data['city_name'] ?? null,
                 'zone_name' => $data['zone_name'] ?? null,
@@ -1192,7 +1216,17 @@ class OrderService implements OrderInterface
                 'city_id' => $data['city_id'] ?? null,
                 'zone_id' => $data['zone_id'] ?? null,
                 'area_id' => $data['area_id'] ?? null,
-            ]);
+            ];
+
+            // Log changes before updating
+            foreach ($courierFields as $field => $newValue) {
+                $oldValue = $order->$field;
+                if ($oldValue != $newValue) {
+                    $order->logEdit($field, $oldValue, $newValue, 'Courier details updated');
+                }
+            }
+
+            $order->update($courierFields);
 
             DB::commit();
             return $order;

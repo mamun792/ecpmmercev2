@@ -368,7 +368,8 @@ class OrderController extends Controller
 
         $order = Order::findOrFail($id);
 
-        $order->update([
+        // Track changes and log edits
+        $fieldsToTrack = [
             'customer_name' => $validated['customer_name'],
             'customer_phone' => $validated['customer_phone'],
             'customer_email' => $validated['customer_email'],
@@ -381,12 +382,19 @@ class OrderController extends Controller
             'shipping_cost' => $validated['shipping_cost'] ?? $order->shipping_cost,
             'area' => $validated['area'] ?? $order->area,
             'status' => $validated['status'] ?? $order->status,
-        ]);
+        ];
 
+        // Log changes before updating
+        foreach ($fieldsToTrack as $field => $newValue) {
+            $oldValue = $order->$field;
+            if ($oldValue != $newValue) {
+                $order->logEdit($field, $oldValue, $newValue, 'Basic info updated via edit page');
+            }
+        }
+
+        $order->update($fieldsToTrack);
 
         $this->orderService->calculateOrderTotals($order);
-
-
 
         Cache::flush();
 
