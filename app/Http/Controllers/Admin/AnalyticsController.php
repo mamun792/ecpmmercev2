@@ -683,15 +683,15 @@ class AnalyticsController extends Controller
                 'products.name',
                 DB::raw('SUM(order_items.quantity) as units_sold'),
                 DB::raw('SUM(order_items.final_price * order_items.quantity) as revenue'),
-                DB::raw('products.cost_price * SUM(order_items.quantity) as cost'),
-                DB::raw('(SUM(order_items.final_price * order_items.quantity) - (products.cost_price * SUM(order_items.quantity))) as profit'),
-                DB::raw('((SUM(order_items.final_price * order_items.quantity) - (products.cost_price * SUM(order_items.quantity))) / SUM(order_items.final_price * order_items.quantity) * 100) as margin_percentage')
+                DB::raw('SUM(order_items.cost_price * order_items.quantity) as cost'),
+                DB::raw('(SUM(order_items.final_price * order_items.quantity) - SUM(order_items.cost_price * order_items.quantity)) as profit'),
+                DB::raw('((SUM(order_items.final_price * order_items.quantity) - SUM(order_items.cost_price * order_items.quantity)) / NULLIF(SUM(order_items.final_price * order_items.quantity), 0) * 100) as margin_percentage')
             )
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->where('orders.status', '!=', 'cancelled')
-            ->whereNotNull('products.cost_price')
-            ->groupBy('products.id', 'products.name', 'products.cost_price')
+            ->whereNotNull('order_items.cost_price')
+            ->groupBy('products.id', 'products.name')
             ->orderBy('profit', 'desc')
             ->limit(10)
             ->get()
