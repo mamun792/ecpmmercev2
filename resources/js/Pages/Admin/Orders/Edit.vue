@@ -40,6 +40,50 @@ const errorMessages = ref({});
 // State for quantities per product
 const quantities = ref({});
 
+// Modal state for variation selection
+const showVariationModal = ref(false);
+const modalProduct = ref(null);
+
+// Modal state for product browser
+const showProductBrowserModal = ref(false);
+
+// Open product browser modal
+const openProductBrowserModal = () => {
+  showProductBrowserModal.value = true;
+};
+
+// Close product browser modal
+const closeProductBrowserModal = () => {
+  showProductBrowserModal.value = false;
+};
+
+// Open variation modal
+const openVariationModal = (product) => {
+  modalProduct.value = product;
+  showVariationModal.value = true;
+};
+
+// Close variation modal
+const closeVariationModal = () => {
+  showVariationModal.value = false;
+  modalProduct.value = null;
+};
+
+// Confirm variation selection from modal
+const confirmVariationSelection = () => {
+  if (modalProduct.value && selectedVariations.value[modalProduct.value.id]) {
+    closeVariationModal();
+  }
+};
+
+// Check if product has many variations (10+)
+const hasManyVariations = (product) => {
+  if (!product.variations || product.variations.length === 0) return false;
+  const totalOptions = Object.values(getUniqueAttributes(product))
+    .reduce((sum, values) => sum + Array.from(values).length, 0);
+  return totalOptions >= 10;
+};
+
 // State for pending quantity changes (item.id => { originalQuantity, newQuantity })
 const pendingQuantityChanges = ref({});
 
@@ -976,15 +1020,25 @@ const submitForm = () => {
           <!-- Products Card with Enhanced Design -->
           <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all border border-gray-200 overflow-hidden">
             <div class="bg-gradient-to-r from-emerald-500 via-green-600 to-teal-600 px-6 py-5 border-b border-emerald-300">
-              <h2 class="text-xl font-bold text-white flex items-center gap-3 mb-2">
-                <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-xl font-bold text-white flex items-center gap-3 mb-2">
+                    <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 6H6.28l-.31-1.243A1 1 0 005 4H3z" />
+                      </svg>
+                    </div>
+                    🛍️ Available Products
+                  </h2>
+                  <p class="text-sm text-emerald-100 font-medium">Search and add products to this order</p>
+                </div>
+                <button @click="openProductBrowserModal" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center gap-2 border-2 border-white/30">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 6H6.28l-.31-1.243A1 1 0 005 4H3z" />
                   </svg>
-                </div>
-                🛍️ Available Products
-              </h2>
-              <p class="text-sm text-emerald-100 font-medium">Search and add products to this order</p>
+                  <span>Browse Products</span>
+                </button>
+              </div>
             </div>
 
             <!-- Filters with Enhanced Design -->
@@ -1127,7 +1181,58 @@ const submitForm = () => {
                       </div>
                     </td>
                     <td class="px-6 py-4">
-                      <div v-if="product.variations && product.variations.length > 0" class="space-y-3">
+                      <!-- For products with many variations (10+), show modal button -->
+                      <div v-if="product.variations && product.variations.length > 0 && hasManyVariations(product)" class="space-y-3">
+                        <button @click="openVariationModal(product)" class="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2">
+                          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                          </svg>
+                          <span>Select Variations</span>
+                          <span v-if="Object.keys(getUniqueAttributes(product)).length" class="bg-white/20 px-2 py-0.5 rounded-full text-xs">{{ Object.keys(getUniqueAttributes(product)).length }} attributes</span>
+                        </button>
+
+                        <!-- Show selected variation summary -->
+                        <div v-if="selectedVariations[product.id]" class="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-3">
+                          <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1">
+                              <p class="text-xs text-emerald-800 font-bold flex items-center gap-2 mb-1">
+                                <svg class="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                <span>Selected</span>
+                              </p>
+                              <div class="text-[10px] text-emerald-700 font-medium space-y-0.5">
+                                <div v-for="attr in selectedVariations[product.id].attributes" :key="attr.id" class="flex items-center gap-1">
+                                  <span class="font-bold">{{ attr.value.attribute.name }}:</span>
+                                  <span>{{ attr.value.value }}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="text-right">
+                              <div :class="[
+                                'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold',
+                                selectedVariations[product.id].stock > 10 ? 'bg-emerald-600 text-white' : selectedVariations[product.id].stock > 0 ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'
+                              ]">
+                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                {{ selectedVariations[product.id].stock }}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div v-else class="bg-blue-50 border-2 border-blue-200 rounded-xl p-3">
+                          <p class="text-xs text-blue-700 font-medium flex items-center gap-2">
+                            <svg class="h-4 w-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Click button above to select variations</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <!-- For products with few variations (<10), show inline -->
+                      <div v-else-if="product.variations && product.variations.length > 0" class="space-y-3">
                         <!-- Attribute Selection -->
                         <div v-for="(values, attrName) in getUniqueAttributes(product)" :key="attrName" class="bg-gray-50 rounded-lg p-3 border border-gray-200">
                           <div class="flex items-center justify-between mb-2">
@@ -1263,6 +1368,327 @@ const submitForm = () => {
         </div>
       </div>
     </div>
+
+    <!-- Variation Selection Modal -->
+    <Teleport to="body">
+      <Transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0">
+        <div v-if="showVariationModal && modalProduct" class="fixed inset-0 z-[9999] overflow-y-auto" @click.self="closeVariationModal">
+          <!-- Backdrop -->
+          <div class="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"></div>
+
+          <!-- Modal Container -->
+          <div class="flex min-h-full items-center justify-center p-4">
+            <Transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4 scale-95" enter-to-class="opacity-100 translate-y-0 scale-100" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 translate-y-4 scale-95">
+              <div v-if="showVariationModal" class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl">
+                <!-- Modal Header -->
+                <div class="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-2xl border-b border-blue-500 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-xl">
+                      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="text-xl font-bold">Select Product Variation</h3>
+                      <p class="text-sm text-blue-100">{{ modalProduct.name }}</p>
+                    </div>
+                  </div>
+                  <button @click="closeVariationModal" class="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Modal Body with Accordion -->
+                <div class="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                  <!-- Attribute Selection Accordion -->
+                  <div class="space-y-4">
+                    <div v-for="(values, attrName, index) in getUniqueAttributes(modalProduct)" :key="attrName" class="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                      <!-- Accordion Header -->
+                      <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-4 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                          <div class="flex items-center gap-3">
+                            <div class="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">
+                              {{ index + 1 }}
+                            </div>
+                            <div>
+                              <h4 class="font-bold text-gray-900 text-lg">{{ attrName }}</h4>
+                              <p class="text-xs text-gray-500">{{ Array.from(values).length }} options available</p>
+                            </div>
+                          </div>
+                          <div v-if="selectedAttributes[modalProduct.id]?.[attrName]" class="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="font-bold text-sm">{{ selectedAttributes[modalProduct.id][attrName] }}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Accordion Body -->
+                      <div class="p-5 bg-white">
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          <button v-for="value in Array.from(values)" :key="value" @click="selectAttribute(modalProduct, attrName, value)" :class="[
+                            'px-4 py-3 text-sm rounded-xl border-2 font-bold transition-all duration-200 transform hover:scale-105',
+                            selectedAttributes[modalProduct.id]?.[attrName] === value
+                              ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg ring-4 ring-blue-200'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600 hover:shadow-md'
+                          ]">
+                            {{ value }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Selected Variation Summary -->
+                  <div v-if="selectedVariations[modalProduct.id]" class="mt-6 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl p-5">
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="flex-1">
+                        <p class="text-sm text-emerald-900 font-bold flex items-center gap-2 mb-3">
+                          <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                          </svg>
+                          <span>Complete Variation Selected</span>
+                        </p>
+                        <div class="grid grid-cols-2 gap-3">
+                          <div v-for="attr in selectedVariations[modalProduct.id].attributes" :key="attr.id" class="bg-white rounded-lg px-3 py-2 border border-emerald-200">
+                            <p class="text-xs text-emerald-600 font-bold mb-0.5">{{ attr.value.attribute.name }}</p>
+                            <p class="text-sm text-emerald-900 font-bold">{{ attr.value.value }}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-xs text-emerald-700 font-medium mb-2">Stock Status</p>
+                        <div :class="[
+                          'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold',
+                          selectedVariations[modalProduct.id].stock > 10 ? 'bg-emerald-600 text-white' :
+                          selectedVariations[modalProduct.id].stock > 0 ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'
+                        ]">
+                          <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                          </svg>
+                          <span>{{ selectedVariations[modalProduct.id].stock }} units</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Error Message -->
+                  <div v-else-if="errorMessages[modalProduct.id]" class="mt-6 bg-red-50 border-2 border-red-300 rounded-xl p-5">
+                    <p class="text-sm text-red-700 font-bold flex items-center gap-2">
+                      <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                      </svg>
+                      <span>{{ errorMessages[modalProduct.id] }}</span>
+                    </p>
+                  </div>
+
+                  <!-- Selection Help -->
+                  <div v-else class="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5">
+                    <p class="text-sm text-blue-700 font-medium flex items-center gap-2">
+                      <svg class="h-5 w-5 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                      </svg>
+                      <span>Please select an option from each attribute category above to view the complete variation</span>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="sticky bottom-0 bg-gray-50 px-6 py-4 rounded-b-2xl border-t border-gray-200 flex items-center justify-between gap-4">
+                  <button @click="closeVariationModal" class="px-6 py-3 bg-white text-gray-700 font-bold rounded-xl border-2 border-gray-300 hover:bg-gray-50 transition-colors">
+                    Cancel
+                  </button>
+                  <button @click="confirmVariationSelection" :disabled="!selectedVariations[modalProduct.id]" :class="[
+                    'px-8 py-3 font-bold rounded-xl transition-all duration-200 transform',
+                    selectedVariations[modalProduct.id]
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 hover:scale-105 shadow-lg hover:shadow-xl'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ]">
+                    <span class="flex items-center gap-2">
+                      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                      </svg>
+                      <span>Confirm Selection</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Product Browser Modal -->
+    <Teleport to="body">
+      <Transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0">
+        <div v-if="showProductBrowserModal" class="fixed inset-0 z-[9999] overflow-y-auto" @click.self="closeProductBrowserModal">
+          <!-- Backdrop -->
+          <div class="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"></div>
+
+          <!-- Modal Container -->
+          <div class="flex min-h-full items-center justify-center p-4">
+            <Transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4 scale-95" enter-to-class="opacity-100 translate-y-0 scale-100" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 translate-y-4 scale-95">
+              <div v-if="showProductBrowserModal" class="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
+                <!-- Modal Header -->
+                <div class="sticky top-0 z-10 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-4 rounded-t-2xl border-b border-emerald-500 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-xl">
+                      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 6H6.28l-.31-1.243A1 1 0 005 4H3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="text-xl font-bold">Browse & Add Products</h3>
+                      <p class="text-sm text-emerald-100">{{ products.total }} products available</p>
+                    </div>
+                  </div>
+                  <button @click="closeProductBrowserModal" class="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Search Bar in Modal -->
+                <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                      </svg>
+                    </div>
+                    <input v-model="search" type="text" placeholder="🔍 Search products by name, SKU, or ID..." class="block w-full pl-12 pr-12 py-3 border-2 border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-semibold shadow-sm" />
+                    <button v-if="search" @click="clearSearch" class="absolute inset-y-0 right-0 pr-4 flex items-center">
+                      <svg class="h-5 w-5 text-gray-400 hover:text-red-500 transition-colors" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Products Grid in Modal Body -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div v-for="product in filteredProducts" :key="product.id" class="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-emerald-400 hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                      <!-- Product Image -->
+                      <div class="relative mb-3">
+                        <div class="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                          <img :src="product.feature_image" :alt="product.name" class="w-full h-full object-cover" />
+                        </div>
+                        <div class="absolute top-2 right-2 bg-emerald-600 text-white px-2 py-1 rounded-lg text-xs font-bold">
+                          ৳{{ parseFloat(product.price).toFixed(2) }}
+                        </div>
+                      </div>
+
+                      <!-- Product Info -->
+                      <div class="mb-3">
+                        <h4 class="font-bold text-gray-900 text-sm mb-1 line-clamp-2">{{ product.name }}</h4>
+                        <p class="text-xs text-gray-500 font-medium">SKU: {{ product.id }}</p>
+                      </div>
+
+                      <!-- Stock Badge -->
+                      <div class="mb-3">
+                        <template v-if="product.type === 'variable' && selectedVariations[product.id]">
+                          <span :class="[
+                            'inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold',
+                            selectedVariations[product.id].stock > 10 ? 'bg-emerald-100 text-emerald-700' : selectedVariations[product.id].stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                          ]">
+                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {{ selectedVariations[product.id].stock }} in stock
+                          </span>
+                        </template>
+                        <template v-else>
+                          <span :class="[
+                            'inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold',
+                            product.stock > 10 ? 'bg-emerald-100 text-emerald-700' : product.stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                          ]">
+                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {{ product.stock }} in stock
+                          </span>
+                        </template>
+                      </div>
+
+                      <!-- Variations Button for Variable Products -->
+                      <div v-if="product.variations && product.variations.length > 0" class="mb-3">
+                        <button @click="openVariationModal(product)" class="w-full px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-2 border border-blue-200">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                          </svg>
+                          Select Variation
+                        </button>
+                      </div>
+
+                      <!-- Quantity & Add Button -->
+                      <div class="flex items-center gap-2">
+                        <div class="flex items-center bg-gray-100 rounded-lg">
+                          <button @click="decrementQuantity(product)" :disabled="quantities[product.id] <= 1" class="px-2 py-1 hover:bg-gray-200 rounded-l-lg disabled:opacity-40">
+                            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                          <span class="px-3 py-1 text-sm font-bold">{{ quantities[product.id] }}</span>
+                          <button @click="incrementQuantity(product)" :disabled="quantities[product.id] >= (product.type === 'variable' ? (selectedVariations[product.id]?.stock || 0) : product.stock)" class="px-2 py-1 hover:bg-gray-200 rounded-r-lg disabled:opacity-40">
+                            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                            </svg>
+                          </button>
+                        </div>
+                        <button @click="addToOrder(product)" :disabled="product.type === 'variable' && !selectedVariations[product.id]" :class="[
+                          'flex-1 px-3 py-2 rounded-lg font-bold text-xs transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2',
+                          product.type === 'variable' && !selectedVariations[product.id]
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-md hover:shadow-lg'
+                        ]">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 6H6.28l-.31-1.243A1 1 0 005 4H3z"/>
+                          </svg>
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- No Products Message -->
+                  <div v-if="filteredProducts.length === 0" class="text-center py-12">
+                    <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                    </svg>
+                    <p class="mt-4 text-lg font-bold text-gray-700">No products found</p>
+                    <p class="text-sm text-gray-500">Try adjusting your search</p>
+                  </div>
+                </div>
+
+                <!-- Modal Footer with Pagination -->
+                <div v-if="products.links && products.links.length > 0" class="sticky bottom-0 bg-gray-50 px-6 py-4 rounded-b-2xl border-t border-gray-200">
+                  <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-700 font-medium">
+                      Showing <span class="text-gray-900 font-bold">{{ products.from }}</span> to <span class="text-gray-900 font-bold">{{ products.to }}</span> of <span class="text-gray-900 font-bold">{{ products.total }}</span> products
+                    </p>
+                    <nav class="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px gap-1">
+                      <button v-for="link in products.links" :key="link.label" @click="link.url && goToPage(parseInt(link.url.split('page=')[1]))" :disabled="!link.url" :class="[
+                        'relative inline-flex items-center px-3 py-2 border text-sm font-medium rounded transition-all',
+                        link.active ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
+                        !link.url ? 'opacity-50 cursor-not-allowed' : ''
+                      ]" v-html="link.label"></button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </AdminLayout>
 </template>
 <style scoped>

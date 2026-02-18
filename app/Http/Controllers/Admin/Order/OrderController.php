@@ -111,19 +111,19 @@ class OrderController extends Controller
 
         // Get payment methods for dropdown
         $paymentMethods = [
-            'cod' => 'Cash on Delivery',
-            'credit_card' => 'Credit Card',
-            'paypal' => 'PayPal',
-            'bank_transfer' => 'Bank Transfer'
+            ['value' => 'cash_on_delivery', 'label' => 'Cash on Delivery'],
+            ['value' => 'credit_card', 'label' => 'Credit Card'],
+            ['value' => 'paypal', 'label' => 'PayPal'],
+            ['value' => 'bank_transfer', 'label' => 'Bank Transfer']
         ];
 
         // Get order statuses for dropdown
         $orderStatuses = [
-            'pending' => 'Pending',
-            'processing' => 'Processing',
-            'completed' => 'Completed',
-            'cancelled' => 'Cancelled',
-            'incomplete' => 'Incomplete'
+            ['value' => 'pending', 'label' => 'Pending'],
+            ['value' => 'processing', 'label' => 'Processing'],
+            ['value' => 'completed', 'label' => 'Completed'],
+            ['value' => 'cancelled', 'label' => 'Cancelled'],
+            ['value' => 'incomplete', 'label' => 'Incomplete']
         ];
 
         return Inertia::render('Admin/Orders/Create', [
@@ -210,26 +210,26 @@ class OrderController extends Controller
 
             // Get payment methods for dropdown
             $paymentMethods = [
-                'cod' => 'Cash on Delivery',
-                'credit_card' => 'Credit Card',
-                'paypal' => 'PayPal',
-                'bank_transfer' => 'Bank Transfer'
+                ['value' => 'cash_on_delivery', 'label' => 'Cash on Delivery'],
+                ['value' => 'credit_card', 'label' => 'Credit Card'],
+                ['value' => 'paypal', 'label' => 'PayPal'],
+                ['value' => 'bank_transfer', 'label' => 'Bank Transfer']
             ];
 
             // Get order statuses for dropdown
             $orderStatuses = [
-                'pending' => 'Pending',
-                'processing' => 'Processing',
-                'completed' => 'Completed',
-                'cancelled' => 'Cancelled',
-                'incomplete' => 'Incomplete'
+                ['value' => 'pending', 'label' => 'Pending'],
+                ['value' => 'processing', 'label' => 'Processing'],
+                ['value' => 'completed', 'label' => 'Completed'],
+                ['value' => 'cancelled', 'label' => 'Cancelled'],
+                ['value' => 'incomplete', 'label' => 'Incomplete']
             ];
 
             // Get payment statuses for dropdown
             $paymentStatuses = [
-                'unpaid' => 'Unpaid',
-                'paid' => 'Paid',
-                'refunded' => 'Refunded'
+                ['value' => 'unpaid', 'label' => 'Unpaid'],
+                ['value' => 'paid', 'label' => 'Paid'],
+                ['value' => 'refunded', 'label' => 'Refunded']
             ];
 
             // Get all products
