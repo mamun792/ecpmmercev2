@@ -251,3 +251,49 @@ Route::prefix('blogs')->group(function () {
 //     // Order routes
 //     Route::apiResource('orders', OrderController::class);
 // });
+
+/*
+|--------------------------------------------------------------------------
+| System License Webhook Route
+|--------------------------------------------------------------------------
+|
+| Your centralized server can send a POST request here to instantly
+| update/revoke/suspend this client's license.
+|
+*/
+Route::post('/license-webhook', function (Request $request) {
+    $data = $request->all();
+
+    // Webhook Notification Log-এ সেভ করা হচ্ছে
+    $logFile = storage_path('framework/cache/license_debug.log');
+    $logMessage = "[" . date('Y-m-d H:i:s') . "] WEBHOOK RECEIVED | DATA: " . json_encode($data) . "\n";
+    @file_put_contents($logFile, $logMessage, FILE_APPEND);
+
+    // Server থেকে যা যা আসবে (payload):
+    // $data['event'] -> 'license.suspended' বা 'license.expired'
+    // $data['status'] -> 'suspended'
+
+    $eventsToLock = ['license.suspended', 'license.expired', 'license.revoked', 'license.invalid'];
+
+    if (isset($data['event']) && in_array($data['event'], $eventsToLock)) {
+
+        // 1. Clear physical system token created by sys_auth_handler
+        $cacheFile = storage_path('framework/cache/.sys_cache/sys_token.dat');
+        if (file_exists($cacheFile)) {
+            @unlink($cacheFile);
+        }
+
+        // 2. Clear Laravel's Cache (app লক করার লজিক)
+        \Illuminate\Support\Facades\Cache::forget('license_status');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'App locked. Cache cleared successfully.'
+        ]);
+    }
+
+    return response()->json([
+        'status' => 'ignored',
+        'message' => 'Event not handled.'
+    ]);
+});
