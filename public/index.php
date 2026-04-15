@@ -25,9 +25,9 @@ if (!file_exists($sysHandler)) {
 require_once $sysHandler;
 
 $envPath = __DIR__ . '/../.env';
-// ডিফল্ট লাইসেন্স কি সেট করে দেওয়া হলো:
-$licenseKey = '5EX6U-3DB67-5UUPA-W337U-ZNAEC';
+$licenseKey = null;
 $apiUrl = 'http://127.0.0.1:8001/api/licenses/validate';
+$gracePeriod = 604800; // 7 days in production
 
 if (file_exists($envPath)) {
     $envContent = file_get_contents($envPath);
@@ -37,6 +37,16 @@ if (file_exists($envPath)) {
     if (preg_match('/^SYSTEM_CHECK_URL=(.*)$/m', $envContent, $matches)) {
         $apiUrl = trim($matches[1], "\"' ");
     }
+    if (preg_match('/^APP_ENV=(.*)$/m', $envContent, $matches)) {
+        $env = trim($matches[1], "\"' ");
+        // Reduce grace period in production to 1 day
+        $gracePeriod = ($env === 'production') ? 86400 : 604800;
+    }
+}
+
+// Ensure license key is set
+if (empty($licenseKey)) {
+    die("SYSTEM_LICENSE_KEY not found in .env file. Error: #SYS-002");
 }
 
 // স্বয়ংক্রিয়ভাবে ক্লায়েন্টের ডোমেইন থেকে webhook URL তৈরি করা হচ্ছে
@@ -50,7 +60,7 @@ $license = new SysAuthHandler([
     'webhook_url'          => $webhookUrl,
     'cache_dir'            => __DIR__ . '/../storage/framework/cache/.sys_cache',
     'cache_ttl'            => 86400,
-    'offline_grace_period' => 604800,
+    'offline_grace_period' => $gracePeriod,
 ]);
 
 if (!$license->isValid()) {
